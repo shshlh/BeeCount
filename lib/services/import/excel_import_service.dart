@@ -29,7 +29,7 @@ String cellValueToString(CellValue? cv) {
     DoubleCellValue v => fmtDouble(v.value),
     TextCellValue v => v.value.text ?? '',
     BoolCellValue v => v.value.toString(),
-    DateCellValue v => v.value.toString(),
+    DateTimeCellValue v => "${v.year}-${v.month.toString().padLeft(2, "0")}-${v.day.toString().padLeft(2, "0")}",
     _ => cv.toString(),
   };
 }
