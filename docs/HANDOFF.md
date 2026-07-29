@@ -71,3 +71,39 @@
 
 ---
 
+
+## 2026-07-29
+
+**移交角色**：投资逻辑工程师（invest-logic）
+**接收角色**：UI 工程师（invest-ui）
+
+**完成工作**：
+- `lib/services/data/investment_service.dart` — Service 层封装：
+  - `PortfolioSummary` / `HoldingReturn` 数据类
+  - `getPortfolioSummary`：组合总市值/总成本/未实现盈亏/收益率
+  - `getHoldingReturn`：单持仓盈亏
+  - `batchUpdateNav`：批量净值刷新
+  - `validateBuy` / `validateSell` / `validateConvert`：前端验证方法
+  - buy / sell / convert / updateNav 直接委托给 Repository
+
+- `lib/providers/investment_providers.dart` — Riverpod Provider 层：
+  - `investmentRepositoryProvider`：创建 LocalInvestmentRepository
+  - `investmentServiceProvider`：创建 InvestmentService
+  - `currentHoldingsProvider`：当前账本持仓 Stream（StreamProvider.autoDispose）
+  - `holdingTransactionsProvider`：持仓交易流水 Stream（family + autoDispose）
+  - `holdingProvider`：单持仓详情 Future（family）
+  - `portfolioSummaryProvider`：投资组合摘要 Future（autoDispose）
+  - `holdingReturnProvider`：单持仓收益 Future（family）
+
+- `lib/providers/all_providers.dart` — 新增 investment_providers 导出
+- `test/services/investment_service_test.dart` — 16 个测试全部通过
+
+**下一个任务需要知道的**：
+- 所有投资数据直接通过 `ref.watch(currentHoldingsProvider)` 读取持仓列表
+- 写入操作（买入/卖出/转换）通过 `ref.read(investmentServiceProvider).buy/sell/convert()`
+- 验证操作（表单前端验证）通过 `service.validateBuy/validateSell/validateConvert()`
+- `PortfolioSummary` 提供组合级别总览，`HoldingReturn` 提供单支持仓盈亏
+- 所有 Provider 带 autoDispose，页面销毁时自动解绑
+- `investmentRepositoryProvider` 不进 BaseRepository（仍保持阶段 1-4 不同步的决策）
+
+**git 状态**：未提交（等待 PM 审查后合入）

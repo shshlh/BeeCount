@@ -1,4 +1,4 @@
-﻿# 团队协作章程 · Fork & Invest
+# 团队协作章程 · Fork & Invest
 
 本文档是本项目的**指挥中心**。任何新会话（团队角色）启动后，第一件事就是读取本文档，了解项目状态、自己的任务和当前进展。
 
@@ -66,9 +66,9 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
 |---|---|---|---|---|
-| 2.1 InvestmentService | ⬜ | — | Service 封装 | — |
-| 2.2 Riverpod Provider | ⬜ | — | Provider 定义 | — |
-| 2.3 单元测试 | ⬜ | — | 测试通过 | — |
+| 2.1 InvestmentService | ✅ | invest-logic | Service 封装 | 2026-07-29 |
+| 2.2 Riverpod Provider | ✅ | invest-logic | Provider 定义 | 2026-07-29 |
+| 2.3 单元测试 | ✅ | invest-logic | 16 测试全通过 | 2026-07-29 |
 
 ### 阶段 3：投资 UI 层
 
@@ -153,3 +153,4 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 
 **git 状态**：当前分支 [branch name]，已提交 [commit hash]
 ```
+

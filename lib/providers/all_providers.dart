@@ -38,3 +38,5 @@ export 'tag_providers.dart';
 
 // 智能记账相关
 export 'smart_billing_providers.dart';
+// 投资相关
+export 'investment_providers.dart';
