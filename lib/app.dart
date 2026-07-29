@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'pages/main/home_page.dart';
+import 'pages/investment/holdings_list_page.dart';
 import 'pages/main/analytics_page.dart';
 import 'pages/account/accounts_page.dart';
 import 'pages/budget/budget_page.dart';
@@ -46,7 +47,7 @@ class _BeeAppState extends ConsumerState<BeeApp>
   final _pages = const [
     HomePage(),
     AnalyticsPage(),
-    AccountsPage(asTab: true),
+    HoldingsListPage(asTab: true),
     MinePage(),
   ];
 
@@ -956,7 +957,7 @@ class _BeeBottomBar extends StatelessWidget {
                 // 中间记账按钮（作为 Tab 样式）
                 _buildCenterTabItem(inactiveColor),
                 _buildTabItem(2, Icons.account_balance_wallet_outlined,
-                    Icons.account_balance_wallet, l10n.tabAssets, inactiveColor),
+                    Icons.show_chart, l10n.tabAssets, inactiveColor),
                 _buildAvatarTabItem(3, l10n.tabMine, inactiveColor),
               ],
             ),
