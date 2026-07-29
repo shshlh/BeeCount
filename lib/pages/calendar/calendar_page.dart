@@ -47,6 +47,21 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       _selectedDay = selectedDay;
     });
     ref.read(calendarSelectedDateProvider.notifier).state = selectedDay;
+
+    // 检查是否有日历事件并显示摘要
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ledgerId = ref.read(currentLedgerIdProvider);
+      final eventsAsync = ref.read(
+        calendarEventsForMonthProvider((ledgerId: ledgerId, month: _focusedMonth)),
+      );
+      final dateKey = _formatDate(selectedDay);
+      eventsAsync.whenData((events) {
+        final dayEvents = events[dateKey];
+        if (dayEvents != null && dayEvents.isNotEmpty && mounted) {
+          _showEventSummary(selectedDay, dayEvents);
+        }
+      });
+    });
   }
 
   void _onPageChanged(DateTime focusedMonth) {
@@ -114,6 +129,11 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       dailyTotalsByMonthProvider((ledgerId: ledgerId, month: _focusedMonth)),
     );
 
+    // 获取当月日历事件（账单日/还款日/投资日/周期交易）
+    final calendarEventsAsync = ref.watch(
+      calendarEventsForMonthProvider((ledgerId: ledgerId, month: _focusedMonth)),
+    );
+
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
       body: Column(
@@ -158,8 +178,11 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                     // 记账等触发 calendarRefreshProvider 时不切到 loading,
                     // 旧统计保留,等新数据来无缝替换 — 避免日历整页 spinner 闪烁
                     skipLoadingOnReload: true,
-                    data: (dailyTotals) =>
-                        _buildCalendar(context, dailyTotals, primaryColor),
+                    data: (dailyTotals) => calendarEventsAsync.when(
+                      data: (events) => _buildCalendar(context, dailyTotals, primaryColor, events),
+                      loading: () => _buildCalendar(context, dailyTotals, primaryColor, null),
+                      error: (_, __) => _buildCalendar(context, dailyTotals, primaryColor, null),
+                    ),
                     loading: () => _buildCalendarSkeleton(context),
                     error: (err, stack) => Center(
                       child: Padding(
@@ -187,6 +210,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     BuildContext context,
     Map<String, (double, double)> dailyTotals,
     Color primaryColor,
+    Map<String, List<CalendarEvent>>? events,
   ) {
     final locale = Localizations.localeOf(context);
 
@@ -290,22 +314,22 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         // 自定义默认日期单元格
         defaultBuilder: (context, day, focusedDay) {
           return _buildDateCell(
-              context, day, dailyTotals, primaryColor, false, false, false);
+              context, day, dailyTotals, primaryColor, false, false, false, events);
         },
         // 自定义今天日期单元格
         todayBuilder: (context, day, focusedDay) {
           return _buildDateCell(
-              context, day, dailyTotals, primaryColor, true, false, false);
+              context, day, dailyTotals, primaryColor, true, false, false, events);
         },
         // 自定义选中日期单元格
         selectedBuilder: (context, day, focusedDay) {
           return _buildDateCell(
-              context, day, dailyTotals, primaryColor, false, true, false);
+              context, day, dailyTotals, primaryColor, false, true, false, events);
         },
         // 自定义非当前月日期
         outsideBuilder: (context, day, focusedDay) {
           return _buildDateCell(
-              context, day, dailyTotals, primaryColor, false, false, true);
+              context, day, dailyTotals, primaryColor, false, false, true, events);
         },
       ),
     );
@@ -319,8 +343,10 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     bool isToday,
     bool isSelected,
     bool isOutside,
+    Map<String, List<CalendarEvent>>? events,
   ) {
     final dateKey = _formatDate(day);
+    final dayEvents = events?[dateKey];
     final totals = dailyTotals[dateKey];
     final (income, expense) = totals ?? (0.0, 0.0);
     final hasTransaction = income > 0 || expense > 0;
@@ -415,6 +441,23 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                 maxLines: 1,
                 overflow: TextOverflow.clip,
               ),
+          ],
+          // 事件标记（彩色圆点）
+          if (!isOutside && dayEvents != null && dayEvents.isNotEmpty) ...[
+            const SizedBox(height: 1),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: _uniqueEventDots(dayEvents!).entries.map((e) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                child: Container(
+                  width: 6, height: 6,
+                  decoration: BoxDecoration(
+                    color: e.value,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              )).toList(),
+            ),
           ],
         ],
       ),
@@ -682,6 +725,83 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         error: (err, stack) => Padding(
           padding: const EdgeInsets.all(24),
           child: Center(child: Text('Error: $err')),
+        ),
+      ),
+    );
+  }
+
+  /// 获取事件去重后的颜色映射（每种类型取其一）
+  Map<CalendarEventType, Color> _uniqueEventDots(List<CalendarEvent> events) {
+    final colors = <CalendarEventType, Color>{};
+    for (final e in events) {
+      colors[e.type] = switch (e.type) {
+        CalendarEventType.billDate => Colors.red.shade400,
+        CalendarEventType.paymentDue => Colors.orange.shade400,
+        CalendarEventType.invest => Colors.blue.shade400,
+        CalendarEventType.recurring => Colors.purple.shade400,
+      };
+    }
+    return colors;
+  }
+
+  Color _eventTypeColor(CalendarEventType type) => switch (type) {
+    CalendarEventType.billDate => Colors.red.shade400,
+    CalendarEventType.paymentDue => Colors.orange.shade400,
+    CalendarEventType.invest => Colors.blue.shade400,
+    CalendarEventType.recurring => Colors.purple.shade400,
+  };
+
+  void _showEventSummary(DateTime day, List<CalendarEvent> events) {
+    final localeName = Localizations.localeOf(context).toString();
+    final dateLabel = DateFormat.yMMMd(localeName).format(day);
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(dateLabel,
+              style: TextStyle(
+                fontSize: 18, fontWeight: FontWeight.bold,
+                color: BeeTokens.textPrimary(context),
+              )),
+            const SizedBox(height: 16),
+            ...events.map((e) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(children: [
+                Container(width: 10, height: 10,
+                  decoration: BoxDecoration(
+                    color: _eventTypeColor(e.type),
+                    shape: BoxShape.circle,
+                  )),
+                const SizedBox(width: 12),
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(e.title,
+                      style: TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w500,
+                        color: BeeTokens.textPrimary(context),
+                      )),
+                    if (e.subtitle != null && e.subtitle!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(e.subtitle!,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: BeeTokens.textTertiary(context),
+                          ))),
+                  ],
+                )),
+              ]),
+            )),
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );

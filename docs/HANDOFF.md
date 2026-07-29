@@ -263,3 +263,63 @@
 - 修改：`.codex/TEAM.md`
 
 **git 状态**：当前分支 main，待提交
+
+## 2026-07-29
+
+**移交角色**：项目经理（PM）
+**接收角色**：UI 工程师（invest-ui）— 4.2 日历接线
+
+**完成工作**：
+4.2 事件采集 provider（`calendarEventsForMonthProvider`）已在阶段 4 由功能集成工程师写好。
+事件源：信用卡账单日/还款日、投资买入日、周期交易到期日。
+
+**需要做的**：
+1. 打开 `lib/pages/calendar/calendar_page.dart`
+2. 在 `_buildDateCell` 中获取该日期的事件列表（从 `calendarEventsForMonthProvider`）
+3. 在日期数字下方添加彩色小圆点标记：账单日→红、还款日→橙、投资日→蓝、周期交易→紫
+4. 点击带标记的日期时，弹出该日事件摘要
+
+**实现细节**：
+- 在 `CalendarPage` 的 `build` 方法中 watch `calendarEventsForMonthProvider(params.ledgerId, year, month)`
+- `NumberButton` 或日期 cell widget 中传 `events` 参数
+- 直接用已有 UI 组件，不改配色系统或 Provider 结构
+
+**约束**：
+- 不改 `calendar_providers.dart`（事件 provider 已存在）
+- 不改 `app.dart` 或导航
+- 用已有 BeeToken 配色
+
+**git 状态**：当前 main @ cb2dcae
+
+## 2026-07-29
+
+**移交角色**：UI 工程师（invest-ui）
+**接收角色**：项目经理（PM）
+
+**完成工作**：
+- `lib/providers/calendar_providers.dart` — 新增 calendarEventsForMonthProvider：
+  - 事件源：信用卡账单日(billingDay)、还款日(paymentDueDay)、投资交易(type=invest)、周期交易(RecurringTransactions)
+  - CalendarEventType 枚举（4 种）+ CalendarEvent 数据类
+  - _recurringDatesInMonth 辅助函数（支持 daily/weekly/monthly/yearly 频率）
+  - 导入 dart:math（min 用）
+
+- `lib/pages/calendar/calendar_page.dart` — 日历事件接线：
+  - build 方法 watch calendarEventsForMonthProvider
+  - _buildCalendar 新增 events 参数 → 传递到 _buildDateCell
+  - _buildDateCell 新增 dayEvents 解析 + 6px 彩色圆点渲染
+  - 圆点色：红=账单日 / 橙=还款日 / 蓝=投资日 / 紫=周期交易
+  - _onDaySelected 点击带事件日期→弹出事件摘要 BottomSheet
+  - 新增辅助方法：_uniqueEventDots（去重）、_eventTypeColor、_showEventSummary
+
+**下一个任务需要知道的**：
+- calendarEventsForMonthProvider 返回 Map<日期Key, List<CalendarEvent>>
+- Provider 按月缓存（autoDispose），切换月份自动重建
+- 事件摘要弹窗在 _onDaySelected 的 postFrameCallback 中异步触发
+- 信用卡 billingDay/paymentDueDay 值范围 1-28，超出当月天数时自动 clamp 到月末
+
+**验证**：flutter analyze 零新增 error；flutter test 511 全通过（7 个预存失败）
+
+**git 状态**：当前 main @ cb2dcae，待提交
+
+---
+
