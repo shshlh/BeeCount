@@ -1,0 +1,3 @@
+﻿id,book_name,name,type,parent_name,icon,sort_order,created_at
+33d42014-549d-47d5-94da-b45bd335dd2c,我的账本,早餐,expense,餐饮,breakfast,0,2025-07-30 10:00:00
+d7878501-c801-460f-a336-b0344eb411d5,我的账本,餐饮,expense,,food,0,2025-07-30 10:00:00

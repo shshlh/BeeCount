@@ -1,0 +1,2 @@
+﻿id,book_name,name,type,amount,account_name,category_name,frequency,interval_days,start_date,end_date,next_run_date,enabled,created_at,updated_at
+fe9a7f88-3445-4bf6-935a-154122b0fe93,我的账本,房租,expense,3000.0,现金,餐饮,monthly,,2025-01-01,,2025-08-01,1,2025-07-30 10:00:00,2025-07-30 10:00:00

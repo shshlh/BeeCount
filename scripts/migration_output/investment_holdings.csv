@@ -1,0 +1,2 @@
+﻿id,book_name,account_name,code,name,holding_type,total_cost,total_shares,latest_nav,nav_date,fee_type,is_liquidated,created_at,updated_at
+57792389-c7b2-486d-a11d-b8638fdcecb9,我的账本,现金,000001,华夏成长,fund,10000.0,1000.0,1.234,2025-07-30 10:00:00,A,0,2025-07-30 10:00:00,2025-07-30 10:00:00

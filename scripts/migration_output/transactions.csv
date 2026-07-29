@@ -1,0 +1,3 @@
+﻿id,book_name,account_name,to_account_name,category_name,type,amount,datetime,note,is_investment,related_investment_code,batch_id,invest_type,code,invest_shares,invest_nav,invest_fee
+8713567c-c187-4af9-9245-4a0d4b4c3b31,我的账本,现金,,早餐,expense,25.5,2025-07-30 08:30:00,早餐,0,,,,,,,
+db42cab2-e5ac-431b-a81f-cf488010a40d,我的账本,现金,招行,,transfer,500.0,2025-07-29 12:00:00,转账,0,,,,,,,

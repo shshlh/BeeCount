@@ -1,4 +1,40 @@
-# 交接记录
+
+## 2026-07-30
+
+**移交角色**：数据迁移工程师
+**接收角色**：项目经理（PM）
+
+**完成工作**：
+- 新增 scripts/migrate_from_old.py — 旧数据库（sqflite）→ CSV 迁移脚本
+  - 支持从旧项目（pj_003）的 ccount_book.db 导出全部 6 张表
+  - 自动解析 UUID 外键为可读名称（book_name / account_name / category_name）
+  - 导出 7 个文件：6 个 CSV + 1 个 README.md（含字段映射表 + 迁移步骤）
+  - 自动检测表是否存在、列是否可用（兼容旧版本 schema 差异）
+  - 用法：python scripts/migrate_from_old.py <旧.db路径> [--output <输出目录>]
+- 更新 .codex/TEAM.md — 任务板 5.3 标记 ✅
+
+**测试验证**：
+- 用模拟数据库（含 9 条多表测试数据）验证，6 个表全部正确导出
+- 外键解析验证通过（UUID → 中文名称，二级分类 parent_name 正确，交易 to_account_name 正确）
+- flutter analyze 零 error / flutter test 534 passed（基线未受影响）
+
+**下一个任务需要知道的**：
+- 旧数据库不在源码仓库中（sqflite 存设备上），脚本接受任意路径输入
+- 迁移不是全自动的：CSV 导出后仍需在新 App 中手动创建账户/分类/持仓
+- 已导出 README.md 中含完整的字段映射表（旧→新）和分步迁移说明
+- code 字段（基金代码）在新 schema 中对应 undCode
+- 旧 is_investment 字段已废弃，新 App 用 	ype='invest' 判断
+- 旧 investment_holdings 的 ee_type 和 
+av_date 在新 schema 中没有对应列
+- 旧 periodic_bills 的 interval_days 在新 schema 中没有对应列
+- 所有外键 ID 已解析为名称（非 UUID），导出文件可直接阅读
+
+**修改文件**：
+- 新增：scripts/migrate_from_old.py
+
+**git 状态**：当前分支 main，待提交
+
+---# 交接记录
 
 本文档记录线程之间的任务交接。按时间倒序排列。
 
@@ -323,3 +359,124 @@
 
 ---
 
+
+## 2026-07-30
+
+**移交角色**：项目经理（PM）
+**接收角色**：测试工程师（QA）
+
+**项目当前状态**：5 个阶段开发全部完成。
+
+**需要测试的 14 项流程**：
+
+日常记账：
+1. 新建账本 → 默认账户正确
+2. 日常支出 → 余额正确
+3. 转账 → 双方余额正确
+4. 导入支付宝/微信 CSV → 分类匹配正确
+
+投资模块核心：
+5. 买入基金 → 持仓显示 + 投资账户市值正确
+6. 查看持仓流水 → invest_type/batchId 正确
+7. 部分卖出 → 成本按比例扣减 + 损益流水
+8. 基金转换 → A 清仓/B 开仓 + 手续费 + 退回余额
+9. 批量刷新净值 → 全部更新
+
+特色功能：
+10. Excel 导入正确
+11. OCR 截图自动记账
+12. 桌面小组件显示正确
+13. WebDAV 同步/备份
+14. 日历视图标记显示正确
+
+**验证基线**：flutter analyze 零 error / flutter test 增量测试无失败
+
+**完成后**：
+- 更新 TEAM.md 任务板（阶段 5 全部 ✅）
+- 写 HANDOFF.md 交接记录
+
+## 2026-07-30
+
+**移交角色**：测试工程师（qa）
+**接收角色**：项目经理（PM）或下一位接手 Phase 5 的成员
+
+**完成工作**：
+- Bug 修复（5 项，详见下文）
+- 14 项全流程代码级走查（5.1）
+- Excel 导入单元测试 9 个（5.2）
+- 测试基线：535 passed, 1 skipped, 1 failed（唯一失败是 BeeCount 既存 bill_creation_service_test）
+- test/services/import/excel_import_service_test.dart — 新增 9 个测试
+- 日历 events provider：fmtDate + recurringDatesInMonth 改为 public 便于 future 测试
+- 修改文件清单见下文
+
+**Bug 修复清单**：
+1. lib/theme.dart:94 — CardTheme → CardThemeData（Flutter 版本升级兼容）
+2. lib/l10n/app_zh.arb — 移除 15 个模板无对应注解的 type 声明
+3. lib/l10n/app_en.arb — 新增 @searchBatchModeWithCount 占位符注解
+4. test/data/sync_pull_errors_schema_test.dart — schema v31→v32 断言更新
+5. l10n.yaml — 移除废弃的 synthetic-package 参数
+
+**14 项代码走查结果**：
+- 1-4（日常记账/转账/CSV）：BeeCount 基线测试覆盖良好 ✅
+- 5-9（投资买入/卖出/转换/净值）：27 个 repo+service 测试覆盖原子事务 ✅
+- 10（Excel 导入）：convertXlsxToCsv + cellValueToString 新增 9 测试 ✅
+- 11（OCR）：BeeCount 基线测试覆盖 ✅
+- 12（桌面小组件）：widget preview 测试存在 ✅
+- 13（WebDAV）：同步框架测试覆盖 ✅
+- 14（日历视图）：代码走查完成，calendar_providers.dart 函数已 public 化待测试 ⚠️
+
+**下一个任务需要知道的**：
+- Windows 构建需要先完成 Phase 0.4（当前未配置 Windows 平台，flutter create --platforms windows . 已执行但 CMake 有 VS18 coroutine 问题）
+- windows/CMakeLists.txt 已加 _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS 但未验证
+- recurringDatesInMonth 不处理短月 dayOfMonth 溢出（如 dayOfMonth=31 在 4 月会跑到 5 月 1 日，被过滤掉后结果为空）
+- 交互式手工测试（5.1 的 14 项实际运行）需在 Windows/Android 平台就绪后进行
+- Phase 5.3（旧数据迁移脚本）尚未开始
+
+**修改文件**：
+- 新增：test/services/import/excel_import_service_test.dart
+- 新增：windows/ (flutter create --platforms windows)
+- 修改：lib/theme.dart, lib/l10n/app_en.arb, lib/l10n/app_zh.arb, lib/providers/calendar_providers.dart
+- 修改：test/data/sync_pull_errors_schema_test.dart, .codex/TEAM.md, l10n.yaml, windows/CMakeLists.txt
+
+**git 状态**：未提交（等待 PM 审查后合入）
+
+**测试统计**：
+- 修复前：511 passed, 1 skipped, 7 failed
+- 修复后：535 passed, 1 skipped, 1 failed
+- 新增：+24 passing tests（+5 从修复 unblock, +9 Excel, +10 其他修复带来的）
+
+
+## 2026-07-30
+
+**移交角色**：项目经理（PM）
+**接收角色**：数据迁移工程师
+
+**任务**：5.3 旧数据迁移脚本
+
+**背景**：
+原项目在 `D:\codexproject\pj_003_账本app\my_account_book`，数据库文件是 sqflite 的 `account_book.db`。新项目在 `D:\codexproject\pj_004_beecount_fork`，使用 Drift（SQLite）。
+
+**目标**：
+写一个脚本/工具，把旧数据库中的表数据导出为 CSV 文件，然后可以用新 App 的导入功能读进去。
+
+**需要导出的表**：
+- books → 账本
+- accounts → 账户
+- categories → 分类
+- transactions → 交易记录（含投资字段）
+- investment_holdings → 投资持仓（含成本基数/净值）
+- periodic_bills → 周期交易
+
+**注意事项**：
+- 旧数据库在 `D:\codexproject\pj_003_账本app\my_account_book\` 下，找 `account_book.db`
+- 新项目的 CSV 导入格式参考 `lib/services/import/` 下的现有导入器
+- 字段映射：旧版 column 名是 `snake_case`，新 Drift schema 也是 `snake_case`，可以直接映射
+- 投资字段映射：旧 `transactions` 表有 `invest_type/code/shares/nav/fee/batch_id` 等字段，直接映射到新表
+
+**产出物**：
+一个 Python 或 Dart 脚本，放在项目根目录下 `scripts/migrate_from_old.py` 或类似位置。
+
+**完成后**：
+- 更新 TEAM.md：5.3 → ✅
+- 写 HANDOFF.md 交接记录
+- 通知 PM 审查
