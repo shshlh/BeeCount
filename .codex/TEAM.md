@@ -87,10 +87,10 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
 |---|---|---|---|---|
-| 4.1 Excel 导入 | ⬜ | — | Excel 解析器 | — |
-| 4.2 日历视图 | ⬜ | — | 日历页面 | — |
-| 4.3 设置页 + WebDAV | ⬜ | — | 设置项 | — |
-| 4.4 时间选择器 | ⬜ | — | 组件 | — |
+| 4.1 Excel 导入 | ✅ | integration | excel_import_service.dart + xlsx_reader 已接线 | 2026-07-29 |
+| 4.2 日历视图 | 🔄 | integration | 事件标记 provider 已写，页面接线待完成 | — |
+| 4.3 设置页 + WebDAV | ✅ | integration | WebDAV已有云备份区 + 账户总览入口 | 2026-07-29 |
+| 4.4 时间选择器 | ✅ | integration | BeeCount 已有 WheelTimePicker | 2026-07-29 |
 
 ### 阶段 5：测试 + 上线
 

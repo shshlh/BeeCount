@@ -224,3 +224,42 @@
 **验证**：flutter analyze 零 error，投资模块 27 个测试全通过。
 
 **git 状态**：未提交（等待 PM 审查后统一合入）
+
+## 2026-07-29
+
+**移交角色**：功能集成工程师（integration）
+**接收角色**：项目经理（PM）
+
+**完成工作**：
+- 4.1 Excel 导入：
+  - 新增 `lib/services/import/excel_import_service.dart`（从 pj_003 移植 cellValueToString + fmtDouble + CSV转义）
+  - BeeCount 已有 `lib/utils/xlsx_reader.dart` 且已在 `import_page.dart` 接线
+  - excel 包 ^4.0.6 已存在，无需额外依赖
+
+- 4.3 设置页 + WebDAV：
+  - WebDAV 配置：MinePage 的"云同步与备份"区已完整支持 WebDAV 通道选择（CloudSyncPage）
+  - 账户统计：MinePage "功能管理"区新增「账户总览」入口 → 已有的 AccountsPage（含净资产卡片：总资产/总负债/净资产）
+  - 修改 `lib/pages/main/mine_page.dart`（+import AccountsPage，+AppListTile 入口）
+
+- 4.4 自定义时间选择器：
+  - BeeCount 已有 `lib/widgets/ui/wheel_time_picker.dart`（CupertinoPicker + BeeTokens + l10n），优于 pj_003 版，无需搬运
+
+**未完成**：
+- 4.2 日历视图（🔄）：事件标记 provider 逻辑已在 `calendar_providers.dart` 中编写（账单日/还款日/周期交易采集），但由于文件编辑工具问题未接线到 `calendar_page.dart`。需要：
+  1. 在 `_buildCalendar` 中 watch `calendarEventsForMonthProvider`
+  2. 将 events map 传入 `_buildDateCell`
+  3. 在日期单元格底部渲染彩色圆点（红=账单日，蓝=还款日，绿=周期交易）
+
+**下一个任务需要知道的**：
+- Excel 导入已就绪，无需额外集成工作
+- 日历事件 provider 写好了但未接线 — 日历页面需要使用 `calendarEventsForMonthProvider(ledgerId, month)` 获取事件并渲染圆点
+- 账户总览入口在 MinePage "智能记账"下方，"自动化功能"上方
+- flutter analyze 零新增 error（仅 1 个预存的 CardTheme→CardThemeData）
+- flutter test 511 通过（6 个预存失败，均为已有问题）
+
+**修改文件**：
+- 新增：`lib/services/import/excel_import_service.dart`
+- 修改：`lib/pages/main/mine_page.dart`
+- 修改：`.codex/TEAM.md`
+
+**git 状态**：当前分支 main，待提交

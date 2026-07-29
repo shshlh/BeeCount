@@ -7,6 +7,7 @@ import 'package:beecount/widgets/biz/bee_icon.dart';
 import '../data/import_page.dart';
 import '../data/export_page.dart';
 import '../settings/personalize_page.dart';
+import '../account/accounts_page.dart';
 import '../../providers.dart';
 import '../../providers/theme_providers.dart';
 import '../../widgets/ui/ui.dart';
@@ -330,6 +331,19 @@ class MinePage extends ConsumerWidget {
                         },
                       ),
                       BeeTokens.cardDivider(context),
+					  // 账户总览（总资产/总负债/净资产）
+					  AppListTile(
+						leading: Icons.account_balance_wallet_outlined,
+						title: '账户总览',
+						subtitle: '总资产 / 总负债 / 净资产',
+						trailing: Icon(Icons.chevron_right,
+							color: BeeTokens.iconTertiary(context), size: 20),
+						onTap: () async {
+							await Navigator.of(context).push(MaterialPageRoute(
+								builder: (_) => const AccountsPage()));
+						},
+					  ),
+					  BeeTokens.cardDivider(context),
                       // 预算管理 已挪到「账本管理 → 长按某账本 → 预算管理」
                       // (每个账本独立预算,放在账本菜单内语义更匹配)。
                       // 自动化功能
