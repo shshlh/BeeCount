@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'dart:ui' show Locale;
 
 import 'package:drift/drift.dart';
@@ -108,9 +108,9 @@ class Categories extends Table {
 
 class Transactions extends Table {
   IntColumn get id => integer().autoIncrement()();
-  IntColumn get ledgerId => integer()();
-  TextColumn get type => text()(); // expense / income / transfer
-  RealColumn get amount => real()();
+ IntColumn get ledgerId => integer()();
+  TextColumn get type => text()(); // expense / income / transfer / invest
+ RealColumn get amount => real()();
   IntColumn get categoryId => integer().nullable()();
   IntColumn get accountId => integer().nullable()();
   IntColumn get toAccountId => integer().nullable()();
@@ -150,7 +150,65 @@ class Transactions extends Table {
   /// v30:折算到账本本位币的金额快照(按记账时汇率,保存即定,不随汇率重算)。
   /// 单币种/未折算 == amount(隐含汇率 1.0)。账本维度统计读本列(?? amount),
   /// 账户维度(余额等)仍读 amount。
-  RealColumn get nativeAmount => real().nullable()();
+ RealColumn get nativeAmount => real().nullable()();
+
+  // --- v32: 投资字段 ---
+  /// 投资操作类型: buy(买入) / sell(卖出) / redeem(赎回) / convert(转换)。
+  /// 仅在 type='invest' 时有值，其余类型为 null。
+  TextColumn get investType => text().nullable()();
+
+  /// 交易份额（基金份额，正=买入/转入，负=卖出/转出）。
+  RealColumn get investShares => real().nullable()();
+
+  /// 成交净值（交易时每份净值）。
+  RealColumn get investNav => real().nullable()();
+
+  /// 手续费。卖出时含赎回费，转换时含转换费。
+  RealColumn get investFee => real().nullable()();
+
+  /// 关联的 InvestmentHoldings.id。买入时指向目标持仓，卖出时指向来源持仓。
+  IntColumn get holdingId => integer().nullable()();
+
+  /// 批次ID。一次转换产生 2 笔交易(A→B)用同一 batchId 关联。
+  TextColumn get batchId => text().nullable()();
+}
+
+// --- v32: 投资持仓表 ---
+/// 每行对应一笔投资持仓（某基金/股票在特定账户下的持有状态）。
+/// 通过 accountId 关联投资类账户，份额 / 成本基数 / 净值在原子事务中联动更新。
+class InvestmentHoldings extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get ledgerId => integer()();
+
+  /// 基金/股票代码（如 000001）。
+  TextColumn get fundCode => text()();
+
+  /// 基金/股票名称（如 华夏成长混合）。
+  TextColumn get fundName => text()();
+
+  /// 关联的投资账户（Accounts.id，其 type 建议为 'investment'）。
+  IntColumn get accountId => integer()();
+
+  /// 当前持有份额。
+  RealColumn get totalShares => real().withDefault(const Constant(0.0))();
+
+  /// 成本基数（投入总金额，不含手续费。卖出时按比例扣减）。
+  RealColumn get totalCost => real().withDefault(const Constant(0.0))();
+
+  /// 最新单位净值（外部刷新或成交时更新）。
+  RealColumn get currentNav => real().withDefault(const Constant(0.0))();
+
+  /// 市值 = totalShares × currentNav（冗余字段，方便查询/排序）。
+  RealColumn get marketValue => real().withDefault(const Constant(0.0))();
+
+  /// 持仓类型：fund(基金) / stock(股票) / etf 等。
+  TextColumn get holdingType => text().withDefault(const Constant('fund'))();
+
+  /// 备注。
+  TextColumn get note => text().nullable()();
+
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt => dateTime().nullable()();
 }
 
 class RecurringTransactions extends Table {
@@ -432,6 +490,7 @@ class SharedLedgerTags extends Table {
   SyncPullErrors,
   ExchangeRates,
   ExchangeRateOverrides,
+  InvestmentHoldings,
 ])
 class BeeDatabase extends _$BeeDatabase {
   BeeDatabase() : super(_openConnection());
@@ -442,7 +501,7 @@ class BeeDatabase extends _$BeeDatabase {
   BeeDatabase.forTesting(QueryExecutor executor) : super(executor);
 
   @override
-  int get schemaVersion => 31; // v31: 账户隐藏 — accounts.hidden
+  int get schemaVersion => 32; // v31: 账户隐藏 / v32: 投资数据层 — InvestmentHoldings + 交易投资字段
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1155,15 +1214,55 @@ class BeeDatabase extends _$BeeDatabase {
             logger.info('DBMigration', '开始迁移到 v31: 账户隐藏(hidden)');
             await _addColumnIfMissing('accounts', 'hidden',
                 'ALTER TABLE accounts ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;');
-            logger.info('DBMigration', 'v31 迁移完成');
+           logger.info('DBMigration', 'v31 迁移完成');
+          }
+          if (from < 32) {
+            logger.info('DBMigration', '开始迁移到 v32: 投资数据层(InvestmentHoldings + 交易投资字段)');
+
+            await _createTableIfMissing(migrator, 'investment_holdings', investmentHoldings);
+
+            await _addColumnIfMissing('transactions', 'invest_type',
+                'ALTER TABLE transactions ADD COLUMN invest_type TEXT;');
+            await _addColumnIfMissing('transactions', 'invest_shares',
+                'ALTER TABLE transactions ADD COLUMN invest_shares REAL;');
+            await _addColumnIfMissing('transactions', 'invest_nav',
+                'ALTER TABLE transactions ADD COLUMN invest_nav REAL;');
+            await _addColumnIfMissing('transactions', 'invest_fee',
+                'ALTER TABLE transactions ADD COLUMN invest_fee REAL;');
+            await _addColumnIfMissing('transactions', 'holding_id',
+                'ALTER TABLE transactions ADD COLUMN holding_id INTEGER;');
+            await _addColumnIfMissing('transactions', 'batch_id',
+                'ALTER TABLE transactions ADD COLUMN batch_id TEXT;');
+
+            // 为投资持仓表建索引（按账本 + 基金代码快速查找）
+            await customStatement(
+                'CREATE INDEX IF NOT EXISTS idx_investment_holdings_ledger '
+                'ON investment_holdings (ledger_id);');
+            await customStatement(
+                'CREATE INDEX IF NOT EXISTS idx_investment_holdings_account '
+                'ON investment_holdings (account_id);');
+            await customStatement(
+                'CREATE UNIQUE INDEX IF NOT EXISTS idx_investment_holdings_fund '
+                'ON investment_holdings (ledger_id, fund_code, account_id);');
+
+            logger.info('DBMigration', 'v32 迁移完成');
           }
         },
-        onCreate: (m) async {
-          await m.createAll();
+       onCreate: (m) async {
+         await m.createAll();
+         await customStatement(
+             'CREATE UNIQUE INDEX IF NOT EXISTS idx_rate_override_pair '
+             'ON exchange_rate_overrides (base_currency, quote_currency);');
           await customStatement(
-              'CREATE UNIQUE INDEX IF NOT EXISTS idx_rate_override_pair '
-              'ON exchange_rate_overrides (base_currency, quote_currency);');
-        },
+              'CREATE INDEX IF NOT EXISTS idx_investment_holdings_ledger '
+              'ON investment_holdings (ledger_id);');
+          await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_investment_holdings_account '
+              'ON investment_holdings (account_id);');
+          await customStatement(
+              'CREATE UNIQUE INDEX IF NOT EXISTS idx_investment_holdings_fund '
+              'ON investment_holdings (ledger_id, fund_code, account_id);');
+       },
       );
 
   /// Migration helper: 列不存在再 ALTER ADD,避免 partial state 重跑时
