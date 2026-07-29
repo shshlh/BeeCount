@@ -2013,6 +2013,42 @@ class $TransactionsTable extends Transactions
   late final GeneratedColumn<double> nativeAmount = GeneratedColumn<double>(
       'native_amount', aliasedName, true,
       type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _investTypeMeta =
+      const VerificationMeta('investType');
+  @override
+  late final GeneratedColumn<String> investType = GeneratedColumn<String>(
+      'invest_type', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _investSharesMeta =
+      const VerificationMeta('investShares');
+  @override
+  late final GeneratedColumn<double> investShares = GeneratedColumn<double>(
+      'invest_shares', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _investNavMeta =
+      const VerificationMeta('investNav');
+  @override
+  late final GeneratedColumn<double> investNav = GeneratedColumn<double>(
+      'invest_nav', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _investFeeMeta =
+      const VerificationMeta('investFee');
+  @override
+  late final GeneratedColumn<double> investFee = GeneratedColumn<double>(
+      'invest_fee', aliasedName, true,
+      type: DriftSqlType.double, requiredDuringInsert: false);
+  static const VerificationMeta _holdingIdMeta =
+      const VerificationMeta('holdingId');
+  @override
+  late final GeneratedColumn<int> holdingId = GeneratedColumn<int>(
+      'holding_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _batchIdMeta =
+      const VerificationMeta('batchId');
+  @override
+  late final GeneratedColumn<String> batchId = GeneratedColumn<String>(
+      'batch_id', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -2035,7 +2071,13 @@ class $TransactionsTable extends Transactions
         excludeFromStats,
         excludeFromBudget,
         currencyCode,
-        nativeAmount
+        nativeAmount,
+        investType,
+        investShares,
+        investNav,
+        investFee,
+        holdingId,
+        batchId
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -2165,6 +2207,34 @@ class $TransactionsTable extends Transactions
           nativeAmount.isAcceptableOrUnknown(
               data['native_amount']!, _nativeAmountMeta));
     }
+    if (data.containsKey('invest_type')) {
+      context.handle(
+          _investTypeMeta,
+          investType.isAcceptableOrUnknown(
+              data['invest_type']!, _investTypeMeta));
+    }
+    if (data.containsKey('invest_shares')) {
+      context.handle(
+          _investSharesMeta,
+          investShares.isAcceptableOrUnknown(
+              data['invest_shares']!, _investSharesMeta));
+    }
+    if (data.containsKey('invest_nav')) {
+      context.handle(_investNavMeta,
+          investNav.isAcceptableOrUnknown(data['invest_nav']!, _investNavMeta));
+    }
+    if (data.containsKey('invest_fee')) {
+      context.handle(_investFeeMeta,
+          investFee.isAcceptableOrUnknown(data['invest_fee']!, _investFeeMeta));
+    }
+    if (data.containsKey('holding_id')) {
+      context.handle(_holdingIdMeta,
+          holdingId.isAcceptableOrUnknown(data['holding_id']!, _holdingIdMeta));
+    }
+    if (data.containsKey('batch_id')) {
+      context.handle(_batchIdMeta,
+          batchId.isAcceptableOrUnknown(data['batch_id']!, _batchIdMeta));
+    }
     return context;
   }
 
@@ -2219,6 +2289,18 @@ class $TransactionsTable extends Transactions
           .read(DriftSqlType.string, data['${effectivePrefix}currency_code']),
       nativeAmount: attachedDatabase.typeMapping
           .read(DriftSqlType.double, data['${effectivePrefix}native_amount']),
+      investType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}invest_type']),
+      investShares: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}invest_shares']),
+      investNav: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}invest_nav']),
+      investFee: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}invest_fee']),
+      holdingId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}holding_id']),
+      batchId: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}batch_id']),
     );
   }
 
@@ -2263,6 +2345,25 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   /// 单币种/未折算 == amount(隐含汇率 1.0)。账本维度统计读本列(?? amount),
   /// 账户维度(余额等)仍读 amount。
   final double? nativeAmount;
+
+  /// 投资操作类型: buy(买入) / sell(卖出) / redeem(赎回) / convert(转换)。
+  /// 仅在 type='invest' 时有值，其余类型为 null。
+  final String? investType;
+
+  /// 交易份额（基金份额，正=买入/转入，负=卖出/转出）。
+  final double? investShares;
+
+  /// 成交净值（交易时每份净值）。
+  final double? investNav;
+
+  /// 手续费。卖出时含赎回费，转换时含转换费。
+  final double? investFee;
+
+  /// 关联的 InvestmentHoldings.id。买入时指向目标持仓，卖出时指向来源持仓。
+  final int? holdingId;
+
+  /// 批次ID。一次转换产生 2 笔交易(A→B)用同一 batchId 关联。
+  final String? batchId;
   const Transaction(
       {required this.id,
       required this.ledgerId,
@@ -2284,7 +2385,13 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       required this.excludeFromStats,
       required this.excludeFromBudget,
       this.currencyCode,
-      this.nativeAmount});
+      this.nativeAmount,
+      this.investType,
+      this.investShares,
+      this.investNav,
+      this.investFee,
+      this.holdingId,
+      this.batchId});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -2339,6 +2446,24 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     if (!nullToAbsent || nativeAmount != null) {
       map['native_amount'] = Variable<double>(nativeAmount);
     }
+    if (!nullToAbsent || investType != null) {
+      map['invest_type'] = Variable<String>(investType);
+    }
+    if (!nullToAbsent || investShares != null) {
+      map['invest_shares'] = Variable<double>(investShares);
+    }
+    if (!nullToAbsent || investNav != null) {
+      map['invest_nav'] = Variable<double>(investNav);
+    }
+    if (!nullToAbsent || investFee != null) {
+      map['invest_fee'] = Variable<double>(investFee);
+    }
+    if (!nullToAbsent || holdingId != null) {
+      map['holding_id'] = Variable<int>(holdingId);
+    }
+    if (!nullToAbsent || batchId != null) {
+      map['batch_id'] = Variable<String>(batchId);
+    }
     return map;
   }
 
@@ -2390,6 +2515,24 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       nativeAmount: nativeAmount == null && nullToAbsent
           ? const Value.absent()
           : Value(nativeAmount),
+      investType: investType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(investType),
+      investShares: investShares == null && nullToAbsent
+          ? const Value.absent()
+          : Value(investShares),
+      investNav: investNav == null && nullToAbsent
+          ? const Value.absent()
+          : Value(investNav),
+      investFee: investFee == null && nullToAbsent
+          ? const Value.absent()
+          : Value(investFee),
+      holdingId: holdingId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(holdingId),
+      batchId: batchId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(batchId),
     );
   }
 
@@ -2423,6 +2566,12 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       excludeFromBudget: serializer.fromJson<bool>(json['excludeFromBudget']),
       currencyCode: serializer.fromJson<String?>(json['currencyCode']),
       nativeAmount: serializer.fromJson<double?>(json['nativeAmount']),
+      investType: serializer.fromJson<String?>(json['investType']),
+      investShares: serializer.fromJson<double?>(json['investShares']),
+      investNav: serializer.fromJson<double?>(json['investNav']),
+      investFee: serializer.fromJson<double?>(json['investFee']),
+      holdingId: serializer.fromJson<int?>(json['holdingId']),
+      batchId: serializer.fromJson<String?>(json['batchId']),
     );
   }
   @override
@@ -2453,6 +2602,12 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'excludeFromBudget': serializer.toJson<bool>(excludeFromBudget),
       'currencyCode': serializer.toJson<String?>(currencyCode),
       'nativeAmount': serializer.toJson<double?>(nativeAmount),
+      'investType': serializer.toJson<String?>(investType),
+      'investShares': serializer.toJson<double?>(investShares),
+      'investNav': serializer.toJson<double?>(investNav),
+      'investFee': serializer.toJson<double?>(investFee),
+      'holdingId': serializer.toJson<int?>(holdingId),
+      'batchId': serializer.toJson<String?>(batchId),
     };
   }
 
@@ -2477,7 +2632,13 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           bool? excludeFromStats,
           bool? excludeFromBudget,
           Value<String?> currencyCode = const Value.absent(),
-          Value<double?> nativeAmount = const Value.absent()}) =>
+          Value<double?> nativeAmount = const Value.absent(),
+          Value<String?> investType = const Value.absent(),
+          Value<double?> investShares = const Value.absent(),
+          Value<double?> investNav = const Value.absent(),
+          Value<double?> investFee = const Value.absent(),
+          Value<int?> holdingId = const Value.absent(),
+          Value<String?> batchId = const Value.absent()}) =>
       Transaction(
         id: id ?? this.id,
         ledgerId: ledgerId ?? this.ledgerId,
@@ -2514,6 +2675,13 @@ class Transaction extends DataClass implements Insertable<Transaction> {
             currencyCode.present ? currencyCode.value : this.currencyCode,
         nativeAmount:
             nativeAmount.present ? nativeAmount.value : this.nativeAmount,
+        investType: investType.present ? investType.value : this.investType,
+        investShares:
+            investShares.present ? investShares.value : this.investShares,
+        investNav: investNav.present ? investNav.value : this.investNav,
+        investFee: investFee.present ? investFee.value : this.investFee,
+        holdingId: holdingId.present ? holdingId.value : this.holdingId,
+        batchId: batchId.present ? batchId.value : this.batchId,
       );
   Transaction copyWithCompanion(TransactionsCompanion data) {
     return Transaction(
@@ -2562,6 +2730,15 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       nativeAmount: data.nativeAmount.present
           ? data.nativeAmount.value
           : this.nativeAmount,
+      investType:
+          data.investType.present ? data.investType.value : this.investType,
+      investShares: data.investShares.present
+          ? data.investShares.value
+          : this.investShares,
+      investNav: data.investNav.present ? data.investNav.value : this.investNav,
+      investFee: data.investFee.present ? data.investFee.value : this.investFee,
+      holdingId: data.holdingId.present ? data.holdingId.value : this.holdingId,
+      batchId: data.batchId.present ? data.batchId.value : this.batchId,
     );
   }
 
@@ -2588,7 +2765,13 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('excludeFromStats: $excludeFromStats, ')
           ..write('excludeFromBudget: $excludeFromBudget, ')
           ..write('currencyCode: $currencyCode, ')
-          ..write('nativeAmount: $nativeAmount')
+          ..write('nativeAmount: $nativeAmount, ')
+          ..write('investType: $investType, ')
+          ..write('investShares: $investShares, ')
+          ..write('investNav: $investNav, ')
+          ..write('investFee: $investFee, ')
+          ..write('holdingId: $holdingId, ')
+          ..write('batchId: $batchId')
           ..write(')'))
         .toString();
   }
@@ -2615,7 +2798,13 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         excludeFromStats,
         excludeFromBudget,
         currencyCode,
-        nativeAmount
+        nativeAmount,
+        investType,
+        investShares,
+        investNav,
+        investFee,
+        holdingId,
+        batchId
       ]);
   @override
   bool operator ==(Object other) =>
@@ -2641,7 +2830,13 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.excludeFromStats == this.excludeFromStats &&
           other.excludeFromBudget == this.excludeFromBudget &&
           other.currencyCode == this.currencyCode &&
-          other.nativeAmount == this.nativeAmount);
+          other.nativeAmount == this.nativeAmount &&
+          other.investType == this.investType &&
+          other.investShares == this.investShares &&
+          other.investNav == this.investNav &&
+          other.investFee == this.investFee &&
+          other.holdingId == this.holdingId &&
+          other.batchId == this.batchId);
 }
 
 class TransactionsCompanion extends UpdateCompanion<Transaction> {
@@ -2666,6 +2861,12 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<bool> excludeFromBudget;
   final Value<String?> currencyCode;
   final Value<double?> nativeAmount;
+  final Value<String?> investType;
+  final Value<double?> investShares;
+  final Value<double?> investNav;
+  final Value<double?> investFee;
+  final Value<int?> holdingId;
+  final Value<String?> batchId;
   const TransactionsCompanion({
     this.id = const Value.absent(),
     this.ledgerId = const Value.absent(),
@@ -2688,6 +2889,12 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.excludeFromBudget = const Value.absent(),
     this.currencyCode = const Value.absent(),
     this.nativeAmount = const Value.absent(),
+    this.investType = const Value.absent(),
+    this.investShares = const Value.absent(),
+    this.investNav = const Value.absent(),
+    this.investFee = const Value.absent(),
+    this.holdingId = const Value.absent(),
+    this.batchId = const Value.absent(),
   });
   TransactionsCompanion.insert({
     this.id = const Value.absent(),
@@ -2711,6 +2918,12 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.excludeFromBudget = const Value.absent(),
     this.currencyCode = const Value.absent(),
     this.nativeAmount = const Value.absent(),
+    this.investType = const Value.absent(),
+    this.investShares = const Value.absent(),
+    this.investNav = const Value.absent(),
+    this.investFee = const Value.absent(),
+    this.holdingId = const Value.absent(),
+    this.batchId = const Value.absent(),
   })  : ledgerId = Value(ledgerId),
         type = Value(type),
         amount = Value(amount);
@@ -2736,6 +2949,12 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<bool>? excludeFromBudget,
     Expression<String>? currencyCode,
     Expression<double>? nativeAmount,
+    Expression<String>? investType,
+    Expression<double>? investShares,
+    Expression<double>? investNav,
+    Expression<double>? investFee,
+    Expression<int>? holdingId,
+    Expression<String>? batchId,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2764,6 +2983,12 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (excludeFromBudget != null) 'exclude_from_budget': excludeFromBudget,
       if (currencyCode != null) 'currency_code': currencyCode,
       if (nativeAmount != null) 'native_amount': nativeAmount,
+      if (investType != null) 'invest_type': investType,
+      if (investShares != null) 'invest_shares': investShares,
+      if (investNav != null) 'invest_nav': investNav,
+      if (investFee != null) 'invest_fee': investFee,
+      if (holdingId != null) 'holding_id': holdingId,
+      if (batchId != null) 'batch_id': batchId,
     });
   }
 
@@ -2788,7 +3013,13 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       Value<bool>? excludeFromStats,
       Value<bool>? excludeFromBudget,
       Value<String?>? currencyCode,
-      Value<double?>? nativeAmount}) {
+      Value<double?>? nativeAmount,
+      Value<String?>? investType,
+      Value<double?>? investShares,
+      Value<double?>? investNav,
+      Value<double?>? investFee,
+      Value<int?>? holdingId,
+      Value<String?>? batchId}) {
     return TransactionsCompanion(
       id: id ?? this.id,
       ledgerId: ledgerId ?? this.ledgerId,
@@ -2814,6 +3045,12 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       excludeFromBudget: excludeFromBudget ?? this.excludeFromBudget,
       currencyCode: currencyCode ?? this.currencyCode,
       nativeAmount: nativeAmount ?? this.nativeAmount,
+      investType: investType ?? this.investType,
+      investShares: investShares ?? this.investShares,
+      investNav: investNav ?? this.investNav,
+      investFee: investFee ?? this.investFee,
+      holdingId: holdingId ?? this.holdingId,
+      batchId: batchId ?? this.batchId,
     );
   }
 
@@ -2887,6 +3124,24 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (nativeAmount.present) {
       map['native_amount'] = Variable<double>(nativeAmount.value);
     }
+    if (investType.present) {
+      map['invest_type'] = Variable<String>(investType.value);
+    }
+    if (investShares.present) {
+      map['invest_shares'] = Variable<double>(investShares.value);
+    }
+    if (investNav.present) {
+      map['invest_nav'] = Variable<double>(investNav.value);
+    }
+    if (investFee.present) {
+      map['invest_fee'] = Variable<double>(investFee.value);
+    }
+    if (holdingId.present) {
+      map['holding_id'] = Variable<int>(holdingId.value);
+    }
+    if (batchId.present) {
+      map['batch_id'] = Variable<String>(batchId.value);
+    }
     return map;
   }
 
@@ -2913,7 +3168,13 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('excludeFromStats: $excludeFromStats, ')
           ..write('excludeFromBudget: $excludeFromBudget, ')
           ..write('currencyCode: $currencyCode, ')
-          ..write('nativeAmount: $nativeAmount')
+          ..write('nativeAmount: $nativeAmount, ')
+          ..write('investType: $investType, ')
+          ..write('investShares: $investShares, ')
+          ..write('investNav: $investNav, ')
+          ..write('investFee: $investFee, ')
+          ..write('holdingId: $holdingId, ')
+          ..write('batchId: $batchId')
           ..write(')'))
         .toString();
   }
@@ -10803,6 +11064,651 @@ class ExchangeRateOverridesCompanion
   }
 }
 
+class $InvestmentHoldingsTable extends InvestmentHoldings
+    with TableInfo<$InvestmentHoldingsTable, InvestmentHolding> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $InvestmentHoldingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _ledgerIdMeta =
+      const VerificationMeta('ledgerId');
+  @override
+  late final GeneratedColumn<int> ledgerId = GeneratedColumn<int>(
+      'ledger_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _fundCodeMeta =
+      const VerificationMeta('fundCode');
+  @override
+  late final GeneratedColumn<String> fundCode = GeneratedColumn<String>(
+      'fund_code', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _fundNameMeta =
+      const VerificationMeta('fundName');
+  @override
+  late final GeneratedColumn<String> fundName = GeneratedColumn<String>(
+      'fund_name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _accountIdMeta =
+      const VerificationMeta('accountId');
+  @override
+  late final GeneratedColumn<int> accountId = GeneratedColumn<int>(
+      'account_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _totalSharesMeta =
+      const VerificationMeta('totalShares');
+  @override
+  late final GeneratedColumn<double> totalShares = GeneratedColumn<double>(
+      'total_shares', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0.0));
+  static const VerificationMeta _totalCostMeta =
+      const VerificationMeta('totalCost');
+  @override
+  late final GeneratedColumn<double> totalCost = GeneratedColumn<double>(
+      'total_cost', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0.0));
+  static const VerificationMeta _currentNavMeta =
+      const VerificationMeta('currentNav');
+  @override
+  late final GeneratedColumn<double> currentNav = GeneratedColumn<double>(
+      'current_nav', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0.0));
+  static const VerificationMeta _marketValueMeta =
+      const VerificationMeta('marketValue');
+  @override
+  late final GeneratedColumn<double> marketValue = GeneratedColumn<double>(
+      'market_value', aliasedName, false,
+      type: DriftSqlType.double,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0.0));
+  static const VerificationMeta _holdingTypeMeta =
+      const VerificationMeta('holdingType');
+  @override
+  late final GeneratedColumn<String> holdingType = GeneratedColumn<String>(
+      'holding_type', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('fund'));
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+      'note', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  @override
+  List<GeneratedColumn> get $columns => [
+        id,
+        ledgerId,
+        fundCode,
+        fundName,
+        accountId,
+        totalShares,
+        totalCost,
+        currentNav,
+        marketValue,
+        holdingType,
+        note,
+        createdAt,
+        updatedAt
+      ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'investment_holdings';
+  @override
+  VerificationContext validateIntegrity(Insertable<InvestmentHolding> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('ledger_id')) {
+      context.handle(_ledgerIdMeta,
+          ledgerId.isAcceptableOrUnknown(data['ledger_id']!, _ledgerIdMeta));
+    } else if (isInserting) {
+      context.missing(_ledgerIdMeta);
+    }
+    if (data.containsKey('fund_code')) {
+      context.handle(_fundCodeMeta,
+          fundCode.isAcceptableOrUnknown(data['fund_code']!, _fundCodeMeta));
+    } else if (isInserting) {
+      context.missing(_fundCodeMeta);
+    }
+    if (data.containsKey('fund_name')) {
+      context.handle(_fundNameMeta,
+          fundName.isAcceptableOrUnknown(data['fund_name']!, _fundNameMeta));
+    } else if (isInserting) {
+      context.missing(_fundNameMeta);
+    }
+    if (data.containsKey('account_id')) {
+      context.handle(_accountIdMeta,
+          accountId.isAcceptableOrUnknown(data['account_id']!, _accountIdMeta));
+    } else if (isInserting) {
+      context.missing(_accountIdMeta);
+    }
+    if (data.containsKey('total_shares')) {
+      context.handle(
+          _totalSharesMeta,
+          totalShares.isAcceptableOrUnknown(
+              data['total_shares']!, _totalSharesMeta));
+    }
+    if (data.containsKey('total_cost')) {
+      context.handle(_totalCostMeta,
+          totalCost.isAcceptableOrUnknown(data['total_cost']!, _totalCostMeta));
+    }
+    if (data.containsKey('current_nav')) {
+      context.handle(
+          _currentNavMeta,
+          currentNav.isAcceptableOrUnknown(
+              data['current_nav']!, _currentNavMeta));
+    }
+    if (data.containsKey('market_value')) {
+      context.handle(
+          _marketValueMeta,
+          marketValue.isAcceptableOrUnknown(
+              data['market_value']!, _marketValueMeta));
+    }
+    if (data.containsKey('holding_type')) {
+      context.handle(
+          _holdingTypeMeta,
+          holdingType.isAcceptableOrUnknown(
+              data['holding_type']!, _holdingTypeMeta));
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+          _noteMeta, note.isAcceptableOrUnknown(data['note']!, _noteMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  InvestmentHolding map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return InvestmentHolding(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      ledgerId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}ledger_id'])!,
+      fundCode: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}fund_code'])!,
+      fundName: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}fund_name'])!,
+      accountId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}account_id'])!,
+      totalShares: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}total_shares'])!,
+      totalCost: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}total_cost'])!,
+      currentNav: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}current_nav'])!,
+      marketValue: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}market_value'])!,
+      holdingType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}holding_type'])!,
+      note: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}note']),
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at']),
+    );
+  }
+
+  @override
+  $InvestmentHoldingsTable createAlias(String alias) {
+    return $InvestmentHoldingsTable(attachedDatabase, alias);
+  }
+}
+
+class InvestmentHolding extends DataClass
+    implements Insertable<InvestmentHolding> {
+  final int id;
+  final int ledgerId;
+
+  /// 基金/股票代码（如 000001）。
+  final String fundCode;
+
+  /// 基金/股票名称（如 华夏成长混合）。
+  final String fundName;
+
+  /// 关联的投资账户（Accounts.id，其 type 建议为 'investment'）。
+  final int accountId;
+
+  /// 当前持有份额。
+  final double totalShares;
+
+  /// 成本基数（投入总金额，不含手续费。卖出时按比例扣减）。
+  final double totalCost;
+
+  /// 最新单位净值（外部刷新或成交时更新）。
+  final double currentNav;
+
+  /// 市值 = totalShares × currentNav（冗余字段，方便查询/排序）。
+  final double marketValue;
+
+  /// 持仓类型：fund(基金) / stock(股票) / etf 等。
+  final String holdingType;
+
+  /// 备注。
+  final String? note;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+  const InvestmentHolding(
+      {required this.id,
+      required this.ledgerId,
+      required this.fundCode,
+      required this.fundName,
+      required this.accountId,
+      required this.totalShares,
+      required this.totalCost,
+      required this.currentNav,
+      required this.marketValue,
+      required this.holdingType,
+      this.note,
+      required this.createdAt,
+      this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['ledger_id'] = Variable<int>(ledgerId);
+    map['fund_code'] = Variable<String>(fundCode);
+    map['fund_name'] = Variable<String>(fundName);
+    map['account_id'] = Variable<int>(accountId);
+    map['total_shares'] = Variable<double>(totalShares);
+    map['total_cost'] = Variable<double>(totalCost);
+    map['current_nav'] = Variable<double>(currentNav);
+    map['market_value'] = Variable<double>(marketValue);
+    map['holding_type'] = Variable<String>(holdingType);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || updatedAt != null) {
+      map['updated_at'] = Variable<DateTime>(updatedAt);
+    }
+    return map;
+  }
+
+  InvestmentHoldingsCompanion toCompanion(bool nullToAbsent) {
+    return InvestmentHoldingsCompanion(
+      id: Value(id),
+      ledgerId: Value(ledgerId),
+      fundCode: Value(fundCode),
+      fundName: Value(fundName),
+      accountId: Value(accountId),
+      totalShares: Value(totalShares),
+      totalCost: Value(totalCost),
+      currentNav: Value(currentNav),
+      marketValue: Value(marketValue),
+      holdingType: Value(holdingType),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      createdAt: Value(createdAt),
+      updatedAt: updatedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(updatedAt),
+    );
+  }
+
+  factory InvestmentHolding.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return InvestmentHolding(
+      id: serializer.fromJson<int>(json['id']),
+      ledgerId: serializer.fromJson<int>(json['ledgerId']),
+      fundCode: serializer.fromJson<String>(json['fundCode']),
+      fundName: serializer.fromJson<String>(json['fundName']),
+      accountId: serializer.fromJson<int>(json['accountId']),
+      totalShares: serializer.fromJson<double>(json['totalShares']),
+      totalCost: serializer.fromJson<double>(json['totalCost']),
+      currentNav: serializer.fromJson<double>(json['currentNav']),
+      marketValue: serializer.fromJson<double>(json['marketValue']),
+      holdingType: serializer.fromJson<String>(json['holdingType']),
+      note: serializer.fromJson<String?>(json['note']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'ledgerId': serializer.toJson<int>(ledgerId),
+      'fundCode': serializer.toJson<String>(fundCode),
+      'fundName': serializer.toJson<String>(fundName),
+      'accountId': serializer.toJson<int>(accountId),
+      'totalShares': serializer.toJson<double>(totalShares),
+      'totalCost': serializer.toJson<double>(totalCost),
+      'currentNav': serializer.toJson<double>(currentNav),
+      'marketValue': serializer.toJson<double>(marketValue),
+      'holdingType': serializer.toJson<String>(holdingType),
+      'note': serializer.toJson<String?>(note),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime?>(updatedAt),
+    };
+  }
+
+  InvestmentHolding copyWith(
+          {int? id,
+          int? ledgerId,
+          String? fundCode,
+          String? fundName,
+          int? accountId,
+          double? totalShares,
+          double? totalCost,
+          double? currentNav,
+          double? marketValue,
+          String? holdingType,
+          Value<String?> note = const Value.absent(),
+          DateTime? createdAt,
+          Value<DateTime?> updatedAt = const Value.absent()}) =>
+      InvestmentHolding(
+        id: id ?? this.id,
+        ledgerId: ledgerId ?? this.ledgerId,
+        fundCode: fundCode ?? this.fundCode,
+        fundName: fundName ?? this.fundName,
+        accountId: accountId ?? this.accountId,
+        totalShares: totalShares ?? this.totalShares,
+        totalCost: totalCost ?? this.totalCost,
+        currentNav: currentNav ?? this.currentNav,
+        marketValue: marketValue ?? this.marketValue,
+        holdingType: holdingType ?? this.holdingType,
+        note: note.present ? note.value : this.note,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
+      );
+  InvestmentHolding copyWithCompanion(InvestmentHoldingsCompanion data) {
+    return InvestmentHolding(
+      id: data.id.present ? data.id.value : this.id,
+      ledgerId: data.ledgerId.present ? data.ledgerId.value : this.ledgerId,
+      fundCode: data.fundCode.present ? data.fundCode.value : this.fundCode,
+      fundName: data.fundName.present ? data.fundName.value : this.fundName,
+      accountId: data.accountId.present ? data.accountId.value : this.accountId,
+      totalShares:
+          data.totalShares.present ? data.totalShares.value : this.totalShares,
+      totalCost: data.totalCost.present ? data.totalCost.value : this.totalCost,
+      currentNav:
+          data.currentNav.present ? data.currentNav.value : this.currentNav,
+      marketValue:
+          data.marketValue.present ? data.marketValue.value : this.marketValue,
+      holdingType:
+          data.holdingType.present ? data.holdingType.value : this.holdingType,
+      note: data.note.present ? data.note.value : this.note,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InvestmentHolding(')
+          ..write('id: $id, ')
+          ..write('ledgerId: $ledgerId, ')
+          ..write('fundCode: $fundCode, ')
+          ..write('fundName: $fundName, ')
+          ..write('accountId: $accountId, ')
+          ..write('totalShares: $totalShares, ')
+          ..write('totalCost: $totalCost, ')
+          ..write('currentNav: $currentNav, ')
+          ..write('marketValue: $marketValue, ')
+          ..write('holdingType: $holdingType, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      id,
+      ledgerId,
+      fundCode,
+      fundName,
+      accountId,
+      totalShares,
+      totalCost,
+      currentNav,
+      marketValue,
+      holdingType,
+      note,
+      createdAt,
+      updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is InvestmentHolding &&
+          other.id == this.id &&
+          other.ledgerId == this.ledgerId &&
+          other.fundCode == this.fundCode &&
+          other.fundName == this.fundName &&
+          other.accountId == this.accountId &&
+          other.totalShares == this.totalShares &&
+          other.totalCost == this.totalCost &&
+          other.currentNav == this.currentNav &&
+          other.marketValue == this.marketValue &&
+          other.holdingType == this.holdingType &&
+          other.note == this.note &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
+  final Value<int> id;
+  final Value<int> ledgerId;
+  final Value<String> fundCode;
+  final Value<String> fundName;
+  final Value<int> accountId;
+  final Value<double> totalShares;
+  final Value<double> totalCost;
+  final Value<double> currentNav;
+  final Value<double> marketValue;
+  final Value<String> holdingType;
+  final Value<String?> note;
+  final Value<DateTime> createdAt;
+  final Value<DateTime?> updatedAt;
+  const InvestmentHoldingsCompanion({
+    this.id = const Value.absent(),
+    this.ledgerId = const Value.absent(),
+    this.fundCode = const Value.absent(),
+    this.fundName = const Value.absent(),
+    this.accountId = const Value.absent(),
+    this.totalShares = const Value.absent(),
+    this.totalCost = const Value.absent(),
+    this.currentNav = const Value.absent(),
+    this.marketValue = const Value.absent(),
+    this.holdingType = const Value.absent(),
+    this.note = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  });
+  InvestmentHoldingsCompanion.insert({
+    this.id = const Value.absent(),
+    required int ledgerId,
+    required String fundCode,
+    required String fundName,
+    required int accountId,
+    this.totalShares = const Value.absent(),
+    this.totalCost = const Value.absent(),
+    this.currentNav = const Value.absent(),
+    this.marketValue = const Value.absent(),
+    this.holdingType = const Value.absent(),
+    this.note = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+  })  : ledgerId = Value(ledgerId),
+        fundCode = Value(fundCode),
+        fundName = Value(fundName),
+        accountId = Value(accountId);
+  static Insertable<InvestmentHolding> custom({
+    Expression<int>? id,
+    Expression<int>? ledgerId,
+    Expression<String>? fundCode,
+    Expression<String>? fundName,
+    Expression<int>? accountId,
+    Expression<double>? totalShares,
+    Expression<double>? totalCost,
+    Expression<double>? currentNav,
+    Expression<double>? marketValue,
+    Expression<String>? holdingType,
+    Expression<String>? note,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (ledgerId != null) 'ledger_id': ledgerId,
+      if (fundCode != null) 'fund_code': fundCode,
+      if (fundName != null) 'fund_name': fundName,
+      if (accountId != null) 'account_id': accountId,
+      if (totalShares != null) 'total_shares': totalShares,
+      if (totalCost != null) 'total_cost': totalCost,
+      if (currentNav != null) 'current_nav': currentNav,
+      if (marketValue != null) 'market_value': marketValue,
+      if (holdingType != null) 'holding_type': holdingType,
+      if (note != null) 'note': note,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+    });
+  }
+
+  InvestmentHoldingsCompanion copyWith(
+      {Value<int>? id,
+      Value<int>? ledgerId,
+      Value<String>? fundCode,
+      Value<String>? fundName,
+      Value<int>? accountId,
+      Value<double>? totalShares,
+      Value<double>? totalCost,
+      Value<double>? currentNav,
+      Value<double>? marketValue,
+      Value<String>? holdingType,
+      Value<String?>? note,
+      Value<DateTime>? createdAt,
+      Value<DateTime?>? updatedAt}) {
+    return InvestmentHoldingsCompanion(
+      id: id ?? this.id,
+      ledgerId: ledgerId ?? this.ledgerId,
+      fundCode: fundCode ?? this.fundCode,
+      fundName: fundName ?? this.fundName,
+      accountId: accountId ?? this.accountId,
+      totalShares: totalShares ?? this.totalShares,
+      totalCost: totalCost ?? this.totalCost,
+      currentNav: currentNav ?? this.currentNav,
+      marketValue: marketValue ?? this.marketValue,
+      holdingType: holdingType ?? this.holdingType,
+      note: note ?? this.note,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (ledgerId.present) {
+      map['ledger_id'] = Variable<int>(ledgerId.value);
+    }
+    if (fundCode.present) {
+      map['fund_code'] = Variable<String>(fundCode.value);
+    }
+    if (fundName.present) {
+      map['fund_name'] = Variable<String>(fundName.value);
+    }
+    if (accountId.present) {
+      map['account_id'] = Variable<int>(accountId.value);
+    }
+    if (totalShares.present) {
+      map['total_shares'] = Variable<double>(totalShares.value);
+    }
+    if (totalCost.present) {
+      map['total_cost'] = Variable<double>(totalCost.value);
+    }
+    if (currentNav.present) {
+      map['current_nav'] = Variable<double>(currentNav.value);
+    }
+    if (marketValue.present) {
+      map['market_value'] = Variable<double>(marketValue.value);
+    }
+    if (holdingType.present) {
+      map['holding_type'] = Variable<String>(holdingType.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InvestmentHoldingsCompanion(')
+          ..write('id: $id, ')
+          ..write('ledgerId: $ledgerId, ')
+          ..write('fundCode: $fundCode, ')
+          ..write('fundName: $fundName, ')
+          ..write('accountId: $accountId, ')
+          ..write('totalShares: $totalShares, ')
+          ..write('totalCost: $totalCost, ')
+          ..write('currentNav: $currentNav, ')
+          ..write('marketValue: $marketValue, ')
+          ..write('holdingType: $holdingType, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$BeeDatabase extends GeneratedDatabase {
   _$BeeDatabase(QueryExecutor e) : super(e);
   $BeeDatabaseManager get managers => $BeeDatabaseManager(this);
@@ -10835,6 +11741,8 @@ abstract class _$BeeDatabase extends GeneratedDatabase {
   late final $ExchangeRatesTable exchangeRates = $ExchangeRatesTable(this);
   late final $ExchangeRateOverridesTable exchangeRateOverrides =
       $ExchangeRateOverridesTable(this);
+  late final $InvestmentHoldingsTable investmentHoldings =
+      $InvestmentHoldingsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -10860,7 +11768,8 @@ abstract class _$BeeDatabase extends GeneratedDatabase {
         transactionTagOverrides,
         syncPullErrors,
         exchangeRates,
-        exchangeRateOverrides
+        exchangeRateOverrides,
+        investmentHoldings
       ];
 }
 
@@ -11733,6 +12642,12 @@ typedef $$TransactionsTableCreateCompanionBuilder = TransactionsCompanion
   Value<bool> excludeFromBudget,
   Value<String?> currencyCode,
   Value<double?> nativeAmount,
+  Value<String?> investType,
+  Value<double?> investShares,
+  Value<double?> investNav,
+  Value<double?> investFee,
+  Value<int?> holdingId,
+  Value<String?> batchId,
 });
 typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
     Function({
@@ -11757,6 +12672,12 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<bool> excludeFromBudget,
   Value<String?> currencyCode,
   Value<double?> nativeAmount,
+  Value<String?> investType,
+  Value<double?> investShares,
+  Value<double?> investNav,
+  Value<double?> investFee,
+  Value<int?> holdingId,
+  Value<String?> batchId,
 });
 
 class $$TransactionsTableFilterComposer
@@ -11838,6 +12759,24 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<double> get nativeAmount => $composableBuilder(
       column: $table.nativeAmount, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get investType => $composableBuilder(
+      column: $table.investType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get investShares => $composableBuilder(
+      column: $table.investShares, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get investNav => $composableBuilder(
+      column: $table.investNav, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get investFee => $composableBuilder(
+      column: $table.investFee, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get holdingId => $composableBuilder(
+      column: $table.holdingId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get batchId => $composableBuilder(
+      column: $table.batchId, builder: (column) => ColumnFilters(column));
 }
 
 class $$TransactionsTableOrderingComposer
@@ -11921,6 +12860,25 @@ class $$TransactionsTableOrderingComposer
   ColumnOrderings<double> get nativeAmount => $composableBuilder(
       column: $table.nativeAmount,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get investType => $composableBuilder(
+      column: $table.investType, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get investShares => $composableBuilder(
+      column: $table.investShares,
+      builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get investNav => $composableBuilder(
+      column: $table.investNav, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get investFee => $composableBuilder(
+      column: $table.investFee, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get holdingId => $composableBuilder(
+      column: $table.holdingId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get batchId => $composableBuilder(
+      column: $table.batchId, builder: (column) => ColumnOrderings(column));
 }
 
 class $$TransactionsTableAnnotationComposer
@@ -11994,6 +12952,24 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<double> get nativeAmount => $composableBuilder(
       column: $table.nativeAmount, builder: (column) => column);
+
+  GeneratedColumn<String> get investType => $composableBuilder(
+      column: $table.investType, builder: (column) => column);
+
+  GeneratedColumn<double> get investShares => $composableBuilder(
+      column: $table.investShares, builder: (column) => column);
+
+  GeneratedColumn<double> get investNav =>
+      $composableBuilder(column: $table.investNav, builder: (column) => column);
+
+  GeneratedColumn<double> get investFee =>
+      $composableBuilder(column: $table.investFee, builder: (column) => column);
+
+  GeneratedColumn<int> get holdingId =>
+      $composableBuilder(column: $table.holdingId, builder: (column) => column);
+
+  GeneratedColumn<String> get batchId =>
+      $composableBuilder(column: $table.batchId, builder: (column) => column);
 }
 
 class $$TransactionsTableTableManager extends RootTableManager<
@@ -12043,6 +13019,12 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<bool> excludeFromBudget = const Value.absent(),
             Value<String?> currencyCode = const Value.absent(),
             Value<double?> nativeAmount = const Value.absent(),
+            Value<String?> investType = const Value.absent(),
+            Value<double?> investShares = const Value.absent(),
+            Value<double?> investNav = const Value.absent(),
+            Value<double?> investFee = const Value.absent(),
+            Value<int?> holdingId = const Value.absent(),
+            Value<String?> batchId = const Value.absent(),
           }) =>
               TransactionsCompanion(
             id: id,
@@ -12066,6 +13048,12 @@ class $$TransactionsTableTableManager extends RootTableManager<
             excludeFromBudget: excludeFromBudget,
             currencyCode: currencyCode,
             nativeAmount: nativeAmount,
+            investType: investType,
+            investShares: investShares,
+            investNav: investNav,
+            investFee: investFee,
+            holdingId: holdingId,
+            batchId: batchId,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -12089,6 +13077,12 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<bool> excludeFromBudget = const Value.absent(),
             Value<String?> currencyCode = const Value.absent(),
             Value<double?> nativeAmount = const Value.absent(),
+            Value<String?> investType = const Value.absent(),
+            Value<double?> investShares = const Value.absent(),
+            Value<double?> investNav = const Value.absent(),
+            Value<double?> investFee = const Value.absent(),
+            Value<int?> holdingId = const Value.absent(),
+            Value<String?> batchId = const Value.absent(),
           }) =>
               TransactionsCompanion.insert(
             id: id,
@@ -12112,6 +13106,12 @@ class $$TransactionsTableTableManager extends RootTableManager<
             excludeFromBudget: excludeFromBudget,
             currencyCode: currencyCode,
             nativeAmount: nativeAmount,
+            investType: investType,
+            investShares: investShares,
+            investNav: investNav,
+            investFee: investFee,
+            holdingId: holdingId,
+            batchId: batchId,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
@@ -16008,6 +17008,295 @@ typedef $$ExchangeRateOverridesTableProcessedTableManager
         ),
         ExchangeRateOverride,
         PrefetchHooks Function()>;
+typedef $$InvestmentHoldingsTableCreateCompanionBuilder
+    = InvestmentHoldingsCompanion Function({
+  Value<int> id,
+  required int ledgerId,
+  required String fundCode,
+  required String fundName,
+  required int accountId,
+  Value<double> totalShares,
+  Value<double> totalCost,
+  Value<double> currentNav,
+  Value<double> marketValue,
+  Value<String> holdingType,
+  Value<String?> note,
+  Value<DateTime> createdAt,
+  Value<DateTime?> updatedAt,
+});
+typedef $$InvestmentHoldingsTableUpdateCompanionBuilder
+    = InvestmentHoldingsCompanion Function({
+  Value<int> id,
+  Value<int> ledgerId,
+  Value<String> fundCode,
+  Value<String> fundName,
+  Value<int> accountId,
+  Value<double> totalShares,
+  Value<double> totalCost,
+  Value<double> currentNav,
+  Value<double> marketValue,
+  Value<String> holdingType,
+  Value<String?> note,
+  Value<DateTime> createdAt,
+  Value<DateTime?> updatedAt,
+});
+
+class $$InvestmentHoldingsTableFilterComposer
+    extends Composer<_$BeeDatabase, $InvestmentHoldingsTable> {
+  $$InvestmentHoldingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get ledgerId => $composableBuilder(
+      column: $table.ledgerId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get fundCode => $composableBuilder(
+      column: $table.fundCode, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get fundName => $composableBuilder(
+      column: $table.fundName, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get accountId => $composableBuilder(
+      column: $table.accountId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get totalShares => $composableBuilder(
+      column: $table.totalShares, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get totalCost => $composableBuilder(
+      column: $table.totalCost, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get currentNav => $composableBuilder(
+      column: $table.currentNav, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get marketValue => $composableBuilder(
+      column: $table.marketValue, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get holdingType => $composableBuilder(
+      column: $table.holdingType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get note => $composableBuilder(
+      column: $table.note, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$InvestmentHoldingsTableOrderingComposer
+    extends Composer<_$BeeDatabase, $InvestmentHoldingsTable> {
+  $$InvestmentHoldingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get ledgerId => $composableBuilder(
+      column: $table.ledgerId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get fundCode => $composableBuilder(
+      column: $table.fundCode, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get fundName => $composableBuilder(
+      column: $table.fundName, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get accountId => $composableBuilder(
+      column: $table.accountId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get totalShares => $composableBuilder(
+      column: $table.totalShares, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get totalCost => $composableBuilder(
+      column: $table.totalCost, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get currentNav => $composableBuilder(
+      column: $table.currentNav, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get marketValue => $composableBuilder(
+      column: $table.marketValue, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get holdingType => $composableBuilder(
+      column: $table.holdingType, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get note => $composableBuilder(
+      column: $table.note, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$InvestmentHoldingsTableAnnotationComposer
+    extends Composer<_$BeeDatabase, $InvestmentHoldingsTable> {
+  $$InvestmentHoldingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get ledgerId =>
+      $composableBuilder(column: $table.ledgerId, builder: (column) => column);
+
+  GeneratedColumn<String> get fundCode =>
+      $composableBuilder(column: $table.fundCode, builder: (column) => column);
+
+  GeneratedColumn<String> get fundName =>
+      $composableBuilder(column: $table.fundName, builder: (column) => column);
+
+  GeneratedColumn<int> get accountId =>
+      $composableBuilder(column: $table.accountId, builder: (column) => column);
+
+  GeneratedColumn<double> get totalShares => $composableBuilder(
+      column: $table.totalShares, builder: (column) => column);
+
+  GeneratedColumn<double> get totalCost =>
+      $composableBuilder(column: $table.totalCost, builder: (column) => column);
+
+  GeneratedColumn<double> get currentNav => $composableBuilder(
+      column: $table.currentNav, builder: (column) => column);
+
+  GeneratedColumn<double> get marketValue => $composableBuilder(
+      column: $table.marketValue, builder: (column) => column);
+
+  GeneratedColumn<String> get holdingType => $composableBuilder(
+      column: $table.holdingType, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$InvestmentHoldingsTableTableManager extends RootTableManager<
+    _$BeeDatabase,
+    $InvestmentHoldingsTable,
+    InvestmentHolding,
+    $$InvestmentHoldingsTableFilterComposer,
+    $$InvestmentHoldingsTableOrderingComposer,
+    $$InvestmentHoldingsTableAnnotationComposer,
+    $$InvestmentHoldingsTableCreateCompanionBuilder,
+    $$InvestmentHoldingsTableUpdateCompanionBuilder,
+    (
+      InvestmentHolding,
+      BaseReferences<_$BeeDatabase, $InvestmentHoldingsTable, InvestmentHolding>
+    ),
+    InvestmentHolding,
+    PrefetchHooks Function()> {
+  $$InvestmentHoldingsTableTableManager(
+      _$BeeDatabase db, $InvestmentHoldingsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$InvestmentHoldingsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$InvestmentHoldingsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$InvestmentHoldingsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> ledgerId = const Value.absent(),
+            Value<String> fundCode = const Value.absent(),
+            Value<String> fundName = const Value.absent(),
+            Value<int> accountId = const Value.absent(),
+            Value<double> totalShares = const Value.absent(),
+            Value<double> totalCost = const Value.absent(),
+            Value<double> currentNav = const Value.absent(),
+            Value<double> marketValue = const Value.absent(),
+            Value<String> holdingType = const Value.absent(),
+            Value<String?> note = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
+          }) =>
+              InvestmentHoldingsCompanion(
+            id: id,
+            ledgerId: ledgerId,
+            fundCode: fundCode,
+            fundName: fundName,
+            accountId: accountId,
+            totalShares: totalShares,
+            totalCost: totalCost,
+            currentNav: currentNav,
+            marketValue: marketValue,
+            holdingType: holdingType,
+            note: note,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required int ledgerId,
+            required String fundCode,
+            required String fundName,
+            required int accountId,
+            Value<double> totalShares = const Value.absent(),
+            Value<double> totalCost = const Value.absent(),
+            Value<double> currentNav = const Value.absent(),
+            Value<double> marketValue = const Value.absent(),
+            Value<String> holdingType = const Value.absent(),
+            Value<String?> note = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+            Value<DateTime?> updatedAt = const Value.absent(),
+          }) =>
+              InvestmentHoldingsCompanion.insert(
+            id: id,
+            ledgerId: ledgerId,
+            fundCode: fundCode,
+            fundName: fundName,
+            accountId: accountId,
+            totalShares: totalShares,
+            totalCost: totalCost,
+            currentNav: currentNav,
+            marketValue: marketValue,
+            holdingType: holdingType,
+            note: note,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$InvestmentHoldingsTableProcessedTableManager = ProcessedTableManager<
+    _$BeeDatabase,
+    $InvestmentHoldingsTable,
+    InvestmentHolding,
+    $$InvestmentHoldingsTableFilterComposer,
+    $$InvestmentHoldingsTableOrderingComposer,
+    $$InvestmentHoldingsTableAnnotationComposer,
+    $$InvestmentHoldingsTableCreateCompanionBuilder,
+    $$InvestmentHoldingsTableUpdateCompanionBuilder,
+    (
+      InvestmentHolding,
+      BaseReferences<_$BeeDatabase, $InvestmentHoldingsTable, InvestmentHolding>
+    ),
+    InvestmentHolding,
+    PrefetchHooks Function()>;
 
 class $BeeDatabaseManager {
   final _$BeeDatabase _db;
@@ -16056,4 +17345,6 @@ class $BeeDatabaseManager {
       $$ExchangeRatesTableTableManager(_db, _db.exchangeRates);
   $$ExchangeRateOverridesTableTableManager get exchangeRateOverrides =>
       $$ExchangeRateOverridesTableTableManager(_db, _db.exchangeRateOverrides);
+  $$InvestmentHoldingsTableTableManager get investmentHoldings =>
+      $$InvestmentHoldingsTableTableManager(_db, _db.investmentHoldings);
 }
