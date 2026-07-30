@@ -253,7 +253,7 @@ class LocalAccountRepository implements AccountRepository {
     if (account == null) return 0.0;
 
     // 估值账户直接返回 initialBalance 作为当前估值
-    if (isValuationOnlyType(account.type)) {
+    if (isValuationOrInvestmentType(account.type)) {
       return account.initialBalance;
     }
 
@@ -301,7 +301,7 @@ class LocalAccountRepository implements AccountRepository {
         .getSingle();
 
     // 估值账户直接返回 initialBalance
-    if (isValuationOnlyType(account.type)) {
+    if (isValuationOrInvestmentType(account.type)) {
       return account.initialBalance;
     }
 
@@ -697,7 +697,7 @@ class LocalAccountRepository implements AccountRepository {
     if (account == null) return [];
 
     // 估值账户：每天返回固定估值
-    if (isValuationOnlyType(account.type)) {
+    if (isValuationOrInvestmentType(account.type)) {
       final result = <({DateTime date, double balance})>[];
       var currentDate = DateTime(startDate.year, startDate.month, startDate.day);
       final end = DateTime(endDate.year, endDate.month, endDate.day);

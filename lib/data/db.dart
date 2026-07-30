@@ -59,7 +59,11 @@ class Accounts extends Table {
   TextColumn get syncId => text().nullable()(); // 跨设备同步唯一标识 (UUID)
   /// 隐藏:true 时该账户不再出现在记账/转账/周期选择器,账户管理页移入「已隐藏」分区。
   /// 仍计入账户余额、净资产、资产构成、净值趋势(.docs/account-archive/01 §二 D1)。
-  BoolColumn get hidden => boolean().withDefault(const Constant(false))();
+ BoolColumn get hidden => boolean().withDefault(const Constant(false))();
+  /// 图标类型: null=默认（按账户type自动匹配SVG） / 'custom'=用户自定义图片
+  TextColumn get iconType => text().nullable()();
+  /// 自定义图标路径（iconType='custom' 时有效）
+  TextColumn get customIconPath => text().nullable()();
 }
 
 /// 自动汇率本地缓存。日期键 append-only;可随时整表重建 → **不进同步**(README D2)。
@@ -500,8 +504,8 @@ class BeeDatabase extends _$BeeDatabase {
   /// 用这个。
   BeeDatabase.forTesting(QueryExecutor executor) : super(executor);
 
-  @override
-  int get schemaVersion => 32; // v31: 账户隐藏 / v32: 投资数据层 — InvestmentHoldings + 交易投资字段
+ @override
+  int get schemaVersion => 33; // v31: 账户隐藏 / v32: 投资数据层 / v33: 账户体系改造 — 7类型 + icon字段
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1245,9 +1249,38 @@ class BeeDatabase extends _$BeeDatabase {
                 'CREATE UNIQUE INDEX IF NOT EXISTS idx_investment_holdings_fund '
                 'ON investment_holdings (ledger_id, fund_code, account_id);');
 
-            logger.info('DBMigration', 'v32 迁移完成');
+           logger.info('DBMigration', 'v32 迁移完成');
+         }
+          if (from < 33) {
+            logger.info('DBMigration', '开始迁移到 v33: 账户体系改造(icon_type/custom_icon_path + 旧类型映射)');
+
+            await _addColumnIfMissing('accounts', 'icon_type',
+                'ALTER TABLE accounts ADD COLUMN icon_type TEXT;');
+            await _addColumnIfMissing('accounts', 'custom_icon_path',
+                'ALTER TABLE accounts ADD COLUMN custom_icon_path TEXT;');
+
+            // 旧账户类型映射: 将被删除的类型映射到保留类型
+            // alipay/wechat → virtual_account, 估值类统一归 investment
+            final typeMapping = {
+              'alipay': 'virtual_account',
+              'wechat': 'virtual_account',
+              'real_estate': 'investment',
+              'vehicle': 'investment',
+              'insurance': 'investment',
+              'social_fund': 'investment',
+              'other_account': 'bank_card',
+            };
+
+            for (final entry in typeMapping.entries) {
+              await customStatement(
+                'UPDATE accounts SET type = ?1 WHERE type = ?2',
+                [entry.value, entry.key],
+              );
+            }
+
+            logger.info('DBMigration', 'v33 迁移完成');
           }
-        },
+       },
        onCreate: (m) async {
          await m.createAll();
          await customStatement(

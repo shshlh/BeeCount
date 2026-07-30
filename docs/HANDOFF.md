@@ -1,3 +1,35 @@
+# 交接记录
+
+本文档记录线程之间的任务交接。按时间倒序排列。
+
+---
+
+<!--
+
+### 模板
+
+## {日期}
+
+**移交角色**：[角色名]
+**接收角色**：[角色名]
+
+**完成工作**：
+- 改了哪些文件
+- 做了什么变更
+- 还有什么未完成
+
+**下一个任务需要知道的**：
+- 关键决策
+- 已知问题
+- 要读的代码上下文
+
+**git 状态**：当前分支 [branch name]，已提交 [commit hash]
+
+---
+
+-->
+
+*暂无交接记录。首个任务开始后启用。*
 
 ## 2026-07-31
 
@@ -149,6 +181,283 @@
 
 *暂无交接记录。首个任务开始后启用。*
 
+## 2026-07-31
+
+**移交角色**：项目经理（PM）
+**接收角色**：UI 工程师（invest-ui）— 3.7 买入流程修复
+
+**问题 1：FAB 被主页 SpeedDial 覆盖**
+持仓列表页（`HoldingsListPage`）有自己的 FAB，但主页 `app.dart` 的 SpeedDial 盖在上面。用户看不到持仓页的「买入」FAB。
+
+**修复**（`app.dart`）：
+- 在 SpeedDial 的显示条件中，当 `_selectedIndex == 2`（投资Tab）时，不显示 SpeedDial
+- 让持仓页自己的 FAB 透出来
+
+**问题 2：明细页买入始终追加到同一持仓**
+`holding_detail_page.dart` 的 `_showBuyDialog` 传入了 `holding`，导致 `buy_dialog.dart:75` 的 `holdingId: widget.holding?.id` 永远不为 null，Repository 忽略用户输入的新基金代码，一直往原持仓追加。
+
+**修复**（`buy_dialog.dart`）：
+- 在 `_submit` 方法中，当用户修改了基金代码（与预填值不一致），将 `holdingId` 置为 null
+- 或者在弹窗打开时，如果 holding 不为 null 但不预填基金代码，让用户自己输入
+
+**问题 3：资金来源**
+买入弹窗需要一个「扣款账户」下拉选择器。
+
+**修复**（`buy_dialog.dart`）：
+- 在表单底部加一个「扣款账户」DropdownButtonFormField
+- 选项为当前账本下可用的日常账户（现金/储蓄卡/虚拟账户）
+- 在 `_submit` 方法中调用 service.buy 时传入正确的 `accountId`
+- 买入后，在投资模块外部自动扣减该账户余额（调用现有 `recordTransaction` 或直接 SQL 更新）
+
+**约束**：
+- 不改 Repository 或 Service 层
+- 不改 investment_providers.dart
+- FAB 修复只改 app.dart 的 SpeedDial 显示条件
+
+## 2026-07-31
+
+**移交角色**：项目经理（PM）
+**接收角色**：UI 工程师（invest-ui）— 3.8 买入流程修复 2
+
+**Bug 1：FAB 被底部导航栏遮挡**
+HoldingsListPage 的 FAB 渲染在嵌套 Scaffold 中，被外层的底部导航栏挡住。
+
+**修复方案**（holdings_list_page.dart）：
+- floatingActionButtonLocation 改为 centerFloat 让 FAB 上移
+- 或者加 padding: EdgeInsets.only(bottom: 60)
+
+同时 app.dart 的 SpeedDial 也要条件渲染，不止拦截长按。
+
+**Bug 2：addTransaction 方法不存在**
+buy_dialog.dart:105 调用了 repositoryProvider.addTransaction(...)，但方法未定义。
+
+**修复方案**（buy_dialog.dart）：
+- 改为 db.into(db.transactions).insert(TransactionsCompanion(...))
+- 从 databaseProvider 拿 db 实例
+
+**约束**：不改 Repository/Service 层
+
+## 2026-07-31
+
+**移交角色**：项目经理（PM）
+**接收角色**：UI 工程师（invest-ui）— 3.9 FAB 位置修正
+
+**问题**：买入 FAB 在内层 Scaffold 中，被底部导航栏挡住。
+
+**修复方案**：
+1. app.dart — 删除调试模式的主题切换 FAB（FloatingActionButton.small, heroTag: themeSwitcher）
+2. app.dart — 在同样位置加条件 FAB：当 idx == 2 时显示买入按钮
+   Positioned(right: 16, bottom: 100, child: FloatingActionButton.small(...))
+   调用 showBuyDialog，成功后 invalidate 相关 Provider
+3. holdings_list_page.dart — 删除内层 Scaffold 的 floatingActionButton 和 floatingActionButtonLocation
+
+**约束**：不改 Provider/Service/Repository 层。flutter analyze 零 error。
+
+---
+
+## 2026-07-31
+
+**移交角色**：数据架构师 (architect) + UI 工程师 (invest-ui)
+**接收角色**：项目经理 (PM)
+
+**完成工作**：
+4.5 账户体系改造 + 自定义图标全部完成。
+
+1. **db.dart** — Schema v32→v33: Accounts 加 icon_type/custom_icon_path; v33 迁移自动映射旧类型 (alipay/wechat→virtual_account, real_estate 等→investment)
+2. **account_type_utils.dart** — 13 旧类型 → 7 一级类型 (现金/储蓄/虚拟/债权/信用/负债/投资) + normalizeAccountType + isTradableType
+3. **SVG 图标** — 保留 7 个 + 新增 virtual_account.svg; 删 9 个旧 SVG + social/ 目录
+4. **seed_service** — 种子账户 3→5 (新增虚拟账户 + 投资账户)
+5. **account_edit_page** — 删除 日常/估值 双 Tab → 统一 7 类型 GridView
+6. **引用更新** — accounts_page / account_detail / account_selector / account_picker / transfer_form / l10n ARB
+7. **验证**: flutter analyze zero error (886 pre-existing) / flutter test: 534 passed, 1 skipped, 1 failed (pre-existing)
+
+**修改文件**: lib/data/db.dart, lib/utils/account_type_utils.dart, lib/services/data/seed_service.dart, lib/pages/account/*, lib/widgets/biz/*, lib/widgets/transaction/transfer_form.dart, lib/l10n/app_zh.arb, lib/l10n/app_en.arb, pubspec.yaml, test/data/sync_pull_errors_schema_test.dart, .codex/TEAM.md, .codex/TEAM.md
+**新增**: assets/icons/virtual_account.svg
+**删除**: assets/icons/{alipay,wechat,insurance,real_estate,social_fund,vehicle,other_account,ai}.svg + social/
+
+**下一个任务需要知道的**:
+- 投资模块 untouched (holding_card 仍引用 assets/icons/stock.svg)
+- isTradableType 排除 investment/receivable/loan (不参与日常转账/支出选择器)
+- normalizeAccountType 提供代码层旧类型兼容; DB 层已在 v33 迁移中直接 UPDATE
+- 已有数据库的旧类型账户在 v33 迁移时自动映射
+
+**git 状态**: 当前分支 main，待提交
+
+## 2026-07-30
+
+**移交角色**：项目经理（PM）
+**接收角色**：测试工程师（QA）
+
+**项目当前状态**：5 个阶段开发全部完成。
+
+**需要测试的 14 项流程**：
+
+日常记账：
+1. 新建账本 → 默认账户正确
+2. 日常支出 → 余额正确
+3. 转账 → 双方余额正确
+4. 导入支付宝/微信 CSV → 分类匹配正确
+
+投资模块核心：
+5. 买入基金 → 持仓显示 + 投资账户市值正确
+6. 查看持仓流水 → invest_type/batchId 正确
+7. 部分卖出 → 成本按比例扣减 + 损益流水
+8. 基金转换 → A 清仓/B 开仓 + 手续费 + 退回余额
+9. 批量刷新净值 → 全部更新
+
+特色功能：
+10. Excel 导入正确
+11. OCR 截图自动记账
+12. 桌面小组件显示正确
+13. WebDAV 同步/备份
+14. 日历视图标记显示正确
+
+**验证基线**：flutter analyze 零 error / flutter test 增量测试无失败
+
+**完成后**：
+- 更新 TEAM.md 任务板（阶段 5 全部 ✅）
+- 写 HANDOFF.md 交接记录
+
+## 2026-07-30
+
+**移交角色**：测试工程师（qa）
+**接收角色**：项目经理（PM）或下一位接手 Phase 5 的成员
+
+**完成工作**：
+- Bug 修复（5 项，详见下文）
+- 14 项全流程代码级走查（5.1）
+- Excel 导入单元测试 9 个（5.2）
+- 测试基线：535 passed, 1 skipped, 1 failed（唯一失败是 BeeCount 既存 bill_creation_service_test）
+- test/services/import/excel_import_service_test.dart — 新增 9 个测试
+- 日历 events provider：fmtDate + recurringDatesInMonth 改为 public 便于 future 测试
+- 修改文件清单见下文
+
+**Bug 修复清单**：
+1. lib/theme.dart:94 — CardTheme → CardThemeData（Flutter 版本升级兼容）
+2. lib/l10n/app_zh.arb — 移除 15 个模板无对应注解的 type 声明
+3. lib/l10n/app_en.arb — 新增 @searchBatchModeWithCount 占位符注解
+4. test/data/sync_pull_errors_schema_test.dart — schema v31→v32 断言更新
+5. l10n.yaml — 移除废弃的 synthetic-package 参数
+
+**14 项代码走查结果**：
+- 1-4（日常记账/转账/CSV）：BeeCount 基线测试覆盖良好 ✅
+- 5-9（投资买入/卖出/转换/净值）：27 个 repo+service 测试覆盖原子事务 ✅
+- 10（Excel 导入）：convertXlsxToCsv + cellValueToString 新增 9 测试 ✅
+- 11（OCR）：BeeCount 基线测试覆盖 ✅
+- 12（桌面小组件）：widget preview 测试存在 ✅
+- 13（WebDAV）：同步框架测试覆盖 ✅
+- 14（日历视图）：代码走查完成，calendar_providers.dart 函数已 public 化待测试 ⚠️
+
+**下一个任务需要知道的**：
+- Windows 构建需要先完成 Phase 0.4（当前未配置 Windows 平台，flutter create --platforms windows . 已执行但 CMake 有 VS18 coroutine 问题）
+- windows/CMakeLists.txt 已加 _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS 但未验证
+- recurringDatesInMonth 不处理短月 dayOfMonth 溢出（如 dayOfMonth=31 在 4 月会跑到 5 月 1 日，被过滤掉后结果为空）
+- 交互式手工测试（5.1 的 14 项实际运行）需在 Windows/Android 平台就绪后进行
+- Phase 5.3（旧数据迁移脚本）尚未开始
+
+**修改文件**：
+- 新增：test/services/import/excel_import_service_test.dart
+- 新增：windows/ (flutter create --platforms windows)
+- 修改：lib/theme.dart, lib/l10n/app_en.arb, lib/l10n/app_zh.arb, lib/providers/calendar_providers.dart
+- 修改：test/data/sync_pull_errors_schema_test.dart, .codex/TEAM.md, l10n.yaml, windows/CMakeLists.txt
+
+**git 状态**：未提交（等待 PM 审查后合入）
+
+**测试统计**：
+- 修复前：511 passed, 1 skipped, 7 failed
+- 修复后：535 passed, 1 skipped, 1 failed
+- 新增：+24 passing tests（+5 从修复 unblock, +9 Excel, +10 其他修复带来的）
+
+## 2026-07-30
+
+**移交角色**：项目经理（PM）
+**接收角色**：数据迁移工程师
+
+**任务**：5.3 旧数据迁移脚本
+
+**背景**：
+原项目在 `D:\codexproject\pj_003_账本app\my_account_book`，数据库文件是 sqflite 的 `account_book.db`。新项目在 `D:\codexproject\pj_004_beecount_fork`，使用 Drift（SQLite）。
+
+**目标**：
+写一个脚本/工具，把旧数据库中的表数据导出为 CSV 文件，然后可以用新 App 的导入功能读进去。
+
+**需要导出的表**：
+- books → 账本
+- accounts → 账户
+- categories → 分类
+- transactions → 交易记录（含投资字段）
+- investment_holdings → 投资持仓（含成本基数/净值）
+- periodic_bills → 周期交易
+
+**注意事项**：
+- 旧数据库在 `D:\codexproject\pj_003_账本app\my_account_book\` 下，找 `account_book.db`
+- 新项目的 CSV 导入格式参考 `lib/services/import/` 下的现有导入器
+- 字段映射：旧版 column 名是 `snake_case`，新 Drift schema 也是 `snake_case`，可以直接映射
+- 投资字段映射：旧 `transactions` 表有 `invest_type/code/shares/nav/fee/batch_id` 等字段，直接映射到新表
+
+**产出物**：
+一个 Python 或 Dart 脚本，放在项目根目录下 `scripts/migrate_from_old.py` 或类似位置。
+
+**完成后**：
+- 更新 TEAM.md：5.3 → ✅
+- 写 HANDOFF.md 交接记录
+- 通知 PM 审查
+
+## 2026-07-30
+
+**移交角色**：项目经理（PM）
+**接收角色**：UI 工程师（invest-ui）— 3.6 持仓列表买入入口
+
+**问题**：
+持仓列表页空态只有文字（"暂无持仓"），没有入口可以发起第一笔买入。买入弹窗只在持仓明细页可访问，但明细页需要先有持仓才能进入。死循环。
+
+**需要做的**（3 处改动）：
+
+1. `holdings_list_page.dart` 空态加一个「买入基金」按钮
+   - 在 `_buildEmptyState` 中，在文字下方加一个 `ElevatedButton.icon` 或 `FilledButton`
+   - 按钮图标 `Icons.add_rounded` + 文字 "买入基金"
+   - 点击后调用 `showBuyDialog(context, ledgerId: ..., accountId: ...)`
+   - `ledgerId`：从 `ref.watch(currentLedgerIdProvider)` 获取
+
+2. `holdings_list_page.dart` 加一个 FAB（有持仓时也能快速买入）
+   - 在 `Scaffold` 上加 `floatingActionButton`
+   - 调用同一个 `showBuyDialog`
+
+3. `holdings_list_page.dart` 需要 import `buy_dialog.dart`
+   - 新增：`import ''../../widgets/investment/buy_dialog.dart''`
+   - 新增：`import ''../../providers.dart''`（已存在）
+
+**约束**：
+- 不改 `holding_detail_page.dart` 或 `app.dart`
+- 不改 Provider 或 Service 层
+- accountId 暂时不处理（弹窗里缺账户选择，已知问题另修）
+
+**git 状态**：main @ aa94648
+
+## 2026-07-30
+
+**移交角色**：UI 工程师（invest-ui）
+**接收角色**：项目经理（PM）
+
+**完成工作**：
+- `lib/pages/investment/holdings_list_page.dart` — 持仓列表买入入口（任务 3.6）：
+  - 空态 `_buildEmptyState` 新增「买入基金」FilledButton.icon（Icons.add_rounded + 文字）
+  - Scaffold 新增 `FloatingActionButton.extended` 快速买入 FAB
+  - 两处均调用 `showBuyDialog(context, ledgerId: ref.read(currentLedgerIdProvider))`
+  - 弹窗成功返回 true 后自动 `ref.invalidate` 刷新持仓数据和摘要
+  - 新增 import `buy_dialog.dart`
+
+**下一个任务需要知道的**：
+- accountId 未传入弹窗（已知缺口，PM 说另修）
+- FAB 在所有状态都可见（空态、加载中、有数据），空态时 FilledButton + FAB 同时存在
+- showBuyDialog 返回 `Future<bool?>`，买入成功返回 true
+
+**验证**：dart analyze 零 issue / 投资模块 27 个测试全通过
+
+**git 状态**：当前分支 main，待提交
+
+---
+
 ## 2026-07-29
 
 **移交角色**：数据架构师（architect）
@@ -189,7 +498,6 @@
 
 ---
 
-
 ## 2026-07-29
 
 **移交角色**：投资逻辑工程师（invest-logic）
@@ -227,7 +535,6 @@
 **git 状态**：未提交（等待 PM 审查后合入）
 
 ---
-
 
 ## 2026-07-29
 
@@ -336,7 +643,8 @@
 
 3. **明细页按钮→弹窗**（holding_detail_page.dart:318-352）
    - 买入/卖出/转换三个按钮已分别接入 showBuyDialog/showSellDialog/showConvertDialog
-   - 弹窗成功后 ef.invalidate(currentHoldingsProvider) 刷新列表
+   - 弹窗成功后 
+ef.invalidate(currentHoldingsProvider) 刷新列表
    - showConvertDialog 使用 romHolding: 参数名
 
 **验证**：flutter analyze 零 error，投资模块 27 个测试全通过。
@@ -440,255 +748,3 @@
 **git 状态**：当前 main @ cb2dcae，待提交
 
 ---
-
-
-## 2026-07-30
-
-**移交角色**：项目经理（PM）
-**接收角色**：测试工程师（QA）
-
-**项目当前状态**：5 个阶段开发全部完成。
-
-**需要测试的 14 项流程**：
-
-日常记账：
-1. 新建账本 → 默认账户正确
-2. 日常支出 → 余额正确
-3. 转账 → 双方余额正确
-4. 导入支付宝/微信 CSV → 分类匹配正确
-
-投资模块核心：
-5. 买入基金 → 持仓显示 + 投资账户市值正确
-6. 查看持仓流水 → invest_type/batchId 正确
-7. 部分卖出 → 成本按比例扣减 + 损益流水
-8. 基金转换 → A 清仓/B 开仓 + 手续费 + 退回余额
-9. 批量刷新净值 → 全部更新
-
-特色功能：
-10. Excel 导入正确
-11. OCR 截图自动记账
-12. 桌面小组件显示正确
-13. WebDAV 同步/备份
-14. 日历视图标记显示正确
-
-**验证基线**：flutter analyze 零 error / flutter test 增量测试无失败
-
-**完成后**：
-- 更新 TEAM.md 任务板（阶段 5 全部 ✅）
-- 写 HANDOFF.md 交接记录
-
-## 2026-07-30
-
-**移交角色**：测试工程师（qa）
-**接收角色**：项目经理（PM）或下一位接手 Phase 5 的成员
-
-**完成工作**：
-- Bug 修复（5 项，详见下文）
-- 14 项全流程代码级走查（5.1）
-- Excel 导入单元测试 9 个（5.2）
-- 测试基线：535 passed, 1 skipped, 1 failed（唯一失败是 BeeCount 既存 bill_creation_service_test）
-- test/services/import/excel_import_service_test.dart — 新增 9 个测试
-- 日历 events provider：fmtDate + recurringDatesInMonth 改为 public 便于 future 测试
-- 修改文件清单见下文
-
-**Bug 修复清单**：
-1. lib/theme.dart:94 — CardTheme → CardThemeData（Flutter 版本升级兼容）
-2. lib/l10n/app_zh.arb — 移除 15 个模板无对应注解的 type 声明
-3. lib/l10n/app_en.arb — 新增 @searchBatchModeWithCount 占位符注解
-4. test/data/sync_pull_errors_schema_test.dart — schema v31→v32 断言更新
-5. l10n.yaml — 移除废弃的 synthetic-package 参数
-
-**14 项代码走查结果**：
-- 1-4（日常记账/转账/CSV）：BeeCount 基线测试覆盖良好 ✅
-- 5-9（投资买入/卖出/转换/净值）：27 个 repo+service 测试覆盖原子事务 ✅
-- 10（Excel 导入）：convertXlsxToCsv + cellValueToString 新增 9 测试 ✅
-- 11（OCR）：BeeCount 基线测试覆盖 ✅
-- 12（桌面小组件）：widget preview 测试存在 ✅
-- 13（WebDAV）：同步框架测试覆盖 ✅
-- 14（日历视图）：代码走查完成，calendar_providers.dart 函数已 public 化待测试 ⚠️
-
-**下一个任务需要知道的**：
-- Windows 构建需要先完成 Phase 0.4（当前未配置 Windows 平台，flutter create --platforms windows . 已执行但 CMake 有 VS18 coroutine 问题）
-- windows/CMakeLists.txt 已加 _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS 但未验证
-- recurringDatesInMonth 不处理短月 dayOfMonth 溢出（如 dayOfMonth=31 在 4 月会跑到 5 月 1 日，被过滤掉后结果为空）
-- 交互式手工测试（5.1 的 14 项实际运行）需在 Windows/Android 平台就绪后进行
-- Phase 5.3（旧数据迁移脚本）尚未开始
-
-**修改文件**：
-- 新增：test/services/import/excel_import_service_test.dart
-- 新增：windows/ (flutter create --platforms windows)
-- 修改：lib/theme.dart, lib/l10n/app_en.arb, lib/l10n/app_zh.arb, lib/providers/calendar_providers.dart
-- 修改：test/data/sync_pull_errors_schema_test.dart, .codex/TEAM.md, l10n.yaml, windows/CMakeLists.txt
-
-**git 状态**：未提交（等待 PM 审查后合入）
-
-**测试统计**：
-- 修复前：511 passed, 1 skipped, 7 failed
-- 修复后：535 passed, 1 skipped, 1 failed
-- 新增：+24 passing tests（+5 从修复 unblock, +9 Excel, +10 其他修复带来的）
-
-
-## 2026-07-30
-
-**移交角色**：项目经理（PM）
-**接收角色**：数据迁移工程师
-
-**任务**：5.3 旧数据迁移脚本
-
-**背景**：
-原项目在 `D:\codexproject\pj_003_账本app\my_account_book`，数据库文件是 sqflite 的 `account_book.db`。新项目在 `D:\codexproject\pj_004_beecount_fork`，使用 Drift（SQLite）。
-
-**目标**：
-写一个脚本/工具，把旧数据库中的表数据导出为 CSV 文件，然后可以用新 App 的导入功能读进去。
-
-**需要导出的表**：
-- books → 账本
-- accounts → 账户
-- categories → 分类
-- transactions → 交易记录（含投资字段）
-- investment_holdings → 投资持仓（含成本基数/净值）
-- periodic_bills → 周期交易
-
-**注意事项**：
-- 旧数据库在 `D:\codexproject\pj_003_账本app\my_account_book\` 下，找 `account_book.db`
-- 新项目的 CSV 导入格式参考 `lib/services/import/` 下的现有导入器
-- 字段映射：旧版 column 名是 `snake_case`，新 Drift schema 也是 `snake_case`，可以直接映射
-- 投资字段映射：旧 `transactions` 表有 `invest_type/code/shares/nav/fee/batch_id` 等字段，直接映射到新表
-
-**产出物**：
-一个 Python 或 Dart 脚本，放在项目根目录下 `scripts/migrate_from_old.py` 或类似位置。
-
-**完成后**：
-- 更新 TEAM.md：5.3 → ✅
-- 写 HANDOFF.md 交接记录
-- 通知 PM 审查
-
-## 2026-07-30
-
-**移交角色**：项目经理（PM）
-**接收角色**：UI 工程师（invest-ui）— 3.6 持仓列表买入入口
-
-**问题**：
-持仓列表页空态只有文字（"暂无持仓"），没有入口可以发起第一笔买入。买入弹窗只在持仓明细页可访问，但明细页需要先有持仓才能进入。死循环。
-
-**需要做的**（3 处改动）：
-
-1. `holdings_list_page.dart` 空态加一个「买入基金」按钮
-   - 在 `_buildEmptyState` 中，在文字下方加一个 `ElevatedButton.icon` 或 `FilledButton`
-   - 按钮图标 `Icons.add_rounded` + 文字 "买入基金"
-   - 点击后调用 `showBuyDialog(context, ledgerId: ..., accountId: ...)`
-   - `ledgerId`：从 `ref.watch(currentLedgerIdProvider)` 获取
-
-2. `holdings_list_page.dart` 加一个 FAB（有持仓时也能快速买入）
-   - 在 `Scaffold` 上加 `floatingActionButton`
-   - 调用同一个 `showBuyDialog`
-
-3. `holdings_list_page.dart` 需要 import `buy_dialog.dart`
-   - 新增：`import ''../../widgets/investment/buy_dialog.dart''`
-   - 新增：`import ''../../providers.dart''`（已存在）
-
-**约束**：
-- 不改 `holding_detail_page.dart` 或 `app.dart`
-- 不改 Provider 或 Service 层
-- accountId 暂时不处理（弹窗里缺账户选择，已知问题另修）
-
-**git 状态**：main @ aa94648
-
-## 2026-07-30
-
-**移交角色**：UI 工程师（invest-ui）
-**接收角色**：项目经理（PM）
-
-**完成工作**：
-- `lib/pages/investment/holdings_list_page.dart` — 持仓列表买入入口（任务 3.6）：
-  - 空态 `_buildEmptyState` 新增「买入基金」FilledButton.icon（Icons.add_rounded + 文字）
-  - Scaffold 新增 `FloatingActionButton.extended` 快速买入 FAB
-  - 两处均调用 `showBuyDialog(context, ledgerId: ref.read(currentLedgerIdProvider))`
-  - 弹窗成功返回 true 后自动 `ref.invalidate` 刷新持仓数据和摘要
-  - 新增 import `buy_dialog.dart`
-
-**下一个任务需要知道的**：
-- accountId 未传入弹窗（已知缺口，PM 说另修）
-- FAB 在所有状态都可见（空态、加载中、有数据），空态时 FilledButton + FAB 同时存在
-- showBuyDialog 返回 `Future<bool?>`，买入成功返回 true
-
-**验证**：dart analyze 零 issue / 投资模块 27 个测试全通过
-
-**git 状态**：当前分支 main，待提交
-
----
-
-
-## 2026-07-31
-
-**移交角色**：项目经理（PM）
-**接收角色**：UI 工程师（invest-ui）— 3.7 买入流程修复
-
-**问题 1：FAB 被主页 SpeedDial 覆盖**
-持仓列表页（`HoldingsListPage`）有自己的 FAB，但主页 `app.dart` 的 SpeedDial 盖在上面。用户看不到持仓页的「买入」FAB。
-
-**修复**（`app.dart`）：
-- 在 SpeedDial 的显示条件中，当 `_selectedIndex == 2`（投资Tab）时，不显示 SpeedDial
-- 让持仓页自己的 FAB 透出来
-
-**问题 2：明细页买入始终追加到同一持仓**
-`holding_detail_page.dart` 的 `_showBuyDialog` 传入了 `holding`，导致 `buy_dialog.dart:75` 的 `holdingId: widget.holding?.id` 永远不为 null，Repository 忽略用户输入的新基金代码，一直往原持仓追加。
-
-**修复**（`buy_dialog.dart`）：
-- 在 `_submit` 方法中，当用户修改了基金代码（与预填值不一致），将 `holdingId` 置为 null
-- 或者在弹窗打开时，如果 holding 不为 null 但不预填基金代码，让用户自己输入
-
-**问题 3：资金来源**
-买入弹窗需要一个「扣款账户」下拉选择器。
-
-**修复**（`buy_dialog.dart`）：
-- 在表单底部加一个「扣款账户」DropdownButtonFormField
-- 选项为当前账本下可用的日常账户（现金/储蓄卡/虚拟账户）
-- 在 `_submit` 方法中调用 service.buy 时传入正确的 `accountId`
-- 买入后，在投资模块外部自动扣减该账户余额（调用现有 `recordTransaction` 或直接 SQL 更新）
-
-**约束**：
-- 不改 Repository 或 Service 层
-- 不改 investment_providers.dart
-- FAB 修复只改 app.dart 的 SpeedDial 显示条件
-
-
-## 2026-07-31
-
-**移交角色**：项目经理（PM）
-**接收角色**：UI 工程师（invest-ui）— 3.8 买入流程修复 2
-
-**Bug 1：FAB 被底部导航栏遮挡**
-HoldingsListPage 的 FAB 渲染在嵌套 Scaffold 中，被外层的底部导航栏挡住。
-
-**修复方案**（holdings_list_page.dart）：
-- floatingActionButtonLocation 改为 centerFloat 让 FAB 上移
-- 或者加 padding: EdgeInsets.only(bottom: 60)
-
-同时 app.dart 的 SpeedDial 也要条件渲染，不止拦截长按。
-
-**Bug 2：addTransaction 方法不存在**
-buy_dialog.dart:105 调用了 repositoryProvider.addTransaction(...)，但方法未定义。
-
-**修复方案**（buy_dialog.dart）：
-- 改为 db.into(db.transactions).insert(TransactionsCompanion(...))
-- 从 databaseProvider 拿 db 实例
-
-**约束**：不改 Repository/Service 层
-
-
-## 2026-07-31
-
-**移交角色**：项目经理（PM）
-**接收角色**：UI 工程师（invest-ui）— 3.9 FAB 位置修正
-
-**问题**：买入 FAB 在内层 Scaffold 中，被底部导航栏挡住。
-
-**修复方案**：
-1. app.dart — 删除调试模式的主题切换 FAB（FloatingActionButton.small, heroTag: themeSwitcher）
-2. app.dart — 在同样位置加条件 FAB：当 idx == 2 时显示买入按钮
-   Positioned(right: 16, bottom: 100, child: FloatingActionButton.small(...))
-   调用 showBuyDialog，成功后 invalidate 相关 Provider
-3. holdings_list_page.dart — 删除内层 Scaffold 的 floatingActionButton 和 floatingActionButtonLocation
-
-**约束**：不改 Provider/Service/Repository 层。flutter analyze 零 error。

@@ -3,8 +3,74 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 import '../l10n/app_localizations.dart';
 
+/// v4.5 账户体系改造：7 个一级类型，取消资产/负债二分法
+///
+/// 7 个一级类型（按展示顺序）：
+///   cash           — 现金（钱包、备用金）
+///   bank_card      — 储蓄（借记卡、存折）
+///   virtual_account — 虚拟账户（支付宝/微信/公交卡等电子支付）
+///   receivable     — 债权（借出款、应收款）
+///   credit_card    — 信用（信用卡、花呗、白条）
+///   loan           — 负债（房贷、车贷、消费贷）
+///   investment     — 投资（基金、股票、理财、不动产、保险等）
+///
+/// 旧类型兼容映射：alipay/wechat → virtual_account；real_estate/vehicle/
+/// insurance/social_fund → investment；other_account → bank_card。
+
+// ─────────────────────── 类型常量 ───────────────────────
+
+/// 一级账户类型：现金
+const accountTypeCash = 'cash';
+/// 一级账户类型：储蓄
+const accountTypeBankCard = 'bank_card';
+/// 一级账户类型：虚拟账户
+const accountTypeVirtualAccount = 'virtual_account';
+/// 一级账户类型：债权
+const accountTypeReceivable = 'receivable';
+/// 一级账户类型：信用
+const accountTypeCreditCard = 'credit_card';
+/// 一级账户类型：负债
+const accountTypeLoan = 'loan';
+/// 一级账户类型：投资
+const accountTypeInvestment = 'investment';
+
+/// 全部 7 个一级类型（按展示顺序：先资产→债权→信用→负债→投资）
+const allAccountTypes = [
+  accountTypeCash,
+  accountTypeBankCard,
+  accountTypeVirtualAccount,
+  accountTypeReceivable,
+  accountTypeCreditCard,
+  accountTypeLoan,
+  accountTypeInvestment,
+];
+
+// ─────────────────────── 旧类型映射 ───────────────────────
+
+/// 旧版类型字符串 → 新版类型字符串
+/// 在 v33 数据库迁移中已执行映射，此函数仅供代码层兼容性使用
+String normalizeAccountType(String type) {
+  switch (type) {
+    case 'alipay': return accountTypeVirtualAccount;
+    case 'wechat': return accountTypeVirtualAccount;
+    case 'real_estate': return accountTypeInvestment;
+    case 'vehicle': return accountTypeInvestment;
+    case 'insurance': return accountTypeInvestment;
+    case 'social_fund': return accountTypeInvestment;
+    case 'other_account': return accountTypeBankCard;
+    default: return allAccountTypes.contains(type) ? type : accountTypeCash;
+  }
+}
+
+// ─────────────────────── 资产/负债分类 ───────────────────────
+
 /// 账户分类：资产 vs 负债
+/// 注意：此分类仅用于净资产计算（总资产 = sum(资产余额) - sum(|负债余额|)）
 enum AccountClassification { asset, liability }
+
+/// 是否为负债类型
+bool isLiabilityType(String type) =>
+    type == accountTypeCreditCard || type == accountTypeLoan;
 
 /// 获取账户的资产/负债分类
 AccountClassification getAccountClassification(String type) {
@@ -15,75 +81,38 @@ AccountClassification getAccountClassification(String type) {
 /// 是否为资产类型
 bool isAssetType(String type) => !isLiabilityType(type);
 
-/// 是否为负债类型
-bool isLiabilityType(String type) {
-  return type == 'credit_card' || type == 'loan';
+/// 是否为估值/投资类账户（不参与日常收支记账的账户选择器）
+bool isValuationOrInvestmentType(String type) {
+  return type == accountTypeInvestment || type == accountTypeLoan
+      || type == accountTypeReceivable;
 }
 
-/// 估值账户类型（资产类）
-const valuationOnlyAssetTypes = [
-  'real_estate', 'vehicle', 'investment', 'insurance', 'social_fund',
-];
+/// 是否为可交易账户类型（参与日常转账/支出选择器）
+/// 排除投资、债权、负债（这些通过专有流程操作）
+bool isTradableType(String type) {
+  final t = normalizeAccountType(type);
+  return t != accountTypeInvestment && t != accountTypeReceivable && t != accountTypeLoan;
+}
 
-/// 估值账户类型（负债类）
-const valuationOnlyLiabilityTypes = ['loan'];
-
-/// 所有估值账户类型
-const valuationOnlyTypes = [
-  ...valuationOnlyAssetTypes,
-  ...valuationOnlyLiabilityTypes,
-];
-
-/// 是否为估值账户类型（不参与日常记账）
-bool isValuationOnlyType(String type) => valuationOnlyTypes.contains(type);
-
-/// 是否为可交易账户类型（参与日常记账）
-bool isTradableType(String type) => !isValuationOnlyType(type);
-
-/// 账户类型常量（完整排序）
-const accountTypeOrder = [
-  'cash', 'bank_card', 'credit_card', 'alipay', 'wechat', 'other',
-  'real_estate', 'vehicle', 'investment', 'insurance', 'social_fund', 'loan',
-];
-
-/// 资产类型排序
-const assetTypeOrder = [
-  'cash', 'bank_card', 'alipay', 'wechat', 'other',
-  'real_estate', 'vehicle', 'investment', 'insurance', 'social_fund',
-];
-
-/// 负债类型排序
-const liabilityTypeOrder = ['credit_card', 'loan'];
+// ─────────────────────── 图标 ───────────────────────
 
 /// 获取账户类型的 Material 图标（备用，用于无 SVG 的场景）
 IconData getIconForAccountType(String type) {
-  switch (type) {
+  switch (normalizeAccountType(type)) {
     case 'cash':
       return Icons.payments_outlined;
     case 'bank_card':
       return Icons.credit_card;
+    case 'virtual_account':
+      return Icons.phone_android;
     case 'credit_card':
       return Icons.credit_score;
-    case 'alipay':
-      return Icons.currency_yuan;
-    case 'wechat':
-      return Icons.chat;
     case 'investment':
       return Icons.trending_up;
     case 'loan':
       return Icons.house_outlined;
     case 'receivable':
       return Icons.call_received;
-    case 'real_estate':
-      return Icons.home_outlined;
-    case 'vehicle':
-      return Icons.directions_car_outlined;
-    case 'insurance':
-      return Icons.health_and_safety_outlined;
-    case 'social_fund':
-      return Icons.account_balance_outlined;
-    case 'other':
-      return Icons.account_balance_outlined;
     default:
       return Icons.account_balance_wallet_outlined;
   }
@@ -92,33 +121,21 @@ IconData getIconForAccountType(String type) {
 /// 获取账户类型名称
 String getAccountTypeLabel(BuildContext context, String type) {
   final l10n = AppLocalizations.of(context);
-  switch (type) {
+  switch (normalizeAccountType(type)) {
     case 'cash':
       return l10n.accountTypeCash;
     case 'bank_card':
       return l10n.accountTypeBankCard;
+    case 'virtual_account':
+      return l10n.accountTypeVirtualAccount;
     case 'credit_card':
       return l10n.accountTypeCreditCard;
-    case 'alipay':
-      return l10n.accountTypeAlipay;
-    case 'wechat':
-      return l10n.accountTypeWechat;
     case 'investment':
       return l10n.accountTypeInvestment;
     case 'loan':
       return l10n.accountTypeLoan;
     case 'receivable':
       return l10n.accountTypeReceivable;
-    case 'real_estate':
-      return l10n.accountTypeRealEstate;
-    case 'vehicle':
-      return l10n.accountTypeVehicle;
-    case 'insurance':
-      return l10n.accountTypeInsurance;
-    case 'social_fund':
-      return l10n.accountTypeSocialFund;
-    case 'other':
-      return l10n.accountTypeOther;
     default:
       return type;
   }
@@ -126,15 +143,13 @@ String getAccountTypeLabel(BuildContext context, String type) {
 
 /// 获取账户类型的品牌颜色
 Color getColorForAccountType(String type, Color primaryColor) {
-  switch (type) {
-    case 'alipay':
-      return const Color(0xFF1677FF);
-    case 'wechat':
-      return const Color(0xFF07C160);
+  switch (normalizeAccountType(type)) {
     case 'cash':
       return Colors.orange;
     case 'bank_card':
       return const Color(0xFF1890FF);
+    case 'virtual_account':
+      return const Color(0xFF00B96B);
     case 'credit_card':
       return Colors.purple;
     case 'investment':
@@ -143,14 +158,6 @@ Color getColorForAccountType(String type, Color primaryColor) {
       return const Color(0xFFE91E63);
     case 'receivable':
       return const Color(0xFF009688);
-    case 'real_estate':
-      return const Color(0xFF795548);
-    case 'vehicle':
-      return const Color(0xFF607D8B);
-    case 'insurance':
-      return const Color(0xFF4CAF50);
-    case 'social_fund':
-      return const Color(0xFF3F51B5);
     default:
       return primaryColor;
   }
@@ -158,35 +165,23 @@ Color getColorForAccountType(String type, Color primaryColor) {
 
 /// 获取 SVG 路径（所有类型均有彩色 SVG）
 String _getSvgPath(String type) {
-  switch (type) {
+  switch (normalizeAccountType(type)) {
     case 'cash':
       return 'assets/icons/cash.svg';
     case 'bank_card':
       return 'assets/icons/bank_card.svg';
+    case 'virtual_account':
+      return 'assets/icons/virtual_account.svg';
     case 'credit_card':
       return 'assets/icons/credit_card.svg';
-    case 'alipay':
-      return 'assets/icons/alipay.svg';
-    case 'wechat':
-      return 'assets/icons/wechat.svg';
     case 'investment':
       return 'assets/icons/investment.svg';
     case 'loan':
       return 'assets/icons/loan.svg';
     case 'receivable':
       return 'assets/icons/receivable.svg';
-    case 'real_estate':
-      return 'assets/icons/real_estate.svg';
-    case 'vehicle':
-      return 'assets/icons/vehicle.svg';
-    case 'insurance':
-      return 'assets/icons/insurance.svg';
-    case 'social_fund':
-      return 'assets/icons/social_fund.svg';
-    case 'other':
-      return 'assets/icons/other_account.svg';
     default:
-      return 'assets/icons/other_account.svg';
+      return 'assets/icons/cash.svg';
   }
 }
 

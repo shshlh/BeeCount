@@ -1,5 +1,6 @@
 import '../../data/db.dart';
 import '../../l10n/app_localizations.dart';
+import '../../utils/account_type_utils.dart';
 import '../system/logger_service.dart';
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
@@ -440,15 +441,39 @@ class SeedService {
       ),
     );
 
-    // 3. 信用卡账户
+   // 3. 信用卡账户
+   await db.into(db.accounts).insert(
+     AccountsCompanion.insert(
+       ledgerId: ledgerId,
+       name: l10n.accountTypeCreditCard,
+       type: const Value('credit_card'),
+       currency: Value(currency),
+       initialBalance: const Value(0.0),
+       syncId: Value(deterministicAccountSyncId('credit_card')),
+     ),
+   );
+
+    // 4. 虚拟账户
     await db.into(db.accounts).insert(
       AccountsCompanion.insert(
         ledgerId: ledgerId,
-        name: l10n.accountTypeCreditCard,
-        type: const Value('credit_card'),
+        name: l10n.accountTypeVirtualAccount,
+        type: const Value(accountTypeVirtualAccount),
         currency: Value(currency),
         initialBalance: const Value(0.0),
-        syncId: Value(deterministicAccountSyncId('credit_card')),
+        syncId: Value(deterministicAccountSyncId(accountTypeVirtualAccount)),
+      ),
+    );
+
+    // 5. 投资账户
+    await db.into(db.accounts).insert(
+      AccountsCompanion.insert(
+        ledgerId: ledgerId,
+        name: l10n.accountTypeInvestment,
+        type: const Value(accountTypeInvestment),
+        currency: Value(currency),
+        initialBalance: const Value(0.0),
+        syncId: Value(deterministicAccountSyncId(accountTypeInvestment)),
       ),
     );
   }

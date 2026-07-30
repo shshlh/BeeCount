@@ -196,9 +196,9 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                         l10n: l10n,
                         title: l10n.assetAccounts,
                         icon: Icons.trending_up,
-                        iconColor: BeeTokens.incomeColor(context, ref),
-                        typeOrder: assetTypeOrder,
-                        groups: groups,
+                       iconColor: BeeTokens.incomeColor(context, ref),
+                        typeOrder: allAccountTypes,
+                       groups: groups,
                         allStats: allStatsAsync.valueOrNull,
                         primaryColor: primaryColor,
                         ledgerId: ledgerId,
@@ -210,9 +210,9 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                         l10n: l10n,
                         title: l10n.liabilityAccounts,
                         icon: Icons.trending_down,
-                        iconColor: BeeTokens.expenseColor(context, ref),
-                        typeOrder: liabilityTypeOrder,
-                        groups: groups,
+                       iconColor: BeeTokens.expenseColor(context, ref),
+                        typeOrder: allAccountTypes,
+                       groups: groups,
                         allStats: allStatsAsync.valueOrNull,
                         primaryColor: primaryColor,
                         ledgerId: ledgerId,
@@ -221,7 +221,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                       // 4. 其他未知类型(排除隐藏账户,账户隐藏 #240)
                       ...groups.keys
                           .where((type) =>
-                              !accountTypeOrder.contains(type) &&
+                              !allAccountTypes.contains(type) &&
                               groups[type]!.any((a) => !a.hidden))
                           .map((type) {
                         final groupList =
@@ -2041,7 +2041,7 @@ class _AccountCard extends ConsumerWidget {
                     if (account.type == 'credit_card' && stats != null)
                       _buildCreditCardStats(context, ref, l10n, isDark)
                     // 估值账户：仅显示当前估值
-                    else if (isValuationOnlyType(account.type) && stats != null)
+                    else if (isValuationOrInvestmentType(account.type) && stats != null)
                       _buildValuationStats(context, ref, l10n, isDark)
                     // 普通账户：余额/收入/支出
                     else if (stats != null)

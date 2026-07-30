@@ -44,28 +44,9 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
   bool _saving = false;
   bool _isNameDuplicate = false;
   String? _nameErrorText;
-  // 账户类型 Tab：0 = 日常账户，1 = 估值账户
-  int _typeTab = 0;
 
-  // 日常账户类型（走流水）
-  static const List<String> tradableAccountTypes = [
-    'cash',
-    'bank_card',
-    'credit_card',
-    'alipay',
-    'wechat',
-    'other',
-  ];
-
-  // 估值账户类型（只记当前价值 / 欠款，不走流水）
-  static const List<String> valuationAccountTypes = [
-    'real_estate',
-    'vehicle',
-    'investment',
-    'insurance',
-    'social_fund',
-    'loan',
-  ];
+  // v4.5: 7 个一级类型，统一列表\r
+  static const List<String> allTypeOptions = allAccountTypes;
 
   @override
   void initState() {
@@ -89,7 +70,6 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
     _selectedCurrency = widget.account?.currency ?? 'CNY';
     _billingDay = widget.account?.billingDay;
     _paymentDueDay = widget.account?.paymentDueDay;
-    _typeTab = isValuationOnlyType(_selectedType) ? 1 : 0;
     _loadReminderSettings();
   }
 
@@ -121,7 +101,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
   bool get isEditing => widget.account != null;
 
   String _getInitialBalanceLabel(AppLocalizations l10n) {
-    if (isValuationOnlyType(_selectedType)) {
+    if (isValuationOrInvestmentType(_selectedType)) {
       return isLiabilityType(_selectedType)
           ? l10n.valuationCurrentDebt
           : l10n.valuationCurrentValue;
@@ -130,7 +110,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
   }
 
   String _getInitialBalanceHint(AppLocalizations l10n) {
-    if (isValuationOnlyType(_selectedType)) {
+    if (isValuationOrInvestmentType(_selectedType)) {
       return isLiabilityType(_selectedType)
           ? l10n.valuationDebtHint
           : l10n.valuationAccountHint;
@@ -199,38 +179,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
         color: BeeTokens.textPrimary(context),
       );
 
-  /// 资产/负债 分段标签
-  Widget _segTab(BuildContext context,
-      {required String label,
-      required bool selected,
-      required Color primaryColor,
-      required VoidCallback onTap}) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: EdgeInsets.symmetric(vertical: 8.0.scaled(context, ref)),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: selected ? BeeTokens.surfaceElevated(context) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-              color: selected ? primaryColor : BeeTokens.textSecondary(context),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
+ @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final primaryColor = ref.watch(primaryColorProvider);
@@ -241,9 +190,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
         _filledDecoration(context, primaryColor,
             label: label, hint: hint, prefix: prefix, errorText: errorText);
 
-    final typesForTab = _typeTab == 0 ? tradableAccountTypes : valuationAccountTypes;
     final isCreditCard = _selectedType == 'credit_card';
-    final isBankCard = _selectedType == 'bank_card';
+    final isBankCard = _selectedType == 'bank_card' || _selectedType == 'virtual_account';
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
@@ -270,44 +218,22 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                     margin: EdgeInsets.zero,
                     child: Padding(
                       padding: EdgeInsets.all(16.0.scaled(context, ref)),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: BeeTokens.surfaceInput(context),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              children: [
-                                _segTab(context,
-                                    label: l10n.accountGroupTradable,
-                                    selected: _typeTab == 0,
-                                    primaryColor: primaryColor,
-                                    onTap: () => setState(() => _typeTab = 0)),
-                                _segTab(context,
-                                    label: l10n.accountTabValuation,
-                                    selected: _typeTab == 1,
-                                    primaryColor: primaryColor,
-                                    onTap: () => setState(() => _typeTab = 1)),
-                              ],
-                            ),
-                          ),
-                          SizedBox(height: 16.0.scaled(context, ref)),
-                          GridView.count(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              GridView.count(
                             crossAxisCount: 4,
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             mainAxisSpacing: 10.0.scaled(context, ref),
                             crossAxisSpacing: 10.0.scaled(context, ref),
                             childAspectRatio: 1.0,
-                            children: typesForTab.map((type) {
+                            children: allTypeOptions.map((type) {
                               final isSelected = _selectedType == type;
                               // 编辑模式禁止跨“可交易 / 估值”大类切换（语义不同）
                               final disabled = isEditing &&
-                                  isValuationOnlyType(type) !=
-                                      isValuationOnlyType(widget.account!.type);
+                                  isValuationOrInvestmentType(type) !=
+                                      isValuationOrInvestmentType(widget.account!.type);
                               return _AccountTypeCard(
                                 type: type,
                                 label: getAccountTypeLabel(context, type),

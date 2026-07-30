@@ -200,7 +200,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
 
     final account = widget.account;
     final typeColor = getColorForAccountType(account.type, primaryColor);
-    final isValuation = isValuationOnlyType(account.type);
+    final isValuation = isValuationOrInvestmentType(account.type);
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),

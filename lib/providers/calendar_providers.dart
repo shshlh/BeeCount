@@ -140,12 +140,12 @@ final calendarEventsForMonthProvider = FutureProvider.autoDispose
       final name = card.name;
       if (card.billingDay != null) {
         final d = min(card.billingDay!, daysInMonth);
-        add(_fmtDate(year, mon, d),
+        add(fmtDate(year, mon, d),
             CalendarEvent(type: CalendarEventType.billDate, title: '${name} 账单日'));
       }
       if (card.paymentDueDay != null) {
         final d = min(card.paymentDueDay!, daysInMonth);
-        add(_fmtDate(year, mon, d),
+        add(fmtDate(year, mon, d),
             CalendarEvent(type: CalendarEventType.paymentDue, title: '${name} 还款日'));
       }
     }
@@ -158,7 +158,7 @@ final calendarEventsForMonthProvider = FutureProvider.autoDispose
     );
     for (final tx in txs) {
       if (tx.t.type == 'invest') {
-        final key = _fmtDate(tx.t.happenedAt.year, tx.t.happenedAt.month, tx.t.happenedAt.day);
+        final key = fmtDate(tx.t.happenedAt.year, tx.t.happenedAt.month, tx.t.happenedAt.day);
         final label = switch (tx.t.investType) {
           'buy' => '买入',
           'sell' => '卖出',
@@ -182,8 +182,8 @@ final calendarEventsForMonthProvider = FutureProvider.autoDispose
         'income' => '收入',
         _ => '转账',
       };
-      for (final d in _recurringDatesInMonth(rt, year, mon)) {
-        add(_fmtDate(d.year, d.month, d.day), CalendarEvent(
+      for (final d in recurringDatesInMonth(rt, year, mon)) {
+        add(fmtDate(d.year, d.month, d.day), CalendarEvent(
           type: CalendarEventType.recurring,
           title: '周期${typeLabel}',
           subtitle: rt.note,
@@ -196,7 +196,7 @@ final calendarEventsForMonthProvider = FutureProvider.autoDispose
 );
 
 /// 计算一条周期交易在指定月份会触发的所有日期
-List<DateTime> _recurringDatesInMonth(
+List<DateTime> recurringDatesInMonth(
     RecurringTransaction rt, int year, int month) {
   final results = <DateTime>[];
   final monthStart = DateTime(year, month, 1);
@@ -246,7 +246,7 @@ List<DateTime> _recurringDatesInMonth(
   return results;
 }
 
-String _fmtDate(int y, int m, int d) =>
+String fmtDate(int y, int m, int d) =>
     '--';
 /// 日历刷新触发器（添加/删除交易后触发）
 final calendarRefreshProvider = StateProvider<int>((ref) => 0);
