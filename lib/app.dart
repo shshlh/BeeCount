@@ -603,6 +603,7 @@ class _BeeAppState extends ConsumerState<BeeApp>
   }
 
   void _onLongPressEnd(LongPressEndDetails details) {
+    if (ref.read(bottomTabIndexProvider) == 2) return;
     final centerActions = [
       SpeedDialAction(
         icon: Icons.camera_alt_rounded,

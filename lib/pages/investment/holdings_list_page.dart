@@ -28,7 +28,8 @@ class HoldingsListPage extends ConsumerWidget {
     final summaryAsync = ref.watch(portfolioSummaryProvider);
 
     return Scaffold(
-      backgroundColor: BeeTokens.scaffoldBackground(context),
+     backgroundColor: BeeTokens.scaffoldBackground(context),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () async {
           final result = await showBuyDialog(

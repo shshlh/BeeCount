@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:drift/drift.dart' show Value;
 
 import '../../data/db.dart';
 import '../../providers.dart';
@@ -102,14 +103,17 @@ class _BuyDialogState extends ConsumerState<BuyDialog> {
 
       // 买入后插入 expense 交易扣减扣款账户余额
       final totalCost = shares * nav + parsedFee;
-      await ref.read(repositoryProvider).addTransaction(
-        ledgerId: widget.ledgerId,
-        type: 'expense',
-        amount: totalCost,
-        accountId: _selectedAccountId!,
-        happenedAt: DateTime.now(),
-        note: '买入 ${_codeCtrl.text.trim()}',
-        excludeFromBudget: true,
+      final db = ref.read(databaseProvider);
+      await db.into(db.transactions).insert(
+        TransactionsCompanion(
+          ledgerId: Value(widget.ledgerId),
+          type: const Value('expense'),
+          amount: Value(totalCost),
+          accountId: Value(_selectedAccountId!),
+          happenedAt: Value(DateTime.now()),
+          note: Value('买入 ${_codeCtrl.text.trim()}'),
+          excludeFromBudget: const Value(true),
+        ),
       );
 
       // NOTE(tech-debt): service.buy() 和 addTransaction() 无共享事务边界。

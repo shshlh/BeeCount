@@ -76,6 +76,7 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 修复任务 | 状态 | 负责人 | 产出物 | 完成日期 |
 |---|---|---|---|---|
 | 3.7 买入流程修复（FAB+holdingId+资金来源） | ✅ | invest-ui | app.dart + buy_dialog | 2026-07-31 |
+| 3.8 买入流程修复 2（FAB遮挡+addTransaction不存在） | ✅ | invest-ui | holdings_list_page + app.dart + buy_dialog | 2026-07-31 |
 
 | 修复任务 | 状态 | 负责人 | 产出物 | 完成日期 |
 |---|---|---|---|---|

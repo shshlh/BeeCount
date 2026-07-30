@@ -5,6 +5,46 @@
 **接收角色**：项目经理（PM）
 
 **完成工作**：
+任务 3.8 买入流程修复 2，共 2 个 Bug 全部修复：
+
+1. **FAB 被底部导航栏遮挡**（holdings_list_page.dart:32-34 + app.dart:605-606）
+   - `HoldingsListPage` Scaffold 新增 `floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat`
+   - FAB 从右下角上移，避开外部 Scaffold 的 bottomNavigationBar
+   - app.dart `_onLongPressEnd` 新增守卫：`if (ref.read(bottomTabIndexProvider) == 2) return;`
+   - 配合已有的 `_onLongPressStart` 守卫（3.7 修复），投资 Tab 下 SpeedDial 完全不会弹出
+
+2. **addTransaction 方法不存在**（buy_dialog.dart:103-115）
+   - `ref.read(repositoryProvider).addTransaction(...)` → Drift 直接插入
+   - 改用 `ref.read(databaseProvider).into(db.transactions).insert(TransactionsCompanion(...))`
+   - 新增 `import 'package:drift/drift.dart' show Value;` 解决 Value 类型导入
+   - expense 扣款交易字段：ledgerId / type / amount / accountId / happenedAt / note / excludeFromBudget
+
+**验证**：
+- flutter analyze 零新增 error（3 个目标文件 no issues）
+- 投资模块 22 个测试全部通过
+
+**下一个任务需要知道的**：
+- FAB 用 `centerFloat` 位置，在不同屏幕尺寸下自适应
+- buy_dialog 的 expense 交易插入与 service.buy() 无共享事务边界（NOTE: tech-debt 已标注）
+- holdlings_list_page 的 FAB 在空态和有数据时均可见
+
+**修改文件**：
+- 修改：lib/pages/investment/holdings_list_page.dart
+- 修改：lib/app.dart
+- 修改：lib/widgets/investment/buy_dialog.dart
+- 修改：.codex/TEAM.md
+- 修改：docs/HANDOFF.md
+
+**git 状态**：当前分支 main，待提交
+
+---
+
+## 2026-07-31
+
+**移交角色**：UI 工程师（invest-ui）
+**接收角色**：项目经理（PM）
+
+**完成工作**：
 任务 3.7 买入流程修复，共 3 个 P1 问题全部修复：
 
 1. **FAB 被主页 SpeedDial 覆盖**（app.dart:596）
@@ -576,3 +616,27 @@
 - 不改 Repository 或 Service 层
 - 不改 investment_providers.dart
 - FAB 修复只改 app.dart 的 SpeedDial 显示条件
+
+
+## 2026-07-31
+
+**移交角色**：项目经理（PM）
+**接收角色**：UI 工程师（invest-ui）— 3.8 买入流程修复 2
+
+**Bug 1：FAB 被底部导航栏遮挡**
+HoldingsListPage 的 FAB 渲染在嵌套 Scaffold 中，被外层的底部导航栏挡住。
+
+**修复方案**（holdings_list_page.dart）：
+- floatingActionButtonLocation 改为 centerFloat 让 FAB 上移
+- 或者加 padding: EdgeInsets.only(bottom: 60)
+
+同时 app.dart 的 SpeedDial 也要条件渲染，不止拦截长按。
+
+**Bug 2：addTransaction 方法不存在**
+buy_dialog.dart:105 调用了 repositoryProvider.addTransaction(...)，但方法未定义。
+
+**修复方案**（buy_dialog.dart）：
+- 改为 db.into(db.transactions).insert(TransactionsCompanion(...))
+- 从 databaseProvider 拿 db 实例
+
+**约束**：不改 Repository/Service 层
