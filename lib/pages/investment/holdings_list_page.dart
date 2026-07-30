@@ -8,6 +8,7 @@ import '../../widgets/biz/section_card.dart';
 import '../../widgets/investment/holding_card.dart';
 import '../../services/data/investment_service.dart';
 import 'holding_detail_page.dart';
+import '../../widgets/investment/buy_dialog.dart';
 
 /// 持仓列表页 — 展示当前账本下所有投资持仓。
 ///
@@ -28,6 +29,20 @@ class HoldingsListPage extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () async {
+          final result = await showBuyDialog(
+            context,
+            ledgerId: ref.read(currentLedgerIdProvider),
+          );
+          if (result == true) {
+            ref.invalidate(currentHoldingsProvider);
+            ref.invalidate(portfolioSummaryProvider);
+          }
+        },
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('买入'),
+      ),
       body: Column(
         children: [
           PrimaryHeader(
@@ -123,6 +138,21 @@ class HoldingsListPage extends ConsumerWidget {
               fontSize: 13,
               color: BeeTokens.textTertiary(context),
             ),
+          ),
+          const SizedBox(height: 24),
+          FilledButton.icon(
+            onPressed: () async {
+              final result = await showBuyDialog(
+                context,
+                ledgerId: ref.read(currentLedgerIdProvider),
+              );
+              if (result == true) {
+                ref.invalidate(currentHoldingsProvider);
+                ref.invalidate(portfolioSummaryProvider);
+              }
+            },
+            icon: const Icon(Icons.add_rounded, size: 20),
+            label: const Text('买入基金'),
           ),
         ],
       ),

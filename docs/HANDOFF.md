@@ -480,3 +480,59 @@ av_date 在新 schema 中没有对应列
 - 更新 TEAM.md：5.3 → ✅
 - 写 HANDOFF.md 交接记录
 - 通知 PM 审查
+
+## 2026-07-30
+
+**移交角色**：项目经理（PM）
+**接收角色**：UI 工程师（invest-ui）— 3.6 持仓列表买入入口
+
+**问题**：
+持仓列表页空态只有文字（"暂无持仓"），没有入口可以发起第一笔买入。买入弹窗只在持仓明细页可访问，但明细页需要先有持仓才能进入。死循环。
+
+**需要做的**（3 处改动）：
+
+1. `holdings_list_page.dart` 空态加一个「买入基金」按钮
+   - 在 `_buildEmptyState` 中，在文字下方加一个 `ElevatedButton.icon` 或 `FilledButton`
+   - 按钮图标 `Icons.add_rounded` + 文字 "买入基金"
+   - 点击后调用 `showBuyDialog(context, ledgerId: ..., accountId: ...)`
+   - `ledgerId`：从 `ref.watch(currentLedgerIdProvider)` 获取
+
+2. `holdings_list_page.dart` 加一个 FAB（有持仓时也能快速买入）
+   - 在 `Scaffold` 上加 `floatingActionButton`
+   - 调用同一个 `showBuyDialog`
+
+3. `holdings_list_page.dart` 需要 import `buy_dialog.dart`
+   - 新增：`import ''../../widgets/investment/buy_dialog.dart''`
+   - 新增：`import ''../../providers.dart''`（已存在）
+
+**约束**：
+- 不改 `holding_detail_page.dart` 或 `app.dart`
+- 不改 Provider 或 Service 层
+- accountId 暂时不处理（弹窗里缺账户选择，已知问题另修）
+
+**git 状态**：main @ aa94648
+
+## 2026-07-30
+
+**移交角色**：UI 工程师（invest-ui）
+**接收角色**：项目经理（PM）
+
+**完成工作**：
+- `lib/pages/investment/holdings_list_page.dart` — 持仓列表买入入口（任务 3.6）：
+  - 空态 `_buildEmptyState` 新增「买入基金」FilledButton.icon（Icons.add_rounded + 文字）
+  - Scaffold 新增 `FloatingActionButton.extended` 快速买入 FAB
+  - 两处均调用 `showBuyDialog(context, ledgerId: ref.read(currentLedgerIdProvider))`
+  - 弹窗成功返回 true 后自动 `ref.invalidate` 刷新持仓数据和摘要
+  - 新增 import `buy_dialog.dart`
+
+**下一个任务需要知道的**：
+- accountId 未传入弹窗（已知缺口，PM 说另修）
+- FAB 在所有状态都可见（空态、加载中、有数据），空态时 FilledButton + FAB 同时存在
+- showBuyDialog 返回 `Future<bool?>`，买入成功返回 true
+
+**验证**：dart analyze 零 issue / 投资模块 27 个测试全通过
+
+**git 状态**：当前分支 main，待提交
+
+---
+
