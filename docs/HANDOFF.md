@@ -5,6 +5,41 @@
 **接收角色**：项目经理（PM）
 
 **完成工作**：
+任务 3.9 FAB 位置修正，1 个结构性修复：
+
+1. **FAB 提升到外层 Stack**（app.dart:867-884 + holdings_list_page.dart:29-33）
+   - 删除 `holdings_list_page.dart` 内层 Scaffold 的 `floatingActionButton` 和 `floatingActionButtonLocation`
+   - 在 `app.dart` 外层 `Stack` 中用 `Positioned(right: 16, bottom: 100)` 放置买入 FAB
+   - 条件渲染：`if (idx == 2)` — 仅在投资 Tab 可见
+   - 替代原来的调试主题切换 FAB（`heroTag: 'themeSwitcher'`，`if (kDebugMode)`）
+   - 点击调用 `showBuyDialog`，成功后 `ref.invalidate(currentHoldingsProvider)` + `ref.invalidate(portfolioSummaryProvider)`
+   - 新增 import `'widgets/investment/buy_dialog.dart'`
+
+**设计决策**：
+- 内层 Scaffold 的 FAB 无法避开外层底部导航栏（`extendBody: true` 让 body 延伸到导航栏后方）
+- 提升到外层 `Stack` + `Positioned` 是唯一正确的解决方案
+- 空态「买入基金」按钮（`_buildEmptyState` 中的 `FilledButton.icon`）保持不变，无需 FAB
+
+**验证**：
+- flutter analyze 零新增 error（仅 1 个预存 info）
+- 投资模块 22 个测试全部通过
+
+**修改文件**：
+- 修改：lib/app.dart（+1 import, FAB 替换）
+- 修改：lib/pages/investment/holdings_list_page.dart（删除内层 FAB）
+- 修改：.codex/TEAM.md
+- 修改：docs/HANDOFF.md
+
+**git 状态**：当前分支 main，待提交
+
+---
+
+## 2026-07-31
+
+**移交角色**：UI 工程师（invest-ui）
+**接收角色**：项目经理（PM）
+
+**完成工作**：
 任务 3.8 买入流程修复 2，共 2 个 Bug 全部修复：
 
 1. **FAB 被底部导航栏遮挡**（holdings_list_page.dart:32-34 + app.dart:605-606）
@@ -640,3 +675,20 @@ buy_dialog.dart:105 调用了 repositoryProvider.addTransaction(...)，但方法
 - 从 databaseProvider 拿 db 实例
 
 **约束**：不改 Repository/Service 层
+
+
+## 2026-07-31
+
+**移交角色**：项目经理（PM）
+**接收角色**：UI 工程师（invest-ui）— 3.9 FAB 位置修正
+
+**问题**：买入 FAB 在内层 Scaffold 中，被底部导航栏挡住。
+
+**修复方案**：
+1. app.dart — 删除调试模式的主题切换 FAB（FloatingActionButton.small, heroTag: themeSwitcher）
+2. app.dart — 在同样位置加条件 FAB：当 idx == 2 时显示买入按钮
+   Positioned(right: 16, bottom: 100, child: FloatingActionButton.small(...))
+   调用 showBuyDialog，成功后 invalidate 相关 Provider
+3. holdings_list_page.dart — 删除内层 Scaffold 的 floatingActionButton 和 floatingActionButtonLocation
+
+**约束**：不改 Provider/Service/Repository 层。flutter analyze 零 error。

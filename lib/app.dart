@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'pages/main/home_page.dart';
 import 'pages/investment/holdings_list_page.dart';
+import 'widgets/investment/buy_dialog.dart';
 import 'pages/main/analytics_page.dart';
 import 'pages/account/accounts_page.dart';
 import 'pages/budget/budget_page.dart';
@@ -864,31 +865,24 @@ class _BeeAppState extends ConsumerState<BeeApp>
               onCenterLongPressEnd: _onLongPressEnd,
             ),
           ),
-          // 开发模式下的主题切换按钮
-          if (kDebugMode)
+          // 投资 Tab 下显示买入 FAB（替代内层 Scaffold 的 FAB，避免被底部导航栏遮挡）
+          if (idx == 2)
             Positioned(
               right: 16,
               bottom: 100,
               child: FloatingActionButton.small(
-                heroTag: 'themeSwitcher',
-                backgroundColor: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white
-                    : Colors.black,
-                onPressed: () {
-                  final current = ref.read(themeModeProvider);
-                  final next = current == ThemeMode.dark
-                      ? ThemeMode.light
-                      : ThemeMode.dark;
-                  ref.read(themeModeProvider.notifier).state = next;
+                heroTag: 'investBuyFab',
+                onPressed: () async {
+                  final result = await showBuyDialog(
+                    context,
+                    ledgerId: ref.read(currentLedgerIdProvider),
+                  );
+                  if (result == true) {
+                    ref.invalidate(currentHoldingsProvider);
+                    ref.invalidate(portfolioSummaryProvider);
+                  }
                 },
-                child: Icon(
-                  Theme.of(context).brightness == Brightness.dark
-                      ? Icons.light_mode
-                      : Icons.dark_mode,
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.black
-                      : Colors.white,
-                ),
+                child: const Icon(Icons.add_rounded),
               ),
             ),
         ],

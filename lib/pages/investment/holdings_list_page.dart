@@ -28,22 +28,7 @@ class HoldingsListPage extends ConsumerWidget {
     final summaryAsync = ref.watch(portfolioSummaryProvider);
 
     return Scaffold(
-     backgroundColor: BeeTokens.scaffoldBackground(context),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final result = await showBuyDialog(
-            context,
-            ledgerId: ref.read(currentLedgerIdProvider),
-          );
-          if (result == true) {
-            ref.invalidate(currentHoldingsProvider);
-            ref.invalidate(portfolioSummaryProvider);
-          }
-        },
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('买入'),
-      ),
+      backgroundColor: BeeTokens.scaffoldBackground(context),
       body: Column(
         children: [
           PrimaryHeader(
