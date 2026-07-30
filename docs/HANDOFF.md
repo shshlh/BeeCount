@@ -1,36 +1,43 @@
 
-## 2026-07-30
+## 2026-07-31
 
-**移交角色**：数据迁移工程师
+**移交角色**：UI 工程师（invest-ui）
 **接收角色**：项目经理（PM）
 
 **完成工作**：
-- 新增 scripts/migrate_from_old.py — 旧数据库（sqflite）→ CSV 迁移脚本
-  - 支持从旧项目（pj_003）的 ccount_book.db 导出全部 6 张表
-  - 自动解析 UUID 外键为可读名称（book_name / account_name / category_name）
-  - 导出 7 个文件：6 个 CSV + 1 个 README.md（含字段映射表 + 迁移步骤）
-  - 自动检测表是否存在、列是否可用（兼容旧版本 schema 差异）
-  - 用法：python scripts/migrate_from_old.py <旧.db路径> [--output <输出目录>]
-- 更新 .codex/TEAM.md — 任务板 5.3 标记 ✅
+任务 3.7 买入流程修复，共 3 个 P1 问题全部修复：
 
-**测试验证**：
-- 用模拟数据库（含 9 条多表测试数据）验证，6 个表全部正确导出
-- 外键解析验证通过（UUID → 中文名称，二级分类 parent_name 正确，交易 to_account_name 正确）
-- flutter analyze 零 error / flutter test 534 passed（基线未受影响）
+1. **FAB 被主页 SpeedDial 覆盖**（app.dart:596）
+   - `_onLongPressStart` 增加守卫：`if (ref.read(bottomTabIndexProvider) == 2) return;`
+   - 投资 Tab 下不再弹出 SpeedDial 覆盖层，持仓页 FAB 正常可见
+
+2. **明细页买入始终追加到同一持仓**（buy_dialog.dart:109-111）
+   - `_submit` 中比较用户输入的基金代码与预填值
+   - 代码变更时 `effectiveHoldingId` 置 null，Repository 按 fundCode+accountId 创建新持仓
+
+3. **资金来源**（buy_dialog.dart）
+   - 新增 `_selectedAccountId` 状态 + `_loadAccounts()` 异步加载
+   - 从 `getAvailableAccountsForLedger` 加载当前账本可用账户
+   - 表单底部新增「扣款账户」DropdownButtonFormField
+   - 买入成功后调用 `addTransaction(type: 'expense', ...)` 扣减账户余额
+   - 新增 import `../../data/db.dart`（Account 模型）
+
+**验证**：
+- flutter analyze 零新增 error（870 个预存 info/warning）
+- 投资模块 27 个测试全部通过
 
 **下一个任务需要知道的**：
-- 旧数据库不在源码仓库中（sqflite 存设备上），脚本接受任意路径输入
-- 迁移不是全自动的：CSV 导出后仍需在新 App 中手动创建账户/分类/持仓
-- 已导出 README.md 中含完整的字段映射表（旧→新）和分步迁移说明
-- code 字段（基金代码）在新 schema 中对应 undCode
-- 旧 is_investment 字段已废弃，新 App 用 	ype='invest' 判断
-- 旧 investment_holdings 的 ee_type 和 
-av_date 在新 schema 中没有对应列
-- 旧 periodic_bills 的 interval_days 在新 schema 中没有对应列
-- 所有外键 ID 已解析为名称（非 UUID），导出文件可直接阅读
+- `repositoryProvider` 通过 `providers.dart → all_providers.dart → database_providers.dart` 导入链可用
+- `addTransaction` 在 TransactionRepository 抽象接口中定义，可用
+- expense 扣款交易 `excludeFromBudget: true`，不影响预算统计；但不设 `excludeFromStats`
+- 扣款账户下拉默认选 widget.accountId（若传入）或首个可用账户
+- `_loadAccounts` 使用 `getAvailableAccountsForLedger`（按账本币种过滤）
 
 **修改文件**：
-- 新增：scripts/migrate_from_old.py
+- 修改：lib/app.dart
+- 修改：lib/widgets/investment/buy_dialog.dart
+- 修改：.codex/TEAM.md
+- 修改：docs/HANDOFF.md
 
 **git 状态**：当前分支 main，待提交
 
@@ -536,3 +543,36 @@ av_date 在新 schema 中没有对应列
 
 ---
 
+
+## 2026-07-31
+
+**移交角色**：项目经理（PM）
+**接收角色**：UI 工程师（invest-ui）— 3.7 买入流程修复
+
+**问题 1：FAB 被主页 SpeedDial 覆盖**
+持仓列表页（`HoldingsListPage`）有自己的 FAB，但主页 `app.dart` 的 SpeedDial 盖在上面。用户看不到持仓页的「买入」FAB。
+
+**修复**（`app.dart`）：
+- 在 SpeedDial 的显示条件中，当 `_selectedIndex == 2`（投资Tab）时，不显示 SpeedDial
+- 让持仓页自己的 FAB 透出来
+
+**问题 2：明细页买入始终追加到同一持仓**
+`holding_detail_page.dart` 的 `_showBuyDialog` 传入了 `holding`，导致 `buy_dialog.dart:75` 的 `holdingId: widget.holding?.id` 永远不为 null，Repository 忽略用户输入的新基金代码，一直往原持仓追加。
+
+**修复**（`buy_dialog.dart`）：
+- 在 `_submit` 方法中，当用户修改了基金代码（与预填值不一致），将 `holdingId` 置为 null
+- 或者在弹窗打开时，如果 holding 不为 null 但不预填基金代码，让用户自己输入
+
+**问题 3：资金来源**
+买入弹窗需要一个「扣款账户」下拉选择器。
+
+**修复**（`buy_dialog.dart`）：
+- 在表单底部加一个「扣款账户」DropdownButtonFormField
+- 选项为当前账本下可用的日常账户（现金/储蓄卡/虚拟账户）
+- 在 `_submit` 方法中调用 service.buy 时传入正确的 `accountId`
+- 买入后，在投资模块外部自动扣减该账户余额（调用现有 `recordTransaction` 或直接 SQL 更新）
+
+**约束**：
+- 不改 Repository 或 Service 层
+- 不改 investment_providers.dart
+- FAB 修复只改 app.dart 的 SpeedDial 显示条件

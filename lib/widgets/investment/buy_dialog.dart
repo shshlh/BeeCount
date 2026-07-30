@@ -5,10 +5,10 @@ import '../../data/db.dart';
 import '../../providers.dart';
 import '../../styles/tokens.dart';
 
-/// 买入弹窗 — 填写基金代码、名称、份额、净值、手续费。
+/// 买入弹窗 — 填写基金代码、名称、份额、净值、手续费、扣款账户。
 ///
-/// 如果从持仓详情进入（传入 [holding]），则自动预填基金信息，
-/// 买入后追加到该持仓。
+/// 如果从持仓详情进入（传入 [holding]），则自动预填基金信息。
+/// 若用户修改了基金代码，则创建新持仓而非追加到原持仓。
 class BuyDialog extends ConsumerStatefulWidget {
   final int ledgerId;
   final int? accountId;
@@ -33,6 +33,8 @@ class _BuyDialogState extends ConsumerState<BuyDialog> {
   late final TextEditingController _navCtrl;
   late final TextEditingController _feeCtrl;
   bool _submitting = false;
+  int? _selectedAccountId;
+  List<Account> _accounts = [];
 
   @override
   void initState() {
@@ -43,6 +45,17 @@ class _BuyDialogState extends ConsumerState<BuyDialog> {
     _sharesCtrl = TextEditingController();
     _navCtrl = TextEditingController(text: h != null && h.currentNav > 0 ? h.currentNav.toString() : '');
     _feeCtrl = TextEditingController(text: '0');
+    _loadAccounts();
+  }
+
+  Future<void> _loadAccounts() async {
+    final accounts = await ref.read(repositoryProvider).getAvailableAccountsForLedger(widget.ledgerId);
+    if (mounted) {
+      setState(() {
+        _accounts = accounts;
+        _selectedAccountId = widget.accountId ?? (accounts.isNotEmpty ? accounts.first.id : null);
+      });
+    }
   }
 
   @override
@@ -57,6 +70,12 @@ class _BuyDialogState extends ConsumerState<BuyDialog> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_selectedAccountId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请选择扣款账户')),
+      );
+      return;
+    }
     setState(() => _submitting = true);
     try {
       final service = ref.read(investmentServiceProvider);
@@ -64,16 +83,38 @@ class _BuyDialogState extends ConsumerState<BuyDialog> {
       final nav = double.parse(_navCtrl.text);
       service.validateBuy(shares: shares, nav: nav);
 
+      // 当用户修改了基金代码（与预填不同），holdingId 置 null 创建新持仓
+      final effectiveHoldingId = (_codeCtrl.text.trim() == widget.holding?.fundCode)
+          ? widget.holding?.id
+          : null;
+      final parsedFee = double.tryParse(_feeCtrl.text) ?? 0;
+
       await service.buy(
         ledgerId: widget.ledgerId,
-        accountId: widget.accountId ?? 0,
+        accountId: _selectedAccountId!,
         fundCode: _codeCtrl.text.trim(),
         fundName: _nameCtrl.text.trim(),
         shares: shares,
         nav: nav,
-        fee: double.tryParse(_feeCtrl.text) ?? 0,
-        holdingId: widget.holding?.id,
+        fee: parsedFee,
+        holdingId: effectiveHoldingId,
       );
+
+      // 买入后插入 expense 交易扣减扣款账户余额
+      final totalCost = shares * nav + parsedFee;
+      await ref.read(repositoryProvider).addTransaction(
+        ledgerId: widget.ledgerId,
+        type: 'expense',
+        amount: totalCost,
+        accountId: _selectedAccountId!,
+        happenedAt: DateTime.now(),
+        note: '买入 ${_codeCtrl.text.trim()}',
+        excludeFromBudget: true,
+      );
+
+      // NOTE(tech-debt): service.buy() 和 addTransaction() 无共享事务边界。
+      // 若 addTransaction 失败，买入已提交但余额未扣减。
+      // 修复需将扣款逻辑整合进 Repository 层 buy 事务内部（非 UI 层职责）。
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
@@ -154,6 +195,18 @@ class _BuyDialogState extends ConsumerState<BuyDialog> {
                 controller: _feeCtrl,
                 decoration: const InputDecoration(labelText: '手续费', suffixText: '元'),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              ),
+              const SizedBox(height: BeeDimens.p16),
+              DropdownButtonFormField<int>(
+                key: ValueKey(_accounts.length),
+                initialValue: _selectedAccountId,
+                decoration: const InputDecoration(labelText: '扣款账户'),
+                items: _accounts.map((a) => DropdownMenuItem(
+                  value: a.id,
+                  child: Text(a.name),
+                )).toList(),
+                onChanged: (v) => setState(() => _selectedAccountId = v),
+                validator: (_) => _selectedAccountId == null ? '请选择扣款账户' : null,
               ),
             ],
           ),

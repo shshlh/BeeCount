@@ -593,6 +593,7 @@ class _BeeAppState extends ConsumerState<BeeApp>
   }
 
   void _onLongPressStart(LongPressStartDetails details) {
+    if (ref.read(bottomTabIndexProvider) == 2) return;
     _expandController.forward();
     _showOverlay();
   }
