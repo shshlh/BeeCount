@@ -1,8 +1,9 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
 import 'package:drift/drift.dart' show Variable;
 import 'package:beecount/data/db.dart';
 import 'package:beecount/data/repositories/local/local_investment_repository.dart';
+import 'package:beecount/data/repositories/local/local_account_repository.dart';
 
 void main() {
   late BeeDatabase db;
@@ -16,8 +17,11 @@ void main() {
     await db.customStatement(
         "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
     await db.customStatement(
-        "INSERT INTO accounts (id, ledger_id, name, currency) "
-        "VALUES (10, 1, '投资账户', 'CNY')");
+        "INSERT INTO accounts (id, ledger_id, name, type, currency) "
+        "VALUES (10, 1, '投资账户', 'investment', 'CNY')");
+    await db.customStatement(
+        "INSERT INTO accounts (id, ledger_id, name, type, currency, initial_balance) "
+        "VALUES (20, 1, '支付宝', 'virtual_account', 'CNY', 5000)");
   });
 
   tearDown(() async => db.close());
@@ -40,7 +44,7 @@ void main() {
         'SELECT * FROM transactions WHERE id = ?',
         variables: [Variable<int>(txId)]).getSingle();
 
-    expect(tx.read<String>('type'), 'invest');
+    expect(tx.read<String>('type'), 'transfer');
     expect(tx.read<String>('invest_type'), 'buy');
     expect(tx.read<double>('amount'), 1510.0); // 1000*1.5+10
     expect(tx.read<double>('invest_shares'), 1000);
@@ -74,6 +78,255 @@ void main() {
     final h = (await holdings).single;
     expect(h.totalShares, 1500);
     expect(h.totalCost, closeTo(1600, 0.01)); // 1000*1.0+500*1.2
+  });
+
+  test('买入：无投资账户时自动创建，不把扣款账户当持仓归属', () async {
+    // 删掉种子投资账户，只剩可交易账户
+    await db.customStatement('DELETE FROM accounts WHERE id = 10');
+
+    final txId = await repo.buy(
+      ledgerId: 1,
+      accountId: 20, // 扣款账户（virtual_account）
+      fundCode: '000001',
+      fundName: '华夏成长混合',
+      shares: 1000,
+      nav: 1.5,
+      sourceAccountId: 20,
+    );
+
+    final tx = await db.customSelect(
+        'SELECT * FROM transactions WHERE id = ?',
+        variables: [Variable<int>(txId)]).getSingle();
+    expect(tx.read<int>('account_id'), 20); // 扣款方
+
+    final holding = await db.select(db.investmentHoldings).getSingle();
+    expect(holding.accountId, isNot(20));
+
+    final investmentAccount = await (db.select(db.accounts)
+          ..where((a) => a.id.equals(holding.accountId)))
+        .getSingle();
+    expect(investmentAccount.type, 'investment');
+    expect(tx.read<int>('to_account_id'), holding.accountId);
+  });
+
+  test('买入：accountId 误传扣款账户时仍归属投资账户', () async {
+    final txId = await repo.buy(
+      ledgerId: 1,
+      accountId: 20, // 错误传成扣款账户
+      fundCode: '000001',
+      fundName: '华夏成长混合',
+      shares: 1000,
+      nav: 1.5,
+      sourceAccountId: 20,
+    );
+
+    final holding = await db.select(db.investmentHoldings).getSingle();
+    expect(holding.accountId, 10); // 归到种子投资账户
+
+    final tx = await db.customSelect(
+        'SELECT * FROM transactions WHERE id = ?',
+        variables: [Variable<int>(txId)]).getSingle();
+    expect(tx.read<int>('account_id'), 20);
+    expect(tx.read<int>('to_account_id'), 10);
+  });
+
+  // ---- 余额联动 ----
+
+  test('余额联动：买入/卖出同步扣款账户与投资账户市值', () async {
+    final accountRepo = LocalAccountRepository(db);
+
+    // 买入 1000 @ 1.5 + 手续费 10
+    await repo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000001',
+      fundName: '华夏成长混合',
+      shares: 1000,
+      nav: 1.5,
+      fee: 10,
+      sourceAccountId: 20,
+    );
+
+    final afterBuy = await (db.select(db.accounts)
+          ..where((a) => a.id.equals(10)))
+        .getSingle();
+    expect(afterBuy.initialBalance, closeTo(1500, 0.01)); // 1000*1.5
+    expect(await accountRepo.getAccountBalance(20), closeTo(3490, 0.01)); // 5000-1510
+
+    // 卖出 500 @ 2.0，手续费 5，回款到支付宝
+    await repo.sell(
+      holdingId: 1,
+      shares: 500,
+      nav: 2.0,
+      fee: 5,
+      targetAccountId: 20,
+    );
+
+    final afterSell = await (db.select(db.accounts)
+          ..where((a) => a.id.equals(10)))
+        .getSingle();
+    expect(afterSell.initialBalance, closeTo(1000, 0.01)); // 500*2.0
+    expect(await accountRepo.getAccountBalance(20),
+        closeTo(4485, 0.01)); // 3490 + 995
+  });
+
+  test('余额联动：更新净值后投资账户市值同步', () async {
+    await repo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000001',
+      fundName: '华夏成长混合',
+      shares: 1000,
+      nav: 1.0,
+    );
+
+    await repo.updateNav(1, 2.0);
+
+    final account = await (db.select(db.accounts)
+          ..where((a) => a.id.equals(10)))
+        .getSingle();
+    expect(account.initialBalance, closeTo(2000, 0.01));
+  });
+
+  test('余额联动：转换后双方持仓合计市值同步', () async {
+    await repo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000001',
+      fundName: '基金A',
+      shares: 1000,
+      nav: 1.0,
+    );
+    await repo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000002',
+      fundName: '基金B',
+      shares: 500,
+      nav: 1.0,
+    );
+
+    await repo.convert(
+      fromHoldingId: 1,
+      toHoldingId: 2,
+      fromShares: 500,
+      fromNav: 1.2,
+      toShares: 480,
+      toNav: 1.25,
+      fee: 5,
+    );
+
+    final account = await (db.select(db.accounts)
+          ..where((a) => a.id.equals(10)))
+        .getSingle();
+    expect(account.initialBalance, closeTo(1825, 0.01)); // 500*1.2 + 980*1.25
+  });
+
+  // ---- 交易编辑重算 ----
+
+  test('编辑交易：修改买入份额/净值/手续费后重算持仓', () async {
+    final txId = await repo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000001',
+      fundName: '华夏成长混合',
+      shares: 1000,
+      nav: 1.5,
+      fee: 10,
+    );
+
+    await repo.updateTransaction(
+      txId,
+      investShares: 500,
+      investNav: 2.0,
+      investFee: 5,
+      amount: 1005,
+    );
+
+    final h = await repo.getHolding(1);
+    expect(h!.totalShares, 500);
+    expect(h.totalCost, closeTo(1005, 0.01)); // 500*2.0+5
+    expect(h.currentNav, 2.0);
+    expect(h.marketValue, closeTo(1000, 0.01));
+
+    final account = await (db.select(db.accounts)
+          ..where((a) => a.id.equals(10)))
+        .getSingle();
+    expect(account.initialBalance, closeTo(1000, 0.01));
+  });
+
+  test('编辑交易：买入金额即成本，仅改金额也重算成本', () async {
+    final txId = await repo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000001',
+      fundName: '华夏成长混合',
+      shares: 1000,
+      nav: 1.5,
+      fee: 10,
+    );
+
+    await repo.updateTransaction(txId, amount: 2000);
+
+    final h = await repo.getHolding(1);
+    expect(h!.totalShares, 1000);
+    expect(h.totalCost, closeTo(2000, 0.01));
+    expect(h.marketValue, closeTo(1500, 0.01)); // 市值仍按净值算
+  });
+
+  test('编辑交易：部分卖出后改买入份额按比例重算成本', () async {
+    final buyTx = await repo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000001',
+      fundName: '华夏成长混合',
+      shares: 1000,
+      nav: 2.0,
+    );
+    await repo.sell(holdingId: 1, shares: 500, nav: 2.5);
+
+    await repo.updateTransaction(
+      buyTx,
+      investShares: 800,
+      amount: 1600,
+    );
+
+    final h = await repo.getHolding(1);
+    expect(h!.totalShares, 300); // 800-500
+    expect(h.totalCost, closeTo(600, 0.01)); // 1600 - 1600*500/800
+    expect(h.currentNav, 2.5);
+    expect(h.marketValue, closeTo(750, 0.01));
+  });
+
+  test('编辑交易：初始持仓修改后重算并联动市值', () async {
+    await repo.createInitialHolding(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000001',
+      fundName: '华夏成长混合',
+      shares: 1000,
+      cost: 2000,
+      nav: 2.0,
+    );
+
+    final tx = await (db.select(db.transactions)
+          ..where((t) => t.holdingId.equals(1)))
+        .getSingle();
+    await repo.updateTransaction(
+      tx.id,
+      investShares: 800,
+      amount: 1600,
+    );
+
+    final h = await repo.getHolding(1);
+    expect(h!.totalShares, 800);
+    expect(h.totalCost, closeTo(1600, 0.01));
+    expect(h.marketValue, closeTo(1600, 0.01));
+
+    final account = await (db.select(db.accounts)
+          ..where((a) => a.id.equals(10)))
+        .getSingle();
+    expect(account.initialBalance, closeTo(1600, 0.01));
   });
 
   // ---- 卖出 ----
@@ -199,3 +452,4 @@ void main() {
     expect(holdings.single.fundCode, '000002');
   });
 }
+

@@ -4,9 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/db.dart';
 import '../../providers.dart';
 import '../../styles/tokens.dart';
+import '../../utils/account_type_utils.dart';
 import '../biz/section_card.dart';
 
 /// 卖出弹窗 — 从已有持仓卖出部分或全部份额。
+/// v4.7: 卖出视为"投资账户 → 回款账户"的转账，支持选择回款目标。
 class SellDialog extends ConsumerStatefulWidget {
   final InvestmentHolding holding;
 
@@ -23,6 +25,8 @@ class _SellDialogState extends ConsumerState<SellDialog> {
   late final TextEditingController _feeCtrl;
   bool _submitting = false;
   bool _sellAll = false;
+  int? _targetAccountId;
+  List<Account> _accounts = [];
 
   @override
   void initState() {
@@ -33,6 +37,17 @@ class _SellDialogState extends ConsumerState<SellDialog> {
             ? widget.holding.currentNav.toString()
             : '');
     _feeCtrl = TextEditingController(text: '0');
+    _loadAccounts();
+  }
+
+  Future<void> _loadAccounts() async {
+    final accounts = await ref.read(repositoryProvider).getAvailableAccountsForLedger(widget.holding.ledgerId);
+    if (mounted) {
+      setState(() {
+        // v4.7: 只显示可交易账户作为回款目标
+        _accounts = accounts.where((a) => isTradableType(a.type)).toList();
+      });
+    }
   }
 
   @override
@@ -64,6 +79,7 @@ class _SellDialogState extends ConsumerState<SellDialog> {
         shares: shares,
         nav: nav,
         fee: double.tryParse(_feeCtrl.text) ?? 0,
+        targetAccountId: _targetAccountId,
       );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
@@ -155,6 +171,19 @@ class _SellDialogState extends ConsumerState<SellDialog> {
                 decoration: const InputDecoration(labelText: '手续费', suffixText: '元'),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
               ),
+              const SizedBox(height: BeeDimens.p16),
+              // v4.7: 回款账户选择
+              if (_accounts.isNotEmpty)
+                DropdownButtonFormField<int>(
+                  key: ValueKey(_accounts.length),
+                  initialValue: _targetAccountId,
+                  decoration: const InputDecoration(labelText: '回款账户（可选）'),
+                  items: _accounts.map((a) => DropdownMenuItem(
+                    value: a.id,
+                    child: Text(a.name),
+                  )).toList(),
+                  onChanged: (v) => setState(() => _targetAccountId = v),
+                ),
             ],
           ),
         ),

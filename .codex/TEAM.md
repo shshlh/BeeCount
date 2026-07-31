@@ -41,35 +41,48 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 
 ## 任务板
 
-状态标记：⬜ 待办 · 🔄 进行中 · ✅ 已完成 · ❌ 阻塞
-
-### 阶段 0：Fork + 瘦身
+### 阶段 4.7：投资模块体验修正
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
 |---|---|---|---|---|
-| 0.1 Fork 仓库 + 改包名 | ✅ | 用户 | 私有仓库 | — |
-| 0.2 删除 iOS 代码 | ⬜ | — | iOS 残留清除 | — |
-| 0.3 瘦身（共享账本/IAP/营销/多语言） | ⬜ | — | 工程瘦身完成 | — |
-| 0.4 添加 Windows 支持 | ⬜ | — | Windows 可编译 | — |
-| 0.5 验证基线 | ⬜ | — | 测试全过 | — |
+| 4.7.1 导入按钮常驻 | ✅ | invest-ui | holdings_list_page 顶部按钮 | — |
+| 4.7.2 交易记录编辑 | ✅ | invest-logic + invest-ui | 编辑弹窗 + Repository 方法（返工：保存后事务内重算持仓） | 2026-08-01 |
+| 4.7.3 初始持仓标记登记 + 不进流水 | ✅ | invest-logic | investType + excludeFromStats | 2026-08-01 |
+| 4.7.4 投资账户不手动估值 | ✅ | invest-ui | account_edit_page 修改 | — |
+| 4.7.5 买卖改为转账 | ✅ | invest-logic | buy/sell 交易类型修改（返工：事务内余额联动 + 持仓归属修正） | 2026-08-01 |
 
-### 阶段 1：投资数据层
-
-| 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
-|---|---|---|---|---|
-| 1.1 InvestmentHoldings 表 | ✅ | architect | db.dart 定义 | 2026-07-29 |
-| 1.2 Transaction 投资字段 | ✅ | architect | db.dart 扩展 | 2026-07-29 |
-| 1.3 Schema 迁移 v31→v32 | ✅ | architect | 迁移代码 | 2026-07-29 |
-| 1.4 InvestmentRepository | ✅ | architect | 4 个核心事务 | 2026-07-29 |
-| 1.5 Repository 单元测试 | ✅ | architect | 13 测试全通过 | 2026-07-29 |
-
-### 阶段 2：投资逻辑层
+### 阶段 4.6：投资逻辑修复 + 初始持仓导入
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
 |---|---|---|---|---|
-| 2.1 InvestmentService | ✅ | invest-logic | Service 封装 | 2026-07-29 |
-| 2.2 Riverpod Provider | ✅ | invest-logic | Provider 定义 | 2026-07-29 |
-| 2.3 单元测试 | ✅ | invest-logic | 16 测试全通过 | 2026-07-29 |
+| 4.6.1 账户资产/负债分组修复 | ✅ | invest-ui | accounts_page 修正 | 2026-07-31 |
+| 4.6.2 初始持仓导入 | ✅ | invest-logic + invest-ui | Repository + Service + UI | 2026-07-31 |
+| 4.6.3 手续费计入成本 | ✅ | invest-logic | repo 修正 | 2026-07-31 |
+
+### 阶段 4.5：账户体系改造
+
+| 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
+|---|---|---|---|---|
+| 4.5 账户体系改造 | ✅ | architect + invest-ui | 7 类型 + icon字段 + SVG清理 + UI合并 | 2026-07-31 |
+
+---
+
+### 阶段 5：测试 + 上线
+
+| 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
+|---|---|---|---|---|
+| 5.1 全流程手工测试 | ✅ | qa | 验证报告 | 2026-07-30 |
+| 5.2 单元测试补充 | ✅ | qa | 测试覆盖率 | 2026-07-30 |
+| 5.3 旧数据迁移脚本 | ✅ | migration | 迁移工具 | 2026-07-30 |
+
+### 阶段 4：特色搬运
+
+| 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
+|---|---|---|---|---|
+| 4.1 Excel 导入 | ✅ | integration | excel_import_service.dart + xlsx_reader 已接线 | 2026-07-29 |
+| 4.2 日历视图 | ✅ | invest-ui | 日历事件 provider + 彩色圆点渲染 + 事件摘要弹窗 | 2026-07-29 |
+| 4.3 设置页 + WebDAV | ✅ | integration | WebDAV已有云备份区 + 账户总览入口 | 2026-07-29 |
+| 4.4 时间选择器 | ✅ | integration | BeeCount 已有 WheelTimePicker | 2026-07-29 |
 
 ### 阶段 3：投资 UI 层
 
@@ -94,38 +107,33 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 3.3 操作弹窗（买入/卖出/转换） | ✅ | invest-ui | 弹窗组件 | 2026-07-29 |
 | 3.4 首页 5 Tab 导航 | ✅ | invest-ui | 导航改造 | 2026-07-29 |
 
-### 阶段 4：特色搬运
+### 阶段 2：投资逻辑层
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
 |---|---|---|---|---|
-| 4.1 Excel 导入 | ✅ | integration | excel_import_service.dart + xlsx_reader 已接线 | 2026-07-29 |
-| 4.2 日历视图 | ✅ | invest-ui | 日历事件 provider + 彩色圆点渲染 + 事件摘要弹窗 | 2026-07-29 |
-| 4.3 设置页 + WebDAV | ✅ | integration | WebDAV已有云备份区 + 账户总览入口 | 2026-07-29 |
-| 4.4 时间选择器 | ✅ | integration | BeeCount 已有 WheelTimePicker | 2026-07-29 |
+| 2.1 InvestmentService | ✅ | invest-logic | Service 封装 | 2026-07-29 |
+| 2.2 Riverpod Provider | ✅ | invest-logic | Provider 定义 | 2026-07-29 |
+| 2.3 单元测试 | ✅ | invest-logic | 16 测试全通过 | 2026-07-29 |
 
-### 阶段 5：测试 + 上线
-
-| 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
-|---|---|---|---|---|
-| 5.1 全流程手工测试 | ✅ | qa | 验证报告 | 2026-07-30 |
-| 5.2 单元测试补充 | ✅ | qa | 测试覆盖率 | 2026-07-30 |
-| 5.3 旧数据迁移脚本 | ✅ | migration | 迁移工具 | 2026-07-30 |
-
-### 阶段 4.6：投资逻辑修复 + 初始持仓导入
+### 阶段 1：投资数据层
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
 |---|---|---|---|---|
-| 4.6.1 账户资产/负债分组修复 | ✅ | invest-ui | accounts_page 修正 | 2026-07-31 |
-| 4.6.2 初始持仓导入 | ✅ | invest-logic + invest-ui | Repository + Service + UI | 2026-07-31 |
-| 4.6.3 手续费计入成本 | ✅ | invest-logic | repo 修正 | 2026-07-31 |
+| 1.1 InvestmentHoldings 表 | ✅ | architect | db.dart 定义 | 2026-07-29 |
+| 1.2 Transaction 投资字段 | ✅ | architect | db.dart 扩展 | 2026-07-29 |
+| 1.3 Schema 迁移 v31→v32 | ✅ | architect | 迁移代码 | 2026-07-29 |
+| 1.4 InvestmentRepository | ✅ | architect | 4 个核心事务 | 2026-07-29 |
+| 1.5 Repository 单元测试 | ✅ | architect | 13 测试全通过 | 2026-07-29 |
 
-### 阶段 4.5：账户体系改造
+### 阶段 0：Fork + 瘦身
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
 |---|---|---|---|---|
-| 4.5 账户体系改造 | ✅ | architect + invest-ui | 7 类型 + icon字段 + SVG清理 + UI合并 | 2026-07-31 |
-
----
+| 0.1 Fork 仓库 + 改包名 | ✅ | 用户 | 私有仓库 | — |
+| 0.2 删除 iOS 代码 | ⬜ | — | iOS 残留清除 | — |
+| 0.3 瘦身（共享账本/IAP/营销/多语言） | ⬜ | — | 工程瘦身完成 | — |
+| 0.4 添加 Windows 支持 | ⬜ | — | Windows 可编译 | — |
+| 0.5 验证基线 | ⬜ | — | 测试全过 | — |
 
 ## 任务分派工作流
 
@@ -182,4 +190,5 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 
 **git 状态**：当前分支 [branch name]，已提交 [commit hash]
 ```
+
 

@@ -13,8 +13,11 @@ import '../../widgets/investment/initial_holding_dialog.dart';
 
 /// 持仓列表页 — 展示当前账本下所有投资持仓。
 ///
+/// v4.7: 导入初始持仓按钮常驻顶部（不仅限于空态）。
+///
 /// 功能：
 /// - 顶部组合摘要卡片（总市值/总成本/盈亏/收益率/持仓数）
+/// - v4.7: 导入初始持仓按钮（常驻，摘要卡片下方）
 /// - 持仓卡片列表（基金名称、代码、份额、市值、盈亏）
 /// - 下拉刷新（刷新净值数据）
 /// - 空状态提示（无持仓时）
@@ -40,10 +43,8 @@ class HoldingsListPage extends ConsumerWidget {
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
-                // 刷新持仓和摘要数据（重新查询数据库）
                 ref.invalidate(currentHoldingsProvider);
                 ref.invalidate(portfolioSummaryProvider);
-                // 等待数据重新加载
                 await Future.delayed(const Duration(milliseconds: 300));
               },
               child: holdingsAsync.when(
@@ -59,7 +60,7 @@ class HoldingsListPage extends ConsumerWidget {
                       BeeDimens.p12,
                       BeeDimens.p12,
                     ),
-                    itemCount: holdings.length + 1, // +1 摘要卡片
+                    itemCount: holdings.length + 2, // +1 摘要卡片 +1 导入按钮（v4.7）
                     itemBuilder: (context, index) {
                       if (index == 0) {
                         return Padding(
@@ -67,7 +68,13 @@ class HoldingsListPage extends ConsumerWidget {
                           child: _buildSummaryCard(context, ref, summaryAsync),
                         );
                       }
-                      final holding = holdings[index - 1];
+                      if (index == 1) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: BeeDimens.p8),
+                          child: _buildImportButton(context, ref),
+                        );
+                      }
+                      final holding = holdings[index - 2];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: BeeDimens.p8),
                         child: HoldingCard(
@@ -94,6 +101,46 @@ class HoldingsListPage extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// v4.7: 导入初始持仓按钮（常驻，在摘要卡片下方）
+  Widget _buildImportButton(BuildContext context, WidgetRef ref) {
+    final primaryColor = ref.watch(primaryColorProvider);
+    return SectionCard(
+      padding: const EdgeInsets.all(BeeDimens.p12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () async {
+          final result = await showInitialHoldingDialog(
+            context,
+            ledgerId: ref.read(currentLedgerIdProvider),
+          );
+          if (result == true) {
+            ref.invalidate(currentHoldingsProvider);
+            ref.invalidate(portfolioSummaryProvider);
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.file_upload_outlined,
+                  size: 18, color: primaryColor),
+              const SizedBox(width: 8),
+              Text(
+                '导入初始持仓',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: primaryColor,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -178,7 +225,6 @@ class HoldingsListPage extends ConsumerWidget {
         ),
         child: Column(
           children: [
-            // 标题行
             Row(
               children: [
                 Text(
@@ -196,7 +242,6 @@ class HoldingsListPage extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: BeeDimens.p12),
-            // 总市值
             _summaryRow(
               context,
               label: '总市值',
@@ -204,14 +249,12 @@ class HoldingsListPage extends ConsumerWidget {
               isMain: true,
             ),
             const SizedBox(height: BeeDimens.p8),
-            // 总成本
             _summaryRow(
               context,
               label: '总成本',
               value: summary.totalCost,
             ),
             const SizedBox(height: BeeDimens.p8),
-            // 盈亏
             _summaryPnlRow(context, ref, summary),
           ],
         ),
@@ -223,7 +266,6 @@ class HoldingsListPage extends ConsumerWidget {
     );
   }
 
-  /// 通用摘要行（标签 + 金额）
   Widget _summaryRow(
     BuildContext context, {
     required String label,
@@ -257,7 +299,6 @@ class HoldingsListPage extends ConsumerWidget {
     );
   }
 
-  /// 盈亏行（带颜色 + 收益率）
   Widget _summaryPnlRow(
     BuildContext context,
     WidgetRef ref,

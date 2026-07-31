@@ -1,11 +1,12 @@
 # 交接记录
 
-本文档记录线程之间的任务交接。按时间倒序排列。
+本文档记录线程之间的任务交接。
+**按时间倒序排列**，每一条新的交接记录必须放在模板下方第一条。
+不同的任务之间必须用“---”分割，同一问题的互相交接仅需**换行分隔**。
 
 ---
 
 <!--
-
 ### 模板
 
 ## {日期}
@@ -26,10 +27,94 @@
 **git 状态**：当前分支 [branch name]，已提交 [commit hash]
 
 ---
-
 -->
 
-*暂无交接记录。首个任务开始后启用。*
+---
+
+## 2026-08-01
+
+**移交角色**：invest-ui + invest-logic（联合修复）
+**接收角色**：PM
+
+**完成工作**：阶段 4.7 投资模块体验修正 5 项全部完成：
+
+1. **4.7.1 导入按钮常驻** — [holdings_list_page.dart](/D:\codexproject\pj_004_beecount_fork\lib\pages\investment\holdings_list_page.dart)
+   - 导入初始持仓按钮从仅空态显示 → 常驻摘要卡片下方
+   - 非空态列表 itemCount +1，index=1 插入导入按钮
+
+2. **4.7.2 交易记录编辑** — [holding_detail_page.dart](/D:\codexproject\pj_004_beecount_fork\lib\pages\investment\holding_detail_page.dart) + [local_investment_repository.dart](/D:\codexproject\pj_004_beecount_fork\lib\data\repositories\local\local_investment_repository.dart)
+   - InvestmentRepository 加 `updateTransaction(id, {note, happenedAt, investShares, investNav, investFee, amount})`
+   - `_TransactionTile` 添加编辑图标 + onTap → 弹出 `_TransactionEditDialog`
+   - 编辑弹窗支持修改日期、金额、份额、净值、手续费、备注
+
+3. **4.7.3 初始持仓标记登记 + 不进流水** — [local_investment_repository.dart](/D:\codexproject\pj_004_beecount_fork\lib\data\repositories\local\local_investment_repository.dart)
+   - `createInitialHolding` 中 investType: 'buy' → 'initial'
+   - 初始持仓交易 `excludeFromStats: true`，不计入流水统计
+   - `_TransactionTile` 新增 '初始登记' 标签 + '不计流水' 副标签
+
+4. **4.7.4 投资账户不手动估值** — [account_edit_page.dart](/D:\codexproject\pj_004_beecount_fork\lib\pages\account\account_edit_page.dart)
+   - 投资账户类型（investment）时，初始余额 field 置为 `enabled: false`
+   - label 显示 "持仓市值（自动计算）"，hint "由持仓总市值自动计算，无需手动填写"
+
+5. **4.7.5 买卖改为转账** — 全链路改造
+   - Repository: `_insertTx` 中 `type: 'invest'` → `type: 'transfer'`
+   - buy() 新增 `sourceAccountId` 参数，用于创建 source → 投资账户的转账
+   - sell() 新增 `targetAccountId` 参数，用于创建投资账户 → 回款账户的转账
+   - buy_dialog: 扣款账户下拉只显示可交易账户（`isTradableType`），移除单独 expense 交易插入
+   - sell_dialog: 新增回款账户选择器（可选）
+   - convert: 两笔交易同步改为 transfer 类型
+
+**验证**：flutter analyze 零 error，22 个投资测试全通过。
+
+**下一个任务需要知道的**：
+- 所有投资交易 type 已从 'invest' 改为 'transfer'，外部若按 type 过滤需同步更新
+- `_insertTx` 新增 `excludeFromStats` 参数（默认 false）
+- buy/sell/conver 签名均新增了可选账户参数，调用方需注意向后兼容
+- 初始持仓 investType='initial'，`_TransactionTile` 已适配显示
+- 投资账户 edit page 的 initialBalance 已被禁用，由持仓市值自动计算
+
+**git 状态**：未提交（等待 PM 审查）
+
+## 2026-08-01
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-logic + invest-ui
+
+**任务**：4.7 投资模块体验修正（5 个问题）
+
+**问题 1：导入初始持仓按钮不常驻**
+- 当前按钮只在空态（holdings_list_page.dart _buildEmptyState）里
+- 修复：把「导入初始持仓」按钮放到 PrimaryHeader 标题「投资持仓」右侧（actions 区），保持常驻
+- 空态按钮可保留或删除，顶部常驻为主
+
+**问题 2：交易记录无法修改**
+- 初始持仓导入填错了，只能卖出+删流水，不合理
+- 修复：holding_detail_page.dart 的每条 _TransactionTile 加编辑入口（点击或右侧编辑按钮）
+- 编辑弹窗：可改份额/净值/成本/日期/备注，保存后更新交易记录 + 重算持仓 totalShares/totalCost/marketValue
+- 需要新增 updateInvestmentTransaction Repository 方法（接口+实现+Service 透传）
+
+**问题 3：初始持仓标记为「买入」+ 流水显示**
+- createInitialHolding 的 investType 用了 buy，详情页显示「买入」
+- 修复：
+  a) 新增 investType 值 initial（登记），_TransactionTile 的 typeLabel 加对应中文「登记」
+  b) 初始持仓交易记录 excludeFromStats: true（不显示在流水页/统计）
+  c) 类似于新建账户填初始资金的处理方式
+
+**问题 4：新建投资账户不要手动填初始估值**
+- account_edit_page.dart 新建投资账户时，初始估值字段强制为 0（或隐藏）
+- 投资账户的市值应由 investment_holdings 自动计算（shares * nav 求和）
+- 不做手动估值输入
+
+**问题 5：买卖基金流水应为转账**
+- 买入基金：支付宝 → 支付宝基金（transfer 类型）
+- 卖出基金：支付宝基金 → 支付宝（transfer 类型）
+- 当前 buy_dialog 插入的是 expense 交易，应改为 transfer（accountId=扣款账户, toAccountId=投资账户）
+- _insertTx 的 type 参数改为 transfer，balance 更新逻辑要同步处理
+- 卖出/赎回同样改为 transfer
+
+**约束**：flutter analyze 零 error。投资模块测试同步更新。
+
+---
 
 ## 2026-07-31
 
@@ -43,9 +128,9 @@
    - 删除 `holdings_list_page.dart` 内层 Scaffold 的 `floatingActionButton` 和 `floatingActionButtonLocation`
    - 在 `app.dart` 外层 `Stack` 中用 `Positioned(right: 16, bottom: 100)` 放置买入 FAB
    - 条件渲染：`if (idx == 2)` — 仅在投资 Tab 可见
-   - 替代原来的调试主题切换 FAB（`heroTag: 'themeSwitcher'`，`if (kDebugMode)`）
+   - 替代原来的调试主题切换 FAB（`heroTag: ''themeSwitcher''`，`if (kDebugMode)`）
    - 点击调用 `showBuyDialog`，成功后 `ref.invalidate(currentHoldingsProvider)` + `ref.invalidate(portfolioSummaryProvider)`
-   - 新增 import `'widgets/investment/buy_dialog.dart'`
+   - 新增 import `''widgets/investment/buy_dialog.dart''`
 
 **设计决策**：
 - 内层 Scaffold 的 FAB 无法避开外层底部导航栏（`extendBody: true` 让 body 延伸到导航栏后方）
@@ -68,39 +153,48 @@
 
 ## 2026-07-31
 
-**移交角色**：UI 工程师（invest-ui）
+**移交角色**：invest-logic + invest-ui
 **接收角色**：项目经理（PM）
 
-**完成工作**：
-任务 3.8 买入流程修复 2，共 2 个 Bug 全部修复：
+**完成工作**：阶段 4.6 全部 3 个任务：
 
-1. **FAB 被底部导航栏遮挡**（holdings_list_page.dart:32-34 + app.dart:605-606）
-   - `HoldingsListPage` Scaffold 新增 `floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat`
-   - FAB 从右下角上移，避开外部 Scaffold 的 bottomNavigationBar
-   - app.dart `_onLongPressEnd` 新增守卫：`if (ref.read(bottomTabIndexProvider) == 2) return;`
-   - 配合已有的 `_onLongPressStart` 守卫（3.7 修复），投资 Tab 下 SpeedDial 完全不会弹出
+### 4.6.1 账户资产/负债分组修复
+- lib/utils/account_type_utils.dart — 新增 assetTypeOrder（cash/bank_card/virtual_account/receivable/investment）和 liabilityTypeOrder（credit_card/loan）两个常量
+- lib/pages/account/accounts_page.dart:200,214 — 资产区 → assetTypeOrder，负债区 → liabilityTypeOrder，修复了所有账户同时出现在两个区的 Bug
 
-2. **addTransaction 方法不存在**（buy_dialog.dart:103-115）
-   - `ref.read(repositoryProvider).addTransaction(...)` → Drift 直接插入
-   - 改用 `ref.read(databaseProvider).into(db.transactions).insert(TransactionsCompanion(...))`
-   - 新增 `import 'package:drift/drift.dart' show Value;` 解决 Value 类型导入
-   - expense 扣款交易字段：ledgerId / type / amount / accountId / happenedAt / note / excludeFromBudget
+### 4.6.2 初始持仓导入
+- lib/data/repositories/investment_repository.dart — 接口新增 createInitialHolding 方法
+- lib/data/repositories/local/local_investment_repository.dart — 实现：事务内新建持仓 + 插入投资交易记录（invest_type=''buy''），返回 holdingId
+- lib/services/data/investment_service.dart — 新增 createInitialHolding 委托
+- lib/widgets/investment/initial_holding_dialog.dart — 新增弹窗：基金代码/名称/份额/成本/净值/投资账户选择/备注，带前端验证
+- lib/pages/investment/holdings_list_page.dart — 空态新增「导入初始持仓」OutlinedButton，调 showInitialHoldingDialog
+
+### 4.6.3 手续费计入成本
+- lib/data/repositories/local/local_investment_repository.dart:164 — final newCost = oldCost + shares * nav; → + fee
+- test/data/repositories/investment_repository_test.dart:56 — totalCost 1500→1510（1000*1.5+10）
+- test/services/investment_service_test.dart:164 — totalCost 1000→1005（500*2.0+5）
 
 **验证**：
-- flutter analyze 零新增 error（3 个目标文件 no issues）
+- dart analyze：17 个预存 issues，零新增 error/warning
+- flutter test：534 passed, 1 skipped, 1 failed（唯一失败 = 既存 bill_creation_service_test）
 - 投资模块 22 个测试全部通过
 
 **下一个任务需要知道的**：
-- FAB 用 `centerFloat` 位置，在不同屏幕尺寸下自适应
-- buy_dialog 的 expense 交易插入与 service.buy() 无共享事务边界（NOTE: tech-debt 已标注）
-- holdlings_list_page 的 FAB 在空态和有数据时均可见
+- createInitialHolding 与 buy 的区别：直接给定 shares+cost，不产生扣款交易，交易备注自动填「初始持仓 {fundCode}」
+- 费率入成本后，Repo 层 buy() 的 transaction.amount 和 holding.totalCost 都包含 fee；Service 层委托透传
+- 弹窗仅在有投资类型账户时显示账户下拉（空则无下拉行，仍可提交但会 SnackBar 报错）
+- accounts_page 资产/负债分组依赖新增的 assetTypeOrder/liabilityTypeOrder — 如果后续新增账户类型，需要同步更新这两个常量
 
 **修改文件**：
+- 修改：lib/utils/account_type_utils.dart
+- 修改：lib/pages/account/accounts_page.dart
+- 修改：lib/data/repositories/investment_repository.dart
+- 修改：lib/data/repositories/local/local_investment_repository.dart
+- 修改：lib/services/data/investment_service.dart
 - 修改：lib/pages/investment/holdings_list_page.dart
-- 修改：lib/app.dart
-- 修改：lib/widgets/investment/buy_dialog.dart
-- 修改：.codex/TEAM.md
-- 修改：docs/HANDOFF.md
+- 新增：lib/widgets/investment/initial_holding_dialog.dart
+- 修改：test/data/repositories/investment_repository_test.dart
+- 修改：test/services/investment_service_test.dart
 
 **git 状态**：当前分支 main，待提交
 
@@ -108,134 +202,33 @@
 
 ## 2026-07-31
 
-**移交角色**：UI 工程师（invest-ui）
-**接收角色**：项目经理（PM）
+**移交角色**：项目经理（PM）
+**接收角色**：invest-logic + invest-ui
 
-**完成工作**：
-任务 3.7 买入流程修复，共 3 个 P1 问题全部修复：
+**任务**：4.6 投资逻辑修复 + 初始持仓导入（3 个 bug）
 
-1. **FAB 被主页 SpeedDial 覆盖**（app.dart:596）
-   - `_onLongPressStart` 增加守卫：`if (ref.read(bottomTabIndexProvider) == 2) return;`
-   - 投资 Tab 下不再弹出 SpeedDial 覆盖层，持仓页 FAB 正常可见
+**Bug 1：账户资产/负债分组错误**（accounts_page.dart）
+- 200 行和 214 行：两处 _buildClassificationSection 都传了 allAccountTypes
+- 导致所有账户（含银行卡）同时出现在「资产账户」和「负债账户」两个区
+- 修复：资产区传 assetTypeOrder，负债区传 liabilityTypeOrder（这俩常量需要加到 account_type_utils.dart）
+  assetTypeOrder = [cash, bank_card, virtual_account, investment, receivable]
+  liabilityTypeOrder = [credit_card, loan]
 
-2. **明细页买入始终追加到同一持仓**（buy_dialog.dart:109-111）
-   - `_submit` 中比较用户输入的基金代码与预填值
-   - 代码变更时 `effectiveHoldingId` 置 null，Repository 按 fundCode+accountId 创建新持仓
+**Bug 2：缺少初始持仓导入**（需要新增）
+- Repository 接口没有 createInitialHolding 方法
+- 需要在 investment_repository.dart 接口加 + local_investment_repository.dart 实现
+- 字段：ledgerId, accountId(投资账户), fundCode, fundName, shares(份额), cost(持仓成本), nav(净值), happenedAt
+- 需要同时更新 InvestmentService + Riverpod Provider + UI 入口（持仓列表页 FAB 附近加「导入初始持仓」按钮）
+- 参考原 pj_003 项目的 database_helper.dart 的 createInitialHolding 逻辑
 
-3. **资金来源**（buy_dialog.dart）
-   - 新增 `_selectedAccountId` 状态 + `_loadAccounts()` 异步加载
-   - 从 `getAvailableAccountsForLedger` 加载当前账本可用账户
-   - 表单底部新增「扣款账户」DropdownButtonFormField
-   - 买入成功后调用 `addTransaction(type: 'expense', ...)` 扣减账户余额
-   - 新增 import `../../data/db.dart`（Account 模型）
+**Bug 3：手续费不计入成本**（local_investment_repository.dart:164）
+- final newCost = oldCost + shares * nav; 漏了 fee
+- 应改为：final newCost = oldCost + shares * nav + fee;
+- 同步更新相关测试
 
-**验证**：
-- flutter analyze 零新增 error（870 个预存 info/warning）
-- 投资模块 27 个测试全部通过
-
-**下一个任务需要知道的**：
-- `repositoryProvider` 通过 `providers.dart → all_providers.dart → database_providers.dart` 导入链可用
-- `addTransaction` 在 TransactionRepository 抽象接口中定义，可用
-- expense 扣款交易 `excludeFromBudget: true`，不影响预算统计；但不设 `excludeFromStats`
-- 扣款账户下拉默认选 widget.accountId（若传入）或首个可用账户
-- `_loadAccounts` 使用 `getAvailableAccountsForLedger`（按账本币种过滤）
-
-**修改文件**：
-- 修改：lib/app.dart
-- 修改：lib/widgets/investment/buy_dialog.dart
-- 修改：.codex/TEAM.md
-- 修改：docs/HANDOFF.md
-
-**git 状态**：当前分支 main，待提交
-
----# 交接记录
-
-本文档记录线程之间的任务交接。按时间倒序排列。
+**约束**：不改 app.dart 导航。flutter analyze 零 error。
 
 ---
-
-<!--
-
-### 模板
-
-## {日期}
-
-**移交角色**：[角色名]
-**接收角色**：[角色名]
-
-**完成工作**：
-- 改了哪些文件
-- 做了什么变更
-- 还有什么未完成
-
-**下一个任务需要知道的**：
-- 关键决策
-- 已知问题
-- 要读的代码上下文
-
-**git 状态**：当前分支 [branch name]，已提交 [commit hash]
-
----
-
--->
-
-*暂无交接记录。首个任务开始后启用。*
-
-## 2026-07-31
-
-**移交角色**：项目经理（PM）
-**接收角色**：UI 工程师（invest-ui）— 3.7 买入流程修复
-
-**问题 1：FAB 被主页 SpeedDial 覆盖**
-持仓列表页（`HoldingsListPage`）有自己的 FAB，但主页 `app.dart` 的 SpeedDial 盖在上面。用户看不到持仓页的「买入」FAB。
-
-**修复**（`app.dart`）：
-- 在 SpeedDial 的显示条件中，当 `_selectedIndex == 2`（投资Tab）时，不显示 SpeedDial
-- 让持仓页自己的 FAB 透出来
-
-**问题 2：明细页买入始终追加到同一持仓**
-`holding_detail_page.dart` 的 `_showBuyDialog` 传入了 `holding`，导致 `buy_dialog.dart:75` 的 `holdingId: widget.holding?.id` 永远不为 null，Repository 忽略用户输入的新基金代码，一直往原持仓追加。
-
-**修复**（`buy_dialog.dart`）：
-- 在 `_submit` 方法中，当用户修改了基金代码（与预填值不一致），将 `holdingId` 置为 null
-- 或者在弹窗打开时，如果 holding 不为 null 但不预填基金代码，让用户自己输入
-
-**问题 3：资金来源**
-买入弹窗需要一个「扣款账户」下拉选择器。
-
-**修复**（`buy_dialog.dart`）：
-- 在表单底部加一个「扣款账户」DropdownButtonFormField
-- 选项为当前账本下可用的日常账户（现金/储蓄卡/虚拟账户）
-- 在 `_submit` 方法中调用 service.buy 时传入正确的 `accountId`
-- 买入后，在投资模块外部自动扣减该账户余额（调用现有 `recordTransaction` 或直接 SQL 更新）
-
-**约束**：
-- 不改 Repository 或 Service 层
-- 不改 investment_providers.dart
-- FAB 修复只改 app.dart 的 SpeedDial 显示条件
-
-## 2026-07-31
-
-**移交角色**：项目经理（PM）
-**接收角色**：UI 工程师（invest-ui）— 3.8 买入流程修复 2
-
-**Bug 1：FAB 被底部导航栏遮挡**
-HoldingsListPage 的 FAB 渲染在嵌套 Scaffold 中，被外层的底部导航栏挡住。
-
-**修复方案**（holdings_list_page.dart）：
-- floatingActionButtonLocation 改为 centerFloat 让 FAB 上移
-- 或者加 padding: EdgeInsets.only(bottom: 60)
-
-同时 app.dart 的 SpeedDial 也要条件渲染，不止拦截长按。
-
-**Bug 2：addTransaction 方法不存在**
-buy_dialog.dart:105 调用了 repositoryProvider.addTransaction(...)，但方法未定义。
-
-**修复方案**（buy_dialog.dart）：
-- 改为 db.into(db.transactions).insert(TransactionsCompanion(...))
-- 从 databaseProvider 拿 db 实例
-
-**约束**：不改 Repository/Service 层
 
 ## 2026-07-31
 
@@ -283,40 +276,7 @@ buy_dialog.dart:105 调用了 repositoryProvider.addTransaction(...)，但方法
 
 **git 状态**: 当前分支 main，待提交
 
-## 2026-07-30
-
-**移交角色**：项目经理（PM）
-**接收角色**：测试工程师（QA）
-
-**项目当前状态**：5 个阶段开发全部完成。
-
-**需要测试的 14 项流程**：
-
-日常记账：
-1. 新建账本 → 默认账户正确
-2. 日常支出 → 余额正确
-3. 转账 → 双方余额正确
-4. 导入支付宝/微信 CSV → 分类匹配正确
-
-投资模块核心：
-5. 买入基金 → 持仓显示 + 投资账户市值正确
-6. 查看持仓流水 → invest_type/batchId 正确
-7. 部分卖出 → 成本按比例扣减 + 损益流水
-8. 基金转换 → A 清仓/B 开仓 + 手续费 + 退回余额
-9. 批量刷新净值 → 全部更新
-
-特色功能：
-10. Excel 导入正确
-11. OCR 截图自动记账
-12. 桌面小组件显示正确
-13. WebDAV 同步/备份
-14. 日历视图标记显示正确
-
-**验证基线**：flutter analyze 零 error / flutter test 增量测试无失败
-
-**完成后**：
-- 更新 TEAM.md 任务板（阶段 5 全部 ✅）
-- 写 HANDOFF.md 交接记录
+---
 
 ## 2026-07-30
 
@@ -368,6 +328,45 @@ buy_dialog.dart:105 调用了 repositoryProvider.addTransaction(...)，但方法
 - 修复后：535 passed, 1 skipped, 1 failed
 - 新增：+24 passing tests（+5 从修复 unblock, +9 Excel, +10 其他修复带来的）
 
+---
+
+## 2026-07-30
+
+**移交角色**：项目经理（PM）
+**接收角色**：测试工程师（QA）
+
+**项目当前状态**：5 个阶段开发全部完成。
+
+**需要测试的 14 项流程**：
+
+日常记账：
+1. 新建账本 → 默认账户正确
+2. 日常支出 → 余额正确
+3. 转账 → 双方余额正确
+4. 导入支付宝/微信 CSV → 分类匹配正确
+
+投资模块核心：
+5. 买入基金 → 持仓显示 + 投资账户市值正确
+6. 查看持仓流水 → invest_type/batchId 正确
+7. 部分卖出 → 成本按比例扣减 + 损益流水
+8. 基金转换 → A 清仓/B 开仓 + 手续费 + 退回余额
+9. 批量刷新净值 → 全部更新
+
+特色功能：
+10. Excel 导入正确
+11. OCR 截图自动记账
+12. 桌面小组件显示正确
+13. WebDAV 同步/备份
+14. 日历视图标记显示正确
+
+**验证基线**：flutter analyze 零 error / flutter test 增量测试无失败
+
+**完成后**：
+- 更新 TEAM.md 任务板（阶段 5 全部 ✅）
+- 写 HANDOFF.md 交接记录
+
+---
+
 ## 2026-07-30
 
 **移交角色**：项目经理（PM）
@@ -403,6 +402,32 @@ buy_dialog.dart:105 调用了 repositoryProvider.addTransaction(...)，但方法
 - 写 HANDOFF.md 交接记录
 - 通知 PM 审查
 
+---
+
+## 2026-07-30
+
+**移交角色**：UI 工程师（invest-ui）
+**接收角色**：项目经理（PM）
+
+**完成工作**：
+- `lib/pages/investment/holdings_list_page.dart` — 持仓列表买入入口（任务 3.6）：
+  - 空态 `_buildEmptyState` 新增「买入基金」FilledButton.icon（Icons.add_rounded + 文字）
+  - Scaffold 新增 `FloatingActionButton.extended` 快速买入 FAB
+  - 两处均调用 `showBuyDialog(context, ledgerId: ref.read(currentLedgerIdProvider))`
+  - 弹窗成功返回 true 后自动 `ref.invalidate` 刷新持仓数据和摘要
+  - 新增 import `buy_dialog.dart`
+
+**下一个任务需要知道的**：
+- accountId 未传入弹窗（已知缺口，PM 说另修）
+- FAB 在所有状态都可见（空态、加载中、有数据），空态时 FilledButton + FAB 同时存在
+- showBuyDialog 返回 `Future<bool?>`，买入成功返回 true
+
+**验证**：dart analyze 零 issue / 投资模块 27 个测试全通过
+
+**git 状态**：当前分支 main，待提交
+
+---
+
 ## 2026-07-30
 
 **移交角色**：项目经理（PM）
@@ -434,25 +459,105 @@ buy_dialog.dart:105 调用了 repositoryProvider.addTransaction(...)，但方法
 
 **git 状态**：main @ aa94648
 
-## 2026-07-30
+---
+
+## 2026-07-29
 
 **移交角色**：UI 工程师（invest-ui）
 **接收角色**：项目经理（PM）
 
 **完成工作**：
-- `lib/pages/investment/holdings_list_page.dart` — 持仓列表买入入口（任务 3.6）：
-  - 空态 `_buildEmptyState` 新增「买入基金」FilledButton.icon（Icons.add_rounded + 文字）
-  - Scaffold 新增 `FloatingActionButton.extended` 快速买入 FAB
-  - 两处均调用 `showBuyDialog(context, ledgerId: ref.read(currentLedgerIdProvider))`
-  - 弹窗成功返回 true 后自动 `ref.invalidate` 刷新持仓数据和摘要
-  - 新增 import `buy_dialog.dart`
+- `lib/providers/calendar_providers.dart` — 新增 calendarEventsForMonthProvider：
+  - 事件源：信用卡账单日(billingDay)、还款日(paymentDueDay)、投资交易(type=invest)、周期交易(RecurringTransactions)
+  - CalendarEventType 枚举（4 种）+ CalendarEvent 数据类
+  - _recurringDatesInMonth 辅助函数（支持 daily/weekly/monthly/yearly 频率）
+  - 导入 dart:math（min 用）
+
+- `lib/pages/calendar/calendar_page.dart` — 日历事件接线：
+  - build 方法 watch calendarEventsForMonthProvider
+  - _buildCalendar 新增 events 参数 → 传递到 _buildDateCell
+  - _buildDateCell 新增 dayEvents 解析 + 6px 彩色圆点渲染
+  - 圆点色：红=账单日 / 橙=还款日 / 蓝=投资日 / 紫=周期交易
+  - _onDaySelected 点击带事件日期→弹出事件摘要 BottomSheet
+  - 新增辅助方法：_uniqueEventDots（去重）、_eventTypeColor、_showEventSummary
 
 **下一个任务需要知道的**：
-- accountId 未传入弹窗（已知缺口，PM 说另修）
-- FAB 在所有状态都可见（空态、加载中、有数据），空态时 FilledButton + FAB 同时存在
-- showBuyDialog 返回 `Future<bool?>`，买入成功返回 true
+- calendarEventsForMonthProvider 返回 Map<日期Key, List<CalendarEvent>>
+- Provider 按月缓存（autoDispose），切换月份自动重建
+- 事件摘要弹窗在 _onDaySelected 的 postFrameCallback 中异步触发
+- 信用卡 billingDay/paymentDueDay 值范围 1-28，超出当月天数时自动 clamp 到月末
 
-**验证**：dart analyze 零 issue / 投资模块 27 个测试全通过
+**验证**：flutter analyze 零新增 error；flutter test 511 全通过（7 个预存失败）
+
+**git 状态**：当前 main @ cb2dcae，待提交
+
+---
+
+## 2026-07-29
+
+**移交角色**：项目经理（PM）
+**接收角色**：UI 工程师（invest-ui）— 4.2 日历接线
+
+**完成工作**：
+4.2 事件采集 provider（`calendarEventsForMonthProvider`）已在阶段 4 由功能集成工程师写好。
+事件源：信用卡账单日/还款日、投资买入日、周期交易到期日。
+
+**需要做的**：
+1. 打开 `lib/pages/calendar/calendar_page.dart`
+2. 在 `_buildDateCell` 中获取该日期的事件列表（从 `calendarEventsForMonthProvider`）
+3. 在日期数字下方添加彩色小圆点标记：账单日→红、还款日→橙、投资日→蓝、周期交易→紫
+4. 点击带标记的日期时，弹出该日事件摘要
+
+**实现细节**：
+- 在 `CalendarPage` 的 `build` 方法中 watch `calendarEventsForMonthProvider(params.ledgerId, year, month)`
+- `NumberButton` 或日期 cell widget 中传 `events` 参数
+- 直接用已有 UI 组件，不改配色系统或 Provider 结构
+
+**约束**：
+- 不改 `calendar_providers.dart`（事件 provider 已存在）
+- 不改 `app.dart` 或导航
+- 用已有 BeeToken 配色
+
+**git 状态**：当前 main @ cb2dcae
+
+---
+
+## 2026-07-29
+
+**移交角色**：功能集成工程师（integration）
+**接收角色**：项目经理（PM）
+
+**完成工作**：
+- 4.1 Excel 导入：
+  - 新增 `lib/services/import/excel_import_service.dart`（从 pj_003 移植 cellValueToString + fmtDouble + CSV转义）
+  - BeeCount 已有 `lib/utils/xlsx_reader.dart` 且已在 `import_page.dart` 接线
+  - excel 包 ^4.0.6 已存在，无需额外依赖
+
+- 4.3 设置页 + WebDAV：
+  - WebDAV 配置：MinePage 的"云同步与备份"区已完整支持 WebDAV 通道选择（CloudSyncPage）
+  - 账户统计：MinePage "功能管理"区新增「账户总览」入口 → 已有的 AccountsPage（含净资产卡片：总资产/总负债/净资产）
+  - 修改 `lib/pages/main/mine_page.dart`（+import AccountsPage，+AppListTile 入口）
+
+- 4.4 自定义时间选择器：
+  - BeeCount 已有 `lib/widgets/ui/wheel_time_picker.dart`（CupertinoPicker + BeeTokens + l10n），优于 pj_003 版，无需搬运
+
+**未完成**：
+- 4.2 日历视图（🔄）：事件标记 provider 逻辑已在 `calendar_providers.dart` 中编写（账单日/还款日/周期交易采集），但由于文件编辑工具问题未接线到 `calendar_page.dart`。需要：
+  1. 在 `_buildCalendar` 中 watch `calendarEventsForMonthProvider`
+  2. 将 events map 传入 `_buildDateCell`
+  3. 在日期单元格底部渲染彩色圆点（红=账单日，蓝=还款日，绿=周期交易）
+
+**下一个任务需要知道的**：
+- Excel 导入已就绪，无需额外集成工作
+- 日历事件 provider 写好了但未接线 — 日历页面需要使用 `calendarEventsForMonthProvider(ledgerId, month)` 获取事件并渲染圆点
+- 账户总览入口在 MinePage "智能记账"下方，"自动化功能"上方
+- flutter analyze 零新增 error（仅 1 个预存的 CardTheme→CardThemeData）
+- flutter test 511 通过（6 个预存失败，均为已有问题）
+
+**修改文件**：
+- 新增：`lib/services/import/excel_import_service.dart`
+- 修改：`lib/pages/main/mine_page.dart`
+- 修改：`.codex/TEAM.md`
 
 **git 状态**：当前分支 main，待提交
 
@@ -460,39 +565,26 @@ buy_dialog.dart:105 调用了 repositoryProvider.addTransaction(...)，但方法
 
 ## 2026-07-29
 
-**移交角色**：数据架构师（architect）
-**接收角色**：投资逻辑工程师（invest-logic）
+**移交角色**：UI 工程师（invest-ui）— 修复任务
+**接收角色**：项目经理（PM）
 
 **完成工作**：
-- `lib/data/db.dart` — v32 schema 扩展：
-  - 新增 `InvestmentHoldings` 表（13 列：id, ledgerId, fundCode, fundName, accountId, totalShares, totalCost, currentNav, marketValue, holdingType, note, createdAt, updatedAt）
-  - Transactions 新增 6 个投资字段：investType, investShares, investNav, investFee, holdingId, batchId
-  - `type` 注释扩展为 `expense / income / transfer / invest`
-  - schemaVersion → 32
-  - v31→v32 迁移块（幂等，含 3 个索引）
-  - `onCreate` 补 investment_holdings 索引
+任务 3.5 页面连线修复全部完成：
 
-- `lib/data/repositories/investment_repository.dart` — 抽象接口（7 个方法）
-- `lib/data/repositories/local/local_investment_repository.dart` — Drift 实现：
-  - buy: 查找/创建持仓 + 插交易 + 更新持仓（追加份额和成本）
-  - sell: 加载持仓 → 比例扣减成本基数 → 插交易 → 更新持仓
-  - convert: A卖出 + B买入，同一事务内，共享 batchId
-  - updateNav: 更新净值 + 重算市值
+1. **showBack 硬编码修复**（holdings_list_page.dart:36）
+   - showBack: true → showBack: !asTab
+   - Tab 模式下不再显示返回按钮
 
-- `test/data/migration_v32_test.dart` — 5 个架构测试
-- `test/data/repositories/investment_repository_test.dart` — 8 个 Repository 测试
-- 13/13 全部通过
+2. **卡片→明细页导航**（holdings_list_page.dart:72-78）
+   - 持仓卡片 onTap 已接线到 HoldingDetailPage(holdingId: holding.id)
+   - 引入 import ''holding_detail_page.dart''
 
-- `pubspec.yaml` — intl ^0.19.0 → ^0.20.2（修复 flutter_localizations 版本冲突）
-- `build.yaml` — 临时文件已删除
+3. **明细页按钮→弹窗**（holding_detail_page.dart:318-352）
+   - 买入/卖出/转换三个按钮已分别接入 showBuyDialog/showSellDialog/showConvertDialog
+   - 弹窗成功后 ref.invalidate(currentHoldingsProvider) 刷新列表
+   - showConvertDialog 使用 fromHolding: 参数名
 
-**下一个任务需要知道的**：
-- 交易 `type='invest'`，`investType` 取值 buy/sell/redeem/convert
-- `excludeFromBudget=true` — 投资交易不参与预算统计
-- 部分卖出时成本基数按 `shares / totalShares` 比例扣减
-- 转换两笔交易通过 `batchId` 关联
-- InvestmentRepository 不加入 BaseRepository（阶段 1-4 不进同步）
-- Repository 所有写操作使用 `db.transaction()` 保证原子性
+**验证**：flutter analyze 零 error，投资模块 27 个测试全通过。
 
 **git 状态**：未提交（等待 PM 审查后统一合入）
 
@@ -538,289 +630,102 @@ buy_dialog.dart:105 调用了 repositoryProvider.addTransaction(...)，但方法
 
 ## 2026-07-29
 
-**移交角色**：UI 工程师（invest-ui）
-**接收角色**：项目经理（PM）
+**移交角色**：数据架构师（architect）
+**接收角色**：投资逻辑工程师（invest-logic）
 
 **完成工作**：
-- `lib/pages/investment/holdings_list_page.dart` — 持仓列表页：
-  - 顶部组合摘要卡片（总市值/总成本/盈亏/收益率/持仓数）
-  - 持仓卡片列表 + 下拉刷新
-  - 空态/加载态/错误态全覆盖
-  - `asTab` 参数支持 Tab 嵌入模式
+- `lib/data/db.dart` — v32 schema 扩展：
+  - 新增 `InvestmentHoldings` 表（13 列：id, ledgerId, fundCode, fundName, accountId, totalShares, totalCost, currentNav, marketValue, holdingType, note, createdAt, updatedAt）
+  - Transactions 新增 6 个投资字段：investType, investShares, investNav, investFee, holdingId, batchId
+  - `type` 注释扩展为 `expense / income / transfer / invest`
+  - schemaVersion → 32
+  - v31→v32 迁移块（幂等，含 3 个索引）
+  - `onCreate` 补 investment_holdings 索引
 
-- `lib/pages/investment/holding_detail_page.dart` — 持仓明细页：
-  - 统计卡片：份额/成本/净值/市值/盈亏
-  - 交易流水列表（买入/卖出/转换，带份额/净值/手续费）
-  - 底部操作栏：买入/卖出/转换按钮（暂接 SnackBar 占位）
+- `lib/data/repositories/investment_repository.dart` — 抽象接口（7 个方法）
+- `lib/data/repositories/local/local_investment_repository.dart` — Drift 实现：
+  - buy: 查找/创建持仓 + 插交易 + 更新持仓（追加份额和成本）
+  - sell: 加载持仓 → 比例扣减成本基数 → 插交易 → 更新持仓
+  - convert: A卖出 + B买入，同一事务内，共享 batchId
+  - updateNav: 更新净值 + 重算市值
 
-- `lib/widgets/investment/holding_card.dart` — 持仓卡片组件：
-  - 基金名称/代码 + 市值 + 盈亏/收益率
-  - 复用 BeeCount SectionCard + AmountText + BeeTokens 设计体系
-  - 盈亏色跟随用户收支颜色偏好
+- `test/data/migration_v32_test.dart` — 5 个架构测试
+- `test/data/repositories/investment_repository_test.dart` — 8 个 Repository 测试
+- 13/13 全部通过
 
-- `lib/widgets/investment/buy_dialog.dart` — 买入弹窗：
-  - 基金代码/名称/份额/净值/手续费表单
-  - validateBuy 前端验证 + try-catch 错误提示
-  - 支持从持仓详情预填基金信息
-
-- `lib/widgets/investment/sell_dialog.dart` — 卖出弹窗：
-  - 展示可卖份额摘要 + 全部卖出开关
-  - validateSell 验证（份数 > 0、不超过可卖份额）
-
-- `lib/widgets/investment/convert_dialog.dart` — 转换弹窗：
-  - 展示可转份额 + 已有持仓单选列表
-  - 转出/转入份额、净值独立填写
-  - validateConvert 验证
-
-- `lib/app.dart` — 导航改造：
-  - `_pages[2]`：`HoldingsListPage(asTab: true)` 替换 `AccountsPage`
-  - Tab 图标：`account_balance_wallet` → `show_chart`
-  - 底部 5 项结构不变（0流水/1报表/2FAB/3投资/4设置）
-
-- `.codex/TEAM.md` — 阶段 3 全部 4 个任务标记 ✅
+- `pubspec.yaml` — intl ^0.19.0 → ^0.20.2（修复 flutter_localizations 版本冲突）
+- `build.yaml` — 临时文件已删除
 
 **下一个任务需要知道的**：
-- 所有 Provider 通过 `ref.watch(currentHoldingsProvider)` 等读取数据
-- 写入操作通过 `ref.read(investmentServiceProvider).buy/sell/convert()`
-- 弹窗通过 `Navigator.push<bool>(MaterialPageRoute(...))` 打开，返回 bool 表示成功
-- `HoldingsListPage(asTab: true)` 嵌入底部导航，`asTab` 控制 PrimaryHeader 的 back 按钮
-- 明细页底部按钮目前是 SnackBar 占位（`_showBuyDialog` 等），需接线到弹窗
-- 盈亏色走 `BeeTokens.incomeColor/expenseColor`，与用户收支偏好一致
-
-**已知缺口**：
-- 弹窗未接线到明细页（SnackBar 占位），可在集成阶段一次性接线
-- 无 widget 测试（需 DB 数据 + 测试基础设施，建议 QA 在阶段 5 补充）
-- 净值刷新仅为 re-query 数据库，实际 API 调用属于阶段 4
+- 交易 `type=''invest''`，`investType` 取值 buy/sell/redeem/convert
+- `excludeFromBudget=true` — 投资交易不参与预算统计
+- 部分卖出时成本基数按 `shares / totalShares` 比例扣减
+- 转换两笔交易通过 `batchId` 关联
+- InvestmentRepository 不加入 BaseRepository（阶段 1-4 不进同步）
+- Repository 所有写操作使用 `db.transaction()` 保证原子性
 
 **git 状态**：未提交（等待 PM 审查后统一合入）
+## 2026-08-01
 
-## 2026-07-29
+**移交角色**：项目经理（PM）审查结论
+**接收角色**：invest-logic + invest-ui（返工）
 
-**移交角色**：项目经理（PM）
-**接收角色**：UI 工程师（invest-ui）— 修复任务
+**审查结论**：❌ 不通过。3 个 P1 必须修复后重新审查。
 
-**完成工作**：
-阶段 3 主任务（3.1~3.4）已由前一位 UI 工程师完成并通过审查。
+**P1-1：买卖转账后账户余额不更新**
+- local_investment_repository.dart 全文件无 balance/UPDATE accounts 逻辑
+- buy/sell 只插入了 type=transfer 的交易记录，但支付宝余额不减少、支付宝基金余额不增加、投资账户市值不更新
+- 要求：buy/sell 在 db.transaction() 内同步更新源账户、目标账户、投资账户余额
 
-**需要修复的 3 个 P1 问题**：
+**P1-2：无持仓新建买入时持仓关联错误账户**
+- buy_dialog.dart: `accountId: investmentAccountId ?? _selectedAccountId!`
+- 从持仓列表 FAB 买入新基金（无 holding）时，accountId 被扣款账户顶替，持仓挂到支付宝/银行卡名下，转账方向变成自己转自己
+- 要求：无持仓时先确定/创建投资账户，禁止用扣款账户当持仓归属
 
-1. **卡片点击 → 明细页导航**（`holdings_list_page.dart`）
-   - 位置：第 114 行 `onTap` 目前是 `// TODO` 空操作
-   - 改为：`Navigator.push(context, MaterialPageRoute(builder: (_) => HoldingDetailPage(holdingId: holding.id)))`
-   - 需要 import `'../pages/investment/holding_detail_page.dart'`
+**P1-3：编辑交易后持仓统计不重算**
+- updateTransaction 接口注释明确"不更新持仓统计"
+- 用户要求"保存后更新交易记录 + 重算持仓 totalShares/totalCost/marketValue"
+- 要求：updateTransaction 改为事务内同时重算持仓统计
 
-2. **明细页按钮 → 弹窗**（`holding_detail_page.dart`）
-   - 位置：第 268~280 行三个 `_showBuyDialog`/`_showSellDialog`/`_showConvertDialog`
-   - 目前全是 SnackBar 占位
-   - 改为分别调用 `showBuyDialog()`/`showSellDialog()`/`showConvertDialog()`
-   - 弹窗成功后 `ref.invalidate(currentHoldingsProvider)` 刷新列表
-   - 需要 import `'../../widgets/investment/buy_dialog.dart'` 等
+**P2（本次可接受，需跟进）**：
+- 初始持仓 excludeFromStats=true 只影响统计，流水列表查询（local_transaction_repository.dart 671/781/813 行）未过滤，主流水仍会显示
+- 导入按钮放在摘要卡片下方，用户要求放顶部 PrimaryHeader 另一侧
 
-3. **showBack 硬编码**（`holdings_list_page.dart`）
-   - 位置：第 35 行 `showBack: true`
-   - 改为：`showBack: !asTab`
-   - Tab 模式下不显示返回按钮，明细页导航才显示
-
-**PM 决策**：Tab 保持 4 个，投资替换账户，记一笔走 FAB。账户页可从设置进入。
-
-**git 状态**：未提交（修复后统一合入）
-
-## 2026-07-29
-
-**移交角色**：UI 工程师（invest-ui）— 修复任务
-**接收角色**：项目经理（PM）
-
-**完成工作**：
-任务 3.5 页面连线修复全部完成：
-
-1. **showBack 硬编码修复**（holdings_list_page.dart:36）
-   - showBack: true → showBack: !asTab
-   - Tab 模式下不再显示返回按钮
-
-2. **卡片→明细页导航**（holdings_list_page.dart:72-78）
-   - 持仓卡片 onTap 已接线到 HoldingDetailPage(holdingId: holding.id)
-   - 引入 import 'holding_detail_page.dart'
-
-3. **明细页按钮→弹窗**（holding_detail_page.dart:318-352）
-   - 买入/卖出/转换三个按钮已分别接入 showBuyDialog/showSellDialog/showConvertDialog
-   - 弹窗成功后 
-ef.invalidate(currentHoldingsProvider) 刷新列表
-   - showConvertDialog 使用 romHolding: 参数名
-
-**验证**：flutter analyze 零 error，投资模块 27 个测试全通过。
-
-**git 状态**：未提交（等待 PM 审查后统一合入）
-
-## 2026-07-29
-
-**移交角色**：功能集成工程师（integration）
-**接收角色**：项目经理（PM）
-
-**完成工作**：
-- 4.1 Excel 导入：
-  - 新增 `lib/services/import/excel_import_service.dart`（从 pj_003 移植 cellValueToString + fmtDouble + CSV转义）
-  - BeeCount 已有 `lib/utils/xlsx_reader.dart` 且已在 `import_page.dart` 接线
-  - excel 包 ^4.0.6 已存在，无需额外依赖
-
-- 4.3 设置页 + WebDAV：
-  - WebDAV 配置：MinePage 的"云同步与备份"区已完整支持 WebDAV 通道选择（CloudSyncPage）
-  - 账户统计：MinePage "功能管理"区新增「账户总览」入口 → 已有的 AccountsPage（含净资产卡片：总资产/总负债/净资产）
-  - 修改 `lib/pages/main/mine_page.dart`（+import AccountsPage，+AppListTile 入口）
-
-- 4.4 自定义时间选择器：
-  - BeeCount 已有 `lib/widgets/ui/wheel_time_picker.dart`（CupertinoPicker + BeeTokens + l10n），优于 pj_003 版，无需搬运
-
-**未完成**：
-- 4.2 日历视图（🔄）：事件标记 provider 逻辑已在 `calendar_providers.dart` 中编写（账单日/还款日/周期交易采集），但由于文件编辑工具问题未接线到 `calendar_page.dart`。需要：
-  1. 在 `_buildCalendar` 中 watch `calendarEventsForMonthProvider`
-  2. 将 events map 传入 `_buildDateCell`
-  3. 在日期单元格底部渲染彩色圆点（红=账单日，蓝=还款日，绿=周期交易）
-
-**下一个任务需要知道的**：
-- Excel 导入已就绪，无需额外集成工作
-- 日历事件 provider 写好了但未接线 — 日历页面需要使用 `calendarEventsForMonthProvider(ledgerId, month)` 获取事件并渲染圆点
-- 账户总览入口在 MinePage "智能记账"下方，"自动化功能"上方
-- flutter analyze 零新增 error（仅 1 个预存的 CardTheme→CardThemeData）
-- flutter test 511 通过（6 个预存失败，均为已有问题）
-
-**修改文件**：
-- 新增：`lib/services/import/excel_import_service.dart`
-- 修改：`lib/pages/main/mine_page.dart`
-- 修改：`.codex/TEAM.md`
-
-**git 状态**：当前分支 main，待提交
-
-## 2026-07-29
-
-**移交角色**：项目经理（PM）
-**接收角色**：UI 工程师（invest-ui）— 4.2 日历接线
-
-**完成工作**：
-4.2 事件采集 provider（`calendarEventsForMonthProvider`）已在阶段 4 由功能集成工程师写好。
-事件源：信用卡账单日/还款日、投资买入日、周期交易到期日。
-
-**需要做的**：
-1. 打开 `lib/pages/calendar/calendar_page.dart`
-2. 在 `_buildDateCell` 中获取该日期的事件列表（从 `calendarEventsForMonthProvider`）
-3. 在日期数字下方添加彩色小圆点标记：账单日→红、还款日→橙、投资日→蓝、周期交易→紫
-4. 点击带标记的日期时，弹出该日事件摘要
-
-**实现细节**：
-- 在 `CalendarPage` 的 `build` 方法中 watch `calendarEventsForMonthProvider(params.ledgerId, year, month)`
-- `NumberButton` 或日期 cell widget 中传 `events` 参数
-- 直接用已有 UI 组件，不改配色系统或 Provider 结构
-
-**约束**：
-- 不改 `calendar_providers.dart`（事件 provider 已存在）
-- 不改 `app.dart` 或导航
-- 用已有 BeeToken 配色
-
-**git 状态**：当前 main @ cb2dcae
-
-## 2026-07-29
-
-**移交角色**：UI 工程师（invest-ui）
-**接收角色**：项目经理（PM）
-
-**完成工作**：
-- `lib/providers/calendar_providers.dart` — 新增 calendarEventsForMonthProvider：
-  - 事件源：信用卡账单日(billingDay)、还款日(paymentDueDay)、投资交易(type=invest)、周期交易(RecurringTransactions)
-  - CalendarEventType 枚举（4 种）+ CalendarEvent 数据类
-  - _recurringDatesInMonth 辅助函数（支持 daily/weekly/monthly/yearly 频率）
-  - 导入 dart:math（min 用）
-
-- `lib/pages/calendar/calendar_page.dart` — 日历事件接线：
-  - build 方法 watch calendarEventsForMonthProvider
-  - _buildCalendar 新增 events 参数 → 传递到 _buildDateCell
-  - _buildDateCell 新增 dayEvents 解析 + 6px 彩色圆点渲染
-  - 圆点色：红=账单日 / 橙=还款日 / 蓝=投资日 / 紫=周期交易
-  - _onDaySelected 点击带事件日期→弹出事件摘要 BottomSheet
-  - 新增辅助方法：_uniqueEventDots（去重）、_eventTypeColor、_showEventSummary
-
-**下一个任务需要知道的**：
-- calendarEventsForMonthProvider 返回 Map<日期Key, List<CalendarEvent>>
-- Provider 按月缓存（autoDispose），切换月份自动重建
-- 事件摘要弹窗在 _onDaySelected 的 postFrameCallback 中异步触发
-- 信用卡 billingDay/paymentDueDay 值范围 1-28，超出当月天数时自动 clamp 到月末
-
-**验证**：flutter analyze 零新增 error；flutter test 511 全通过（7 个预存失败）
-
-**git 状态**：当前 main @ cb2dcae，待提交
+**验证要求**：flutter analyze 零 error + 投资模块测试全过 + 补充余额联动测试。
 
 ---
 
+## 2026-08-01
 
-## 2026-07-31
+**移交角色**：invest-logic + invest-ui（4.7 返工）
+**接收角色**：PM
 
-**移交角色**：项目经理（PM）
-**接收角色**：invest-logic + invest-ui
+**完成工作**：PM 审查的 3 个 P1 全部修复，并补余额联动测试。
 
-**任务**：4.6 投资逻辑修复 + 初始持仓导入（3 个 bug）
+1. **P1-1 余额联动** — [local_investment_repository.dart](/D:\codexproject\pj_004_beecount_fork\lib\data\repositories\local\local_investment_repository.dart)
+   - 新增 `_syncInvestmentAccountValue()`：事务内把投资账户 initial_balance 同步为名下全部持仓市值之和（账户页对投资账户直接读 initial_balance）
+   - buy / sell / convert / updateNav / createInitialHolding / updateTransaction 全部接入
+   - 扣款/回款账户余额由 transfer 交易行实时计算，买卖转账天然联动
+   - 只同步投资类型账户，历史脏数据挂在日常账户下时不会反向污染余额
 
-**Bug 1：账户资产/负债分组错误**（accounts_page.dart）
-- 200 行和 214 行：两处 _buildClassificationSection 都传了 llAccountTypes
-- 导致所有账户（含银行卡）同时出现在「资产账户」和「负债账户」两个区
-- 修复：资产区传 ssetTypeOrder，负债区传 liabilityTypeOrder（这俩常量需要加到 account_type_utils.dart）
-  assetTypeOrder = [cash, bank_card, virtual_account, investment, receivable]
-  liabilityTypeOrder = [credit_card, loan]
+2. **P1-2 持仓归属** — buy_dialog.dart + repository
+   - Repository 新增 `_resolveInvestmentAccount()`：accountId 为 null 或非投资类型时自动查找账本内投资账户，仍无则新建「投资账户」；禁止扣款账户当持仓归属
+   - buy 接口 accountId 改为可空，Service 透传
+   - 买入弹窗新增「投资账户」下拉（仅新买入显示）；无投资账户时提示保存自动创建
 
-**Bug 2：缺少初始持仓导入**（需要新增）
-- Repository 接口没有 createInitialHolding 方法
-- 需要在 investment_repository.dart 接口加 + local_investment_repository.dart 实现
-- 字段：ledgerId, accountId(投资账户), fundCode, fundName, shares(份额), cost(持仓成本), nav(净值), happenedAt
-- 需要同时更新 InvestmentService + Riverpod Provider + UI 入口（持仓列表页 FAB 附近加「导入初始持仓」按钮）
-- 参考原 pj_003 项目的 database_helper.dart 的 createInitialHolding 逻辑
-
-**Bug 3：手续费不计入成本**（local_investment_repository.dart:164）
-- inal newCost = oldCost + shares * nav; 漏了 fee
-- 应改为：inal newCost = oldCost + shares * nav + fee;
-- 同步更新相关测试
-
-**约束**：不改 app.dart 导航。flutter analyze 零 error。
-
-## 2026-07-31
-
-**移交角色**：invest-logic + invest-ui
-**接收角色**：项目经理（PM）
-
-**完成工作**：阶段 4.6 全部 3 个任务：
-
-### 4.6.1 账户资产/负债分组修复
-- lib/utils/account_type_utils.dart — 新增 ssetTypeOrder（cash/bank_card/virtual_account/receivable/investment）和 liabilityTypeOrder（credit_card/loan）两个常量
-- lib/pages/account/accounts_page.dart:200,214 — 资产区 → ssetTypeOrder，负债区 → liabilityTypeOrder，修复了所有账户同时出现在两个区的 Bug
-
-### 4.6.2 初始持仓导入
-- lib/data/repositories/investment_repository.dart — 接口新增 createInitialHolding 方法
-- lib/data/repositories/local/local_investment_repository.dart — 实现：事务内新建持仓 + 插入投资交易记录（invest_type='buy'），返回 holdingId
-- lib/services/data/investment_service.dart — 新增 createInitialHolding 委托
-- lib/widgets/investment/initial_holding_dialog.dart — 新增弹窗：基金代码/名称/份额/成本/净值/投资账户选择/备注，带前端验证
-- lib/pages/investment/holdings_list_page.dart — 空态新增「导入初始持仓」OutlinedButton，调 showInitialHoldingDialog
-
-### 4.6.3 手续费计入成本
-- lib/data/repositories/local/local_investment_repository.dart:164 — inal newCost = oldCost + shares * nav; → + fee
-- 	est/data/repositories/investment_repository_test.dart:56 — 	otalCost 1500→1510（1000*1.5+10）
-- 	est/services/investment_service_test.dart:164 — 	otalCost 1000→1005（500*2.0+5）
+3. **P1-3 交易重算** — updateTransaction 重写
+   - 改为 db.transaction() 内更新交易 → `_recomputeHolding()` 按全部投资交易重算 totalShares / totalCost / currentNav / marketValue → 同步投资账户市值
+   - 成本口径：买入/初始按交易金额（缺失时按份额×净值+手续费），转换买入只按份额×净值，卖出按份额比例扣减
 
 **验证**：
-- dart analyze：17 个预存 issues，零新增 error/warning
-- flutter test：534 passed, 1 skipped, 1 failed（唯一失败 = 既存 bill_creation_service_test）
-- 投资模块 22 个测试全部通过
+- 全仓 flutter analyze：870 个预存 info/warning，零 error
+- 投资模块测试：31 个全通过（新增 9 个：持仓归属 2 + 余额联动 4 + 编辑重算 3）
+- flutter test 全套：542 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
 
 **下一个任务需要知道的**：
-- createInitialHolding 与 uy 的区别：直接给定 shares+cost，不产生扣款交易，交易备注自动填「初始持仓 {fundCode}」
-- 费率入成本后，Repo 层 uy() 的 transaction.amount 和 holding.totalCost 都包含 fee；Service 层委托透传
-- 弹窗仅在有投资类型账户时显示账户下拉（空则无下拉行，仍可提交但会 SnackBar 报错）
-- ccounts_page 资产/负债分组依赖新增的 ssetTypeOrder/liabilityTypeOrder — 如果后续新增账户类型，需要同步更新这两个常量
+- 投资账户余额 = initial_balance 缓存 = 持仓市值总和，由投资 Repository 维护，不要再走手动估值
+- buy 的 accountId 语义 = 持仓归属投资账户，扣款方是 sourceAccountId
+- updateTransaction 现在会重算持仓，不再只是改交易行
+- P2 两项仍未做：主流水未过滤 excludeFromStats 的初始持仓（local_transaction_repository.dart 671/781/813）、导入按钮未移到 PrimaryHeader 顶部
 
-**修改文件**：
-- 修改：lib/utils/account_type_utils.dart
-- 修改：lib/pages/account/accounts_page.dart
-- 修改：lib/data/repositories/investment_repository.dart
-- 修改：lib/data/repositories/local/local_investment_repository.dart
-- 修改：lib/services/data/investment_service.dart
-- 修改：lib/pages/investment/holdings_list_page.dart
-- 新增：lib/widgets/investment/initial_holding_dialog.dart
-- 修改：	est/data/repositories/investment_repository_test.dart
-- 修改：	est/services/investment_service_test.dart
-
-**git 状态**：当前分支 main，待提交
+**git 状态**：当前分支 main，未提交（等待 PM 审查）

@@ -18,8 +18,8 @@ void main() {
     await db.customStatement(
         "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
     await db.customStatement(
-        "INSERT INTO accounts (id, ledger_id, name, currency) "
-        "VALUES (10, 1, '投资账户', 'CNY')");
+        "INSERT INTO accounts (id, ledger_id, name, type, currency) "
+        "VALUES (10, 1, '投资账户', 'investment', 'CNY')");
   });
 
   tearDown(() async => db.close());

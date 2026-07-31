@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart' show Value;
 
 import '../../data/db.dart';
 import '../../providers.dart';
 import '../../styles/tokens.dart';
+import '../../utils/account_type_utils.dart';
 
 /// 买入弹窗 — 填写基金代码、名称、份额、净值、手续费、扣款账户。
+///
+/// v4.7: 买入视为"扣款账户 → 投资账户"的转账，不再创建单独的 expense 交易。
+/// 扣款账户下拉仅显示可交易账户（排除投资/债权/负债）。
 ///
 /// 如果从持仓详情进入（传入 [holding]），则自动预填基金信息。
 /// 若用户修改了基金代码，则创建新持仓而非追加到原持仓。
@@ -34,8 +37,10 @@ class _BuyDialogState extends ConsumerState<BuyDialog> {
   late final TextEditingController _navCtrl;
   late final TextEditingController _feeCtrl;
   bool _submitting = false;
-  int? _selectedAccountId;
-  List<Account> _accounts = [];
+  int? _selectedAccountId; // 扣款账户
+  int? _selectedInvestmentAccountId; // 持仓归属的投资账户
+  List<Account> _tradableAccounts = [];
+  List<Account> _investmentAccounts = [];
 
   @override
   void initState() {
@@ -53,8 +58,18 @@ class _BuyDialogState extends ConsumerState<BuyDialog> {
     final accounts = await ref.read(repositoryProvider).getAvailableAccountsForLedger(widget.ledgerId);
     if (mounted) {
       setState(() {
-        _accounts = accounts;
-        _selectedAccountId = widget.accountId ?? (accounts.isNotEmpty ? accounts.first.id : null);
+        // v4.7: 只显示可交易账户（排除投资/债权/负债），避免转账到自身
+        _tradableAccounts = accounts.where((a) => isTradableType(a.type)).toList();
+        _investmentAccounts = accounts
+            .where((a) => normalizeAccountType(a.type) == accountTypeInvestment)
+            .toList();
+        _selectedAccountId = widget.holding != null
+            ? (_tradableAccounts.isNotEmpty ? _tradableAccounts.first.id : null)
+            : (widget.accountId != null && _tradableAccounts.any((a) => a.id == widget.accountId)
+                ? widget.accountId
+                : (_tradableAccounts.isNotEmpty ? _tradableAccounts.first.id : null));
+        _selectedInvestmentAccountId =
+            _investmentAccounts.isNotEmpty ? _investmentAccounts.first.id : null;
       });
     }
   }
@@ -90,35 +105,22 @@ class _BuyDialogState extends ConsumerState<BuyDialog> {
           : null;
       final parsedFee = double.tryParse(_feeCtrl.text) ?? 0;
 
+      // v4.7 返工：持仓归属必须是投资账户。已有持仓沿用其账户；
+      // 新买入由用户选择，未选时仓库自动创建，绝不把扣款账户当持仓归属。
+      final investmentAccountId =
+          widget.holding?.accountId ?? _selectedInvestmentAccountId;
       await service.buy(
         ledgerId: widget.ledgerId,
-        accountId: _selectedAccountId!,
+        accountId: investmentAccountId,
         fundCode: _codeCtrl.text.trim(),
         fundName: _nameCtrl.text.trim(),
         shares: shares,
         nav: nav,
         fee: parsedFee,
         holdingId: effectiveHoldingId,
+        sourceAccountId: _selectedAccountId!,
       );
 
-      // 买入后插入 expense 交易扣减扣款账户余额
-      final totalCost = shares * nav + parsedFee;
-      final db = ref.read(databaseProvider);
-      await db.into(db.transactions).insert(
-        TransactionsCompanion(
-          ledgerId: Value(widget.ledgerId),
-          type: const Value('expense'),
-          amount: Value(totalCost),
-          accountId: Value(_selectedAccountId!),
-          happenedAt: Value(DateTime.now()),
-          note: Value('买入 ${_codeCtrl.text.trim()}'),
-          excludeFromBudget: const Value(true),
-        ),
-      );
-
-      // NOTE(tech-debt): service.buy() 和 addTransaction() 无共享事务边界。
-      // 若 addTransaction 失败，买入已提交但余额未扣减。
-      // 修复需将扣款逻辑整合进 Repository 层 buy 事务内部（非 UI 层职责）。
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
@@ -201,11 +203,35 @@ class _BuyDialogState extends ConsumerState<BuyDialog> {
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
               ),
               const SizedBox(height: BeeDimens.p16),
+              // v4.7 返工：新买入先确定投资账户；无投资账户时保存会自动创建。
+              if (widget.holding == null) ...[
+                if (_investmentAccounts.isNotEmpty)
+                  DropdownButtonFormField<int>(
+                    key: ValueKey('investment-${_investmentAccounts.length}'),
+                    initialValue: _selectedInvestmentAccountId,
+                    decoration: const InputDecoration(labelText: '投资账户'),
+                    items: _investmentAccounts.map((a) => DropdownMenuItem(
+                      value: a.id,
+                      child: Text(a.name),
+                    )).toList(),
+                    onChanged: (v) =>
+                        setState(() => _selectedInvestmentAccountId = v),
+                  )
+                else
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      '尚未创建投资账户，保存时将自动创建「投资账户」',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ),
+                const SizedBox(height: BeeDimens.p16),
+              ],
               DropdownButtonFormField<int>(
-                key: ValueKey(_accounts.length),
+                key: ValueKey(_tradableAccounts.length),
                 initialValue: _selectedAccountId,
                 decoration: const InputDecoration(labelText: '扣款账户'),
-                items: _accounts.map((a) => DropdownMenuItem(
+                items: _tradableAccounts.map((a) => DropdownMenuItem(
                   value: a.id,
                   child: Text(a.name),
                 )).toList(),
@@ -237,3 +263,4 @@ Future<bool?> showBuyDialog(
     ),
   );
 }
+

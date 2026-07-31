@@ -123,7 +123,7 @@ class InvestmentService {
 
   Future<int> buy({
     required int ledgerId,
-    required int accountId,
+    int? accountId,
     required String fundCode,
     required String fundName,
     required double shares,
@@ -132,6 +132,7 @@ class InvestmentService {
     DateTime? happenedAt,
     String? note,
     int? holdingId,
+    int? sourceAccountId,
   }) {
     return _repo.buy(
       ledgerId: ledgerId,
@@ -144,6 +145,7 @@ class InvestmentService {
       happenedAt: happenedAt,
       note: note,
       holdingId: holdingId,
+      sourceAccountId: sourceAccountId,
     );
   }
 
@@ -154,6 +156,7 @@ class InvestmentService {
     double fee = 0,
     DateTime? happenedAt,
     String? note,
+    int? targetAccountId,
   }) {
     return _repo.sell(
       holdingId: holdingId,
@@ -162,6 +165,7 @@ class InvestmentService {
       fee: fee,
       happenedAt: happenedAt,
       note: note,
+      targetAccountId: targetAccountId,
     );
   }
 
@@ -198,8 +202,29 @@ class InvestmentService {
   Stream<List<InvestmentHolding>> watchHoldings({required int ledgerId}) =>
       _repo.watchHoldings(ledgerId: ledgerId);
 
- Stream<List<Transaction>> watchTransactions(int holdingId) =>
-     _repo.watchTransactions(holdingId);
+  Stream<List<Transaction>> watchTransactions(int holdingId) =>
+      _repo.watchTransactions(holdingId);
+
+  /// 更新投资交易的可编辑字段（note / happenedAt / shares / nav / fee / amount）。
+  /// 保存后重算持仓统计并联动投资账户市值。
+  Future<void> updateTransaction(int transactionId, {
+    String? note,
+    DateTime? happenedAt,
+    double? investShares,
+    double? investNav,
+    double? investFee,
+    double? amount,
+  }) {
+    return _repo.updateTransaction(
+      transactionId,
+      note: note,
+      happenedAt: happenedAt,
+      investShares: investShares,
+      investNav: investNav,
+      investFee: investFee,
+      amount: amount,
+    );
+  }
 
   /// 创建初始持仓（导入已有投资记录）。
   Future<int> createInitialHolding({

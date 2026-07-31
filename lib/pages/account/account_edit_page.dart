@@ -101,6 +101,9 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
   bool get isEditing => widget.account != null;
 
   String _getInitialBalanceLabel(AppLocalizations l10n) {
+    if (_selectedType == accountTypeInvestment) {
+      return '持仓市值（自动计算）';
+    }
     if (isValuationOrInvestmentType(_selectedType)) {
       return isLiabilityType(_selectedType)
           ? l10n.valuationCurrentDebt
@@ -110,6 +113,9 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
   }
 
   String _getInitialBalanceHint(AppLocalizations l10n) {
+    if (_selectedType == accountTypeInvestment) {
+      return '由持仓总市值自动计算，无需手动填写';
+    }
     if (isValuationOrInvestmentType(_selectedType)) {
       return isLiabilityType(_selectedType)
           ? l10n.valuationDebtHint
@@ -334,6 +340,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                               SizedBox(width: 12.0.scaled(context, ref)),
                               Expanded(
                                 child: TextFormField(
+                                  enabled: _selectedType != 'investment',
                                   controller: _initialBalanceController,
                                   decoration: filledDec(
                                     label: _getInitialBalanceLabel(l10n),
@@ -1289,3 +1296,4 @@ class _AccountTypeCard extends ConsumerWidget {
     );
   }
 }
+
