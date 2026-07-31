@@ -9,6 +9,7 @@ import '../../widgets/investment/holding_card.dart';
 import '../../services/data/investment_service.dart';
 import 'holding_detail_page.dart';
 import '../../widgets/investment/buy_dialog.dart';
+import '../../widgets/investment/initial_holding_dialog.dart';
 
 /// 持仓列表页 — 展示当前账本下所有投资持仓。
 ///
@@ -126,9 +127,24 @@ class HoldingsListPage extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 24),
-          FilledButton.icon(
+         FilledButton.icon(
+           onPressed: () async {
+             final result = await showBuyDialog(
+               context,
+               ledgerId: ref.read(currentLedgerIdProvider),
+             );
+             if (result == true) {
+               ref.invalidate(currentHoldingsProvider);
+               ref.invalidate(portfolioSummaryProvider);
+             }
+           },
+           icon: const Icon(Icons.add_rounded, size: 20),
+           label: const Text('买入基金'),
+         ),
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
             onPressed: () async {
-              final result = await showBuyDialog(
+              final result = await showInitialHoldingDialog(
                 context,
                 ledgerId: ref.read(currentLedgerIdProvider),
               );
@@ -137,8 +153,8 @@ class HoldingsListPage extends ConsumerWidget {
                 ref.invalidate(portfolioSummaryProvider);
               }
             },
-            icon: const Icon(Icons.add_rounded, size: 20),
-            label: const Text('买入基金'),
+            icon: const Icon(Icons.file_upload_outlined, size: 20),
+            label: const Text('导入初始持仓'),
           ),
         ],
       ),

@@ -50,9 +50,9 @@ void main() {
     // 验证持仓
     final holdings = db.select(db.investmentHoldings).get();
     final h = (await holdings).single;
-    expect(h.totalShares, 1000);
-    expect(h.totalCost, 1500.0); // 不含手续费
-    expect(h.currentNav, 1.5);
+   expect(h.totalShares, 1000);
+    expect(h.totalCost, 1510.0); // 1000*1.5+10
+   expect(h.currentNav, 1.5);
     expect(h.marketValue, 1500.0); // 1000*1.5
     expect(h.fundCode, '000001');
     expect(h.accountId, 10);

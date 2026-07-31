@@ -198,6 +198,31 @@ class InvestmentService {
   Stream<List<InvestmentHolding>> watchHoldings({required int ledgerId}) =>
       _repo.watchHoldings(ledgerId: ledgerId);
 
-  Stream<List<Transaction>> watchTransactions(int holdingId) =>
-      _repo.watchTransactions(holdingId);
+ Stream<List<Transaction>> watchTransactions(int holdingId) =>
+     _repo.watchTransactions(holdingId);
+
+  /// 创建初始持仓（导入已有投资记录）。
+  Future<int> createInitialHolding({
+    required int ledgerId,
+    required int accountId,
+    required String fundCode,
+    required String fundName,
+    required double shares,
+    required double cost,
+    required double nav,
+    DateTime? happenedAt,
+    String? note,
+  }) {
+    return _repo.createInitialHolding(
+      ledgerId: ledgerId,
+      accountId: accountId,
+      fundCode: fundCode,
+      fundName: fundName,
+      shares: shares,
+      cost: cost,
+      nav: nav,
+      happenedAt: happenedAt,
+      note: note,
+    );
+  }
 }

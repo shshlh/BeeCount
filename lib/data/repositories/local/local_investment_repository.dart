@@ -1,4 +1,4 @@
-﻿import 'dart:math';
+import 'dart:math';
 
 import 'package:drift/drift.dart' as d;
 import 'package:uuid/uuid.dart';
@@ -160,9 +160,9 @@ class LocalInvestmentRepository implements InvestmentRepository {
       );
 
       // 3. 更新持仓
-      final newShares = oldShares + shares;
-      final newCost = oldCost + shares * nav;
-      await _updateHolding(
+     final newShares = oldShares + shares;
+      final newCost = oldCost + shares * nav + fee;
+     await _updateHolding(
         effectiveHoldingId,
         totalShares: newShares,
         totalCost: newCost,
@@ -322,6 +322,56 @@ class LocalInvestmentRepository implements InvestmentRepository {
       marketValue: holding.totalShares * nav,
       updatedAt: DateTime.now(),
     );
+  }
+
+  @override
+  Future<int> createInitialHolding({
+    required int ledgerId,
+    required int accountId,
+    required String fundCode,
+    required String fundName,
+    required double shares,
+    required double cost,
+    required double nav,
+    DateTime? happenedAt,
+    String? note,
+  }) async {
+    final effectiveHappenedAt = happenedAt ?? DateTime.now();
+
+    return db.transaction(() async {
+      // 1. 新建持仓
+      final holdingId = await db.into(db.investmentHoldings).insert(
+            InvestmentHoldingsCompanion.insert(
+              ledgerId: ledgerId,
+              fundCode: fundCode,
+              fundName: fundName,
+              accountId: accountId,
+              totalShares: d.Value(shares),
+              totalCost: d.Value(cost),
+              currentNav: d.Value(nav),
+              marketValue: d.Value(shares * nav),
+              note: d.Value(note),
+              createdAt: d.Value(effectiveHappenedAt),
+              updatedAt: d.Value(effectiveHappenedAt),
+            ),
+          );
+
+      // 2. 插入初始投资交易记录
+      await _insertTx(
+        ledgerId: ledgerId,
+        accountId: accountId,
+        investType: 'buy',
+        amount: cost,
+        investShares: shares,
+        investNav: nav,
+        investFee: 0,
+        holdingId: holdingId,
+        happenedAt: effectiveHappenedAt,
+        note: note ?? '初始持仓 $fundCode',
+      );
+
+      return holdingId;
+    });
   }
 
   @override

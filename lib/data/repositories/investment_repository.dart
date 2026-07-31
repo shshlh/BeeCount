@@ -60,6 +60,23 @@ abstract class InvestmentRepository {
   /// 更新持仓净值，同时重算市值（marketValue = totalShares × nav）。
   Future<void> updateNav(int holdingId, double nav);
 
-  /// 监听某个持仓的所有投资交易（按 happenedAt 降序）。
-  Stream<List<Transaction>> watchTransactions(int holdingId);
+ /// 监听某个持仓的所有投资交易（按 happenedAt 降序）。
+ Stream<List<Transaction>> watchTransactions(int holdingId);
+
+  /// 创建初始持仓（导入已有投资记录）。
+  ///
+  /// 与 buy 不同，此方法直接以指定 [shares] 和 [cost] 建立持仓记录，
+  /// 同时插入一条 invest 类型交易记录用于追溯。
+  /// 返回持仓 ID。
+  Future<int> createInitialHolding({
+    required int ledgerId,
+    required int accountId,
+    required String fundCode,
+    required String fundName,
+    required double shares,
+    required double cost,
+    required double nav,
+    DateTime? happenedAt,
+    String? note,
+  });
 }

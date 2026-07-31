@@ -160,8 +160,8 @@ void main() {
     expect(txId, isPositive);
 
     final h = await repo.getHolding(1);
-    expect(h!.totalShares, 500);
-    expect(h.totalCost, 1000); // 不含手续费
+   expect(h!.totalShares, 500);
+    expect(h.totalCost, 1005.0); // 500*2.0+5
   });
 
   test('sell：委托 repo，按比例扣减成本', () async {

@@ -748,3 +748,79 @@ ef.invalidate(currentHoldingsProvider) 刷新列表
 **git 状态**：当前 main @ cb2dcae，待提交
 
 ---
+
+
+## 2026-07-31
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-logic + invest-ui
+
+**任务**：4.6 投资逻辑修复 + 初始持仓导入（3 个 bug）
+
+**Bug 1：账户资产/负债分组错误**（accounts_page.dart）
+- 200 行和 214 行：两处 _buildClassificationSection 都传了 llAccountTypes
+- 导致所有账户（含银行卡）同时出现在「资产账户」和「负债账户」两个区
+- 修复：资产区传 ssetTypeOrder，负债区传 liabilityTypeOrder（这俩常量需要加到 account_type_utils.dart）
+  assetTypeOrder = [cash, bank_card, virtual_account, investment, receivable]
+  liabilityTypeOrder = [credit_card, loan]
+
+**Bug 2：缺少初始持仓导入**（需要新增）
+- Repository 接口没有 createInitialHolding 方法
+- 需要在 investment_repository.dart 接口加 + local_investment_repository.dart 实现
+- 字段：ledgerId, accountId(投资账户), fundCode, fundName, shares(份额), cost(持仓成本), nav(净值), happenedAt
+- 需要同时更新 InvestmentService + Riverpod Provider + UI 入口（持仓列表页 FAB 附近加「导入初始持仓」按钮）
+- 参考原 pj_003 项目的 database_helper.dart 的 createInitialHolding 逻辑
+
+**Bug 3：手续费不计入成本**（local_investment_repository.dart:164）
+- inal newCost = oldCost + shares * nav; 漏了 fee
+- 应改为：inal newCost = oldCost + shares * nav + fee;
+- 同步更新相关测试
+
+**约束**：不改 app.dart 导航。flutter analyze 零 error。
+
+## 2026-07-31
+
+**移交角色**：invest-logic + invest-ui
+**接收角色**：项目经理（PM）
+
+**完成工作**：阶段 4.6 全部 3 个任务：
+
+### 4.6.1 账户资产/负债分组修复
+- lib/utils/account_type_utils.dart — 新增 ssetTypeOrder（cash/bank_card/virtual_account/receivable/investment）和 liabilityTypeOrder（credit_card/loan）两个常量
+- lib/pages/account/accounts_page.dart:200,214 — 资产区 → ssetTypeOrder，负债区 → liabilityTypeOrder，修复了所有账户同时出现在两个区的 Bug
+
+### 4.6.2 初始持仓导入
+- lib/data/repositories/investment_repository.dart — 接口新增 createInitialHolding 方法
+- lib/data/repositories/local/local_investment_repository.dart — 实现：事务内新建持仓 + 插入投资交易记录（invest_type='buy'），返回 holdingId
+- lib/services/data/investment_service.dart — 新增 createInitialHolding 委托
+- lib/widgets/investment/initial_holding_dialog.dart — 新增弹窗：基金代码/名称/份额/成本/净值/投资账户选择/备注，带前端验证
+- lib/pages/investment/holdings_list_page.dart — 空态新增「导入初始持仓」OutlinedButton，调 showInitialHoldingDialog
+
+### 4.6.3 手续费计入成本
+- lib/data/repositories/local/local_investment_repository.dart:164 — inal newCost = oldCost + shares * nav; → + fee
+- 	est/data/repositories/investment_repository_test.dart:56 — 	otalCost 1500→1510（1000*1.5+10）
+- 	est/services/investment_service_test.dart:164 — 	otalCost 1000→1005（500*2.0+5）
+
+**验证**：
+- dart analyze：17 个预存 issues，零新增 error/warning
+- flutter test：534 passed, 1 skipped, 1 failed（唯一失败 = 既存 bill_creation_service_test）
+- 投资模块 22 个测试全部通过
+
+**下一个任务需要知道的**：
+- createInitialHolding 与 uy 的区别：直接给定 shares+cost，不产生扣款交易，交易备注自动填「初始持仓 {fundCode}」
+- 费率入成本后，Repo 层 uy() 的 transaction.amount 和 holding.totalCost 都包含 fee；Service 层委托透传
+- 弹窗仅在有投资类型账户时显示账户下拉（空则无下拉行，仍可提交但会 SnackBar 报错）
+- ccounts_page 资产/负债分组依赖新增的 ssetTypeOrder/liabilityTypeOrder — 如果后续新增账户类型，需要同步更新这两个常量
+
+**修改文件**：
+- 修改：lib/utils/account_type_utils.dart
+- 修改：lib/pages/account/accounts_page.dart
+- 修改：lib/data/repositories/investment_repository.dart
+- 修改：lib/data/repositories/local/local_investment_repository.dart
+- 修改：lib/services/data/investment_service.dart
+- 修改：lib/pages/investment/holdings_list_page.dart
+- 新增：lib/widgets/investment/initial_holding_dialog.dart
+- 修改：	est/data/repositories/investment_repository_test.dart
+- 修改：	est/services/investment_service_test.dart
+
+**git 状态**：当前分支 main，待提交

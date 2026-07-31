@@ -45,6 +45,21 @@ const allAccountTypes = [
   accountTypeInvestment,
 ];
 
+/// 资产类账户类型列表（用于资产区展示排序）
+const assetTypeOrder = [
+  accountTypeCash,
+  accountTypeBankCard,
+  accountTypeVirtualAccount,
+  accountTypeReceivable,
+  accountTypeInvestment,
+];
+
+/// 负债类账户类型列表（用于负债区展示排序）
+const liabilityTypeOrder = [
+  accountTypeCreditCard,
+  accountTypeLoan,
+];
+
 // ─────────────────────── 旧类型映射 ───────────────────────
 
 /// 旧版类型字符串 → 新版类型字符串
