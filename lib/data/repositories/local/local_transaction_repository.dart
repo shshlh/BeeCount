@@ -94,7 +94,10 @@ class LocalTransactionRepository implements TransactionRepository {
   }) {
     final select = db.select(db.transactions);
     if (ledgerId != null) {
-      select.where((t) => t.ledgerId.equals(ledgerId));
+      select.where((t) =>
+          t.ledgerId.equals(ledgerId) & t.excludeFromStats.equals(false));
+    } else {
+      select.where((t) => t.excludeFromStats.equals(false));
     }
     select.orderBy([
       (t) => d.OrderingTerm(
@@ -668,7 +671,8 @@ class LocalTransactionRepository implements TransactionRepository {
     required int limit,
   }) async {
     final q = (db.select(db.transactions)
-          ..where((t) => t.ledgerId.equals(ledgerId))
+          ..where((t) =>
+              t.ledgerId.equals(ledgerId) & t.excludeFromStats.equals(false))
           ..orderBy([
             (t) => d.OrderingTerm(
                 expression: t.happenedAt, mode: d.OrderingMode.desc)
@@ -778,7 +782,8 @@ class LocalTransactionRepository implements TransactionRepository {
   @override
   Future<List<Transaction>> getTransactionsByLedger(int ledgerId) async {
     return await (db.select(db.transactions)
-          ..where((t) => t.ledgerId.equals(ledgerId))
+          ..where((t) =>
+              t.ledgerId.equals(ledgerId) & t.excludeFromStats.equals(false))
           ..orderBy([
             (t) =>
                 d.OrderingTerm(expression: t.happenedAt, mode: d.OrderingMode.desc)
@@ -810,7 +815,8 @@ class LocalTransactionRepository implements TransactionRepository {
     int limit = 10,
   }) async {
     return await (db.select(db.transactions)
-          ..where((t) => t.ledgerId.equals(ledgerId))
+          ..where((t) =>
+              t.ledgerId.equals(ledgerId) & t.excludeFromStats.equals(false))
           ..orderBy([
             (t) => d.OrderingTerm(
                 expression: t.happenedAt, mode: d.OrderingMode.desc)

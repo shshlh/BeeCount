@@ -33,6 +33,63 @@
 
 ## 2026-08-01
 
+**移交角色**：invest-ui
+**接收角色**：PM
+
+**完成工作**：阶段 4.8.3 删除 GitHub star + 更多产品
+
+1. **GitHub star 入口移除** — [mine_page.dart](/D:\codexproject\pj_004_beecount_fork\lib\pages\main\mine_page.dart)
+   - 删除「支持我们」区的 GitHub Star 列表项及分隔线
+   - 删除 `_showGitHubStarGuide` 引导弹窗
+   - 删除 [github_star_provider.dart](/D:\codexproject\pj_004_beecount_fork\lib\providers\github_star_provider.dart)（GitHub API 请求 + SharedPreferences 缓存，仅此页引用）
+
+2. **更多产品区块移除** — [about_page.dart](/D:\codexproject\pj_004_beecount_fork\lib\pages\settings\about_page.dart)
+   - 删除「相关产品」标题、`_buildProductPromos` 及其对 product_promos 的 import
+   - `services/marketing/product_promos.dart` 与 `ProductPromoCard` 保留：资产管理页 header 的「蜜蜂家当」入口仍在使用
+
+**未清理**：
+- l10n key（`mineSupportAuthor*` / `githubStarGuide*` / `aboutRelatedProducts` / `aboutBeeDNS*`）与 `assets/images/github_star_guide.png` 已无代码引用但暂留，避免大范围动 ARB/生成文件
+- about_page 社媒按钮仍引用不存在的 `assets/icons/social/*.svg`（github/telegram/xiaohongshu/douyin），属预存问题，本次未处理
+
+**验证**：flutter analyze 零 error；mine_page/about_page 16 个 warning 为基线预存（未新增）；全量 flutter test 545 passed / 1 skipped / 1 failed（既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，未提交（等待 PM 审查）
+
+---
+
+## 2026-08-01
+
+**移交角色**：invest-logic
+**接收角色**：PM
+
+**完成工作**：阶段 4.8 遗留问题修复（4.8.1 + 4.8.2）
+
+1. **4.8.1 初始持仓重复登记报错** — [local_investment_repository.dart](/D:\codexproject\pj_004_beecount_fork\lib\data\repositories\local\local_investment_repository.dart) + [investment_repository.dart](/D:\codexproject\pj_004_beecount_fork\lib\data\repositories\investment_repository.dart)
+   - `createInitialHolding` 先按 `(ledgerId, fundCode, accountId)` 查找已有持仓，命中则复用、未命中才新建
+   - 复用后插入 initial 交易并调用 `_recomputeHolding` 重算，份额/成本自动累加，不再触发唯一索引冲突
+   - 接口注释同步说明复用语义
+
+2. **4.8.2 流水过滤 excludeFromStats** — [local_transaction_repository.dart](/D:\codexproject\pj_004_beecount_fork\lib\data\repositories\local\local_transaction_repository.dart) + [transaction_repository.dart](/D:\codexproject\pj_004_beecount_fork\lib\data\repositories\transaction_repository.dart)
+   - 4 个用户可见流水查询增加 `excludeFromStats == false` 过滤：`watchTransactionsWithCategoryAll`（首页/搜索/导出主 feed）、`getRecentTransactionsWithCategory`（预加载）、`getTransactionsByLedger`（分享海报）、`getRecentTransactions`（桌面小组件最近交易）
+   - 统计聚合、账户余额、云同步数据层不受影响
+
+**测试**：
+- 新增「初始持仓：重复登记同基金+账户时复用持仓并累加」测试
+- 更新 `getRecentTransactions` 契约测试：过滤 excludeFromStats，保留 excludeFromBudget 与转账
+- 新增「主流水 feed 过滤 excludeFromStats 的登记类交易」测试
+- flutter analyze 零 error；全量 flutter test 545 passed / 1 skipped / 1 failed（既存 bill_creation_service_test）
+
+**下一个任务需要知道的**：
+- 4.8.3（mine_page/about_page 清理 GitHub star + 更多产品）仍由 invest-ui 负责，本次未动
+- `getRecentTransactions` 契约已从「不做任何 exclude 过滤」改为「过滤 excludeFromStats」
+- 日历 provider 仍按 `type == 'invest'` 采集投资事件，v4.7 后买卖已是 transfer 类型，投资日历事件需要另行确认是否遗漏
+
+**git 状态**：当前分支 main，未提交（等待 PM 审查）
+
+---
+
+## 2026-08-01
+
 **移交角色**：invest-ui + invest-logic（联合修复）
 **接收角色**：PM
 
@@ -115,6 +172,71 @@
 **约束**：flutter analyze 零 error。投资模块测试同步更新。
 
 ---
+
+## 2026-08-01
+
+**移交角色**：项目经理（PM）审查结论
+**接收角色**：invest-logic + invest-ui（返工）
+
+**审查结论**：❌ 不通过。3 个 P1 必须修复后重新审查。
+
+**P1-1：买卖转账后账户余额不更新**
+- local_investment_repository.dart 全文件无 balance/UPDATE accounts 逻辑
+- buy/sell 只插入了 type=transfer 的交易记录，但支付宝余额不减少、支付宝基金余额不增加、投资账户市值不更新
+- 要求：buy/sell 在 db.transaction() 内同步更新源账户、目标账户、投资账户余额
+
+**P1-2：无持仓新建买入时持仓关联错误账户**
+- buy_dialog.dart: `accountId: investmentAccountId ?? _selectedAccountId!`
+- 从持仓列表 FAB 买入新基金（无 holding）时，accountId 被扣款账户顶替，持仓挂到支付宝/银行卡名下，转账方向变成自己转自己
+- 要求：无持仓时先确定/创建投资账户，禁止用扣款账户当持仓归属
+
+**P1-3：编辑交易后持仓统计不重算**
+- updateTransaction 接口注释明确"不更新持仓统计"
+- 用户要求"保存后更新交易记录 + 重算持仓 totalShares/totalCost/marketValue"
+- 要求：updateTransaction 改为事务内同时重算持仓统计
+
+**P2（本次可接受，需跟进）**：
+- 初始持仓 excludeFromStats=true 只影响统计，流水列表查询（local_transaction_repository.dart 671/781/813 行）未过滤，主流水仍会显示
+- 导入按钮放在摘要卡片下方，用户要求放顶部 PrimaryHeader 另一侧
+
+**验证要求**：flutter analyze 零 error + 投资模块测试全过 + 补充余额联动测试。
+
+---
+
+## 2026-08-01
+
+**移交角色**：invest-logic + invest-ui（4.7 返工）
+**接收角色**：PM
+
+**完成工作**：PM 审查的 3 个 P1 全部修复，并补余额联动测试。
+
+1. **P1-1 余额联动** — [local_investment_repository.dart](/D:\codexproject\pj_004_beecount_fork\lib\data\repositories\local\local_investment_repository.dart)
+   - 新增 `_syncInvestmentAccountValue()`：事务内把投资账户 initial_balance 同步为名下全部持仓市值之和（账户页对投资账户直接读 initial_balance）
+   - buy / sell / convert / updateNav / createInitialHolding / updateTransaction 全部接入
+   - 扣款/回款账户余额由 transfer 交易行实时计算，买卖转账天然联动
+   - 只同步投资类型账户，历史脏数据挂在日常账户下时不会反向污染余额
+
+2. **P1-2 持仓归属** — buy_dialog.dart + repository
+   - Repository 新增 `_resolveInvestmentAccount()`：accountId 为 null 或非投资类型时自动查找账本内投资账户，仍无则新建「投资账户」；禁止扣款账户当持仓归属
+   - buy 接口 accountId 改为可空，Service 透传
+   - 买入弹窗新增「投资账户」下拉（仅新买入显示）；无投资账户时提示保存自动创建
+
+3. **P1-3 交易重算** — updateTransaction 重写
+   - 改为 db.transaction() 内更新交易 → `_recomputeHolding()` 按全部投资交易重算 totalShares / totalCost / currentNav / marketValue → 同步投资账户市值
+   - 成本口径：买入/初始按交易金额（缺失时按份额×净值+手续费），转换买入只按份额×净值，卖出按份额比例扣减
+
+**验证**：
+- 全仓 flutter analyze：870 个预存 info/warning，零 error
+- 投资模块测试：31 个全通过（新增 9 个：持仓归属 2 + 余额联动 4 + 编辑重算 3）
+- flutter test 全套：542 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**下一个任务需要知道的**：
+- 投资账户余额 = initial_balance 缓存 = 持仓市值总和，由投资 Repository 维护，不要再走手动估值
+- buy 的 accountId 语义 = 持仓归属投资账户，扣款方是 sourceAccountId
+- updateTransaction 现在会重算持仓，不再只是改交易行
+- P2 两项仍未做：主流水未过滤 excludeFromStats 的初始持仓（local_transaction_repository.dart 671/781/813）、导入按钮未移到 PrimaryHeader 顶部
+
+**git 状态**：当前分支 main，未提交（等待 PM 审查）
 
 ## 2026-07-31
 
@@ -665,67 +787,3 @@
 - Repository 所有写操作使用 `db.transaction()` 保证原子性
 
 **git 状态**：未提交（等待 PM 审查后统一合入）
-## 2026-08-01
-
-**移交角色**：项目经理（PM）审查结论
-**接收角色**：invest-logic + invest-ui（返工）
-
-**审查结论**：❌ 不通过。3 个 P1 必须修复后重新审查。
-
-**P1-1：买卖转账后账户余额不更新**
-- local_investment_repository.dart 全文件无 balance/UPDATE accounts 逻辑
-- buy/sell 只插入了 type=transfer 的交易记录，但支付宝余额不减少、支付宝基金余额不增加、投资账户市值不更新
-- 要求：buy/sell 在 db.transaction() 内同步更新源账户、目标账户、投资账户余额
-
-**P1-2：无持仓新建买入时持仓关联错误账户**
-- buy_dialog.dart: `accountId: investmentAccountId ?? _selectedAccountId!`
-- 从持仓列表 FAB 买入新基金（无 holding）时，accountId 被扣款账户顶替，持仓挂到支付宝/银行卡名下，转账方向变成自己转自己
-- 要求：无持仓时先确定/创建投资账户，禁止用扣款账户当持仓归属
-
-**P1-3：编辑交易后持仓统计不重算**
-- updateTransaction 接口注释明确"不更新持仓统计"
-- 用户要求"保存后更新交易记录 + 重算持仓 totalShares/totalCost/marketValue"
-- 要求：updateTransaction 改为事务内同时重算持仓统计
-
-**P2（本次可接受，需跟进）**：
-- 初始持仓 excludeFromStats=true 只影响统计，流水列表查询（local_transaction_repository.dart 671/781/813 行）未过滤，主流水仍会显示
-- 导入按钮放在摘要卡片下方，用户要求放顶部 PrimaryHeader 另一侧
-
-**验证要求**：flutter analyze 零 error + 投资模块测试全过 + 补充余额联动测试。
-
----
-
-## 2026-08-01
-
-**移交角色**：invest-logic + invest-ui（4.7 返工）
-**接收角色**：PM
-
-**完成工作**：PM 审查的 3 个 P1 全部修复，并补余额联动测试。
-
-1. **P1-1 余额联动** — [local_investment_repository.dart](/D:\codexproject\pj_004_beecount_fork\lib\data\repositories\local\local_investment_repository.dart)
-   - 新增 `_syncInvestmentAccountValue()`：事务内把投资账户 initial_balance 同步为名下全部持仓市值之和（账户页对投资账户直接读 initial_balance）
-   - buy / sell / convert / updateNav / createInitialHolding / updateTransaction 全部接入
-   - 扣款/回款账户余额由 transfer 交易行实时计算，买卖转账天然联动
-   - 只同步投资类型账户，历史脏数据挂在日常账户下时不会反向污染余额
-
-2. **P1-2 持仓归属** — buy_dialog.dart + repository
-   - Repository 新增 `_resolveInvestmentAccount()`：accountId 为 null 或非投资类型时自动查找账本内投资账户，仍无则新建「投资账户」；禁止扣款账户当持仓归属
-   - buy 接口 accountId 改为可空，Service 透传
-   - 买入弹窗新增「投资账户」下拉（仅新买入显示）；无投资账户时提示保存自动创建
-
-3. **P1-3 交易重算** — updateTransaction 重写
-   - 改为 db.transaction() 内更新交易 → `_recomputeHolding()` 按全部投资交易重算 totalShares / totalCost / currentNav / marketValue → 同步投资账户市值
-   - 成本口径：买入/初始按交易金额（缺失时按份额×净值+手续费），转换买入只按份额×净值，卖出按份额比例扣减
-
-**验证**：
-- 全仓 flutter analyze：870 个预存 info/warning，零 error
-- 投资模块测试：31 个全通过（新增 9 个：持仓归属 2 + 余额联动 4 + 编辑重算 3）
-- flutter test 全套：542 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
-
-**下一个任务需要知道的**：
-- 投资账户余额 = initial_balance 缓存 = 持仓市值总和，由投资 Repository 维护，不要再走手动估值
-- buy 的 accountId 语义 = 持仓归属投资账户，扣款方是 sourceAccountId
-- updateTransaction 现在会重算持仓，不再只是改交易行
-- P2 两项仍未做：主流水未过滤 excludeFromStats 的初始持仓（local_transaction_repository.dart 671/781/813）、导入按钮未移到 PrimaryHeader 顶部
-
-**git 状态**：当前分支 main，未提交（等待 PM 审查）

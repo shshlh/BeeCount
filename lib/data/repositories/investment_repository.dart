@@ -86,6 +86,8 @@ abstract class InvestmentRepository {
   ///
   /// 与 buy 不同，此方法直接以指定 [shares] 和 [cost] 建立持仓记录，
   /// 同时插入一条 transfer 类型交易记录（investType='initial', excludeFromStats=true）用于追溯。
+  /// 若 (ledgerId, fundCode, accountId) 已存在持仓，则复用该持仓并累加份额/成本，
+  /// 不再新建重复持仓（避免唯一索引冲突）。
   /// 返回持仓 ID。
   Future<int> createInitialHolding({
     required int ledgerId,

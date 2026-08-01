@@ -329,6 +329,52 @@ void main() {
     expect(account.initialBalance, closeTo(1600, 0.01));
   });
 
+  test('初始持仓：重复登记同基金+账户时复用持仓并累加', () async {
+    final firstId = await repo.createInitialHolding(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000001',
+      fundName: '华夏成长混合',
+      shares: 1000,
+      cost: 2000,
+      nav: 2.0,
+    );
+
+    final secondId = await repo.createInitialHolding(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000001',
+      fundName: '华夏成长混合',
+      shares: 500,
+      cost: 1100,
+      nav: 2.2,
+    );
+
+    // 同一持仓，不因唯一索引报错
+    expect(secondId, firstId);
+    final holdings = db.select(db.investmentHoldings).get();
+    expect((await holdings).length, 1);
+    final h = (await holdings).single;
+    expect(h.totalShares, 1500);
+    expect(h.totalCost, closeTo(3100, 0.01)); // 2000 + 1100
+    expect(h.currentNav, 2.2);
+    expect(h.marketValue, closeTo(3300, 0.01)); // 1500 * 2.2
+
+    // 两笔初始登记都保留，且都不进流水统计
+    final txs = await (db.select(db.transactions)
+          ..where((t) => t.holdingId.equals(firstId)))
+        .get();
+    expect(txs.length, 2);
+    expect(txs.every((t) => t.investType == 'initial'), isTrue);
+    expect(txs.every((t) => t.excludeFromStats), isTrue);
+
+    // 投资账户市值联动为合并后的市值
+    final account = await (db.select(db.accounts)
+          ..where((a) => a.id.equals(10)))
+        .getSingle();
+    expect(account.initialBalance, closeTo(3300, 0.01));
+  });
+
   // ---- 卖出 ----
 
   test('卖出：全额卖出成本减为零', () async {

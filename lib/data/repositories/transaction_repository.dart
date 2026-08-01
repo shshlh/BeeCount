@@ -249,7 +249,7 @@ abstract class TransactionRepository {
   });
 
   /// 最近 [limit] 笔交易(按 happenedAt 降序),纯 [Transaction] 行、无分类/账户
-  /// join、不做任何 exclude 过滤。
+  /// join、过滤 excludeFromStats(不计收支的登记类流水不进入用户可见列表)。
   ///
   /// 供桌面小组件「最近交易」类型取数用(`WidgetDataService.gatherRecent`,
   /// `.docs/home-widget/plan.md` §一.3)。需要分类名/图标/账户名时由调用方

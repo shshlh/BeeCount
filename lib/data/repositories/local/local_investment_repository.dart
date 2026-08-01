@@ -556,22 +556,25 @@ class LocalInvestmentRepository implements InvestmentRepository {
     final effectiveHappenedAt = happenedAt ?? DateTime.now();
 
     return db.transaction(() async {
-      // 1. 新建持仓
-      final holdingId = await db.into(db.investmentHoldings).insert(
-            InvestmentHoldingsCompanion.insert(
-              ledgerId: ledgerId,
-              fundCode: fundCode,
-              fundName: fundName,
-              accountId: accountId,
-              totalShares: d.Value(shares),
-              totalCost: d.Value(cost),
-              currentNav: d.Value(nav),
-              marketValue: d.Value(shares * nav),
-              note: d.Value(note),
-              createdAt: d.Value(effectiveHappenedAt),
-              updatedAt: d.Value(effectiveHappenedAt),
-            ),
-          );
+      // 1. 复用已有持仓（同账本+基金代码+账户），否则新建
+      final existing =
+          await _findHolding(ledgerId, fundCode, accountId);
+      final int holdingId;
+      if (existing != null) {
+        holdingId = existing.id;
+      } else {
+        holdingId = await db.into(db.investmentHoldings).insert(
+              InvestmentHoldingsCompanion.insert(
+                ledgerId: ledgerId,
+                fundCode: fundCode,
+                fundName: fundName,
+                accountId: accountId,
+                note: d.Value(note),
+                createdAt: d.Value(effectiveHappenedAt),
+                updatedAt: d.Value(effectiveHappenedAt),
+              ),
+            );
+      }
 
       // 2. 插入初始投资交易记录（v4.7: investType='initial', excludeFromStats=true）
       await _insertTx(
@@ -589,7 +592,8 @@ class LocalInvestmentRepository implements InvestmentRepository {
         excludeFromStats: true,
       );
 
-      // 初始持仓同样联动投资账户市值
+      // 3. 按全部投资交易重算持仓（复用场景自动累加份额/成本），并联动账户市值
+      await _recomputeHolding(holdingId);
       await _syncInvestmentAccountValue(accountId);
 
       return holdingId;
