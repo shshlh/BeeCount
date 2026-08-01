@@ -99,4 +99,16 @@ void main() {
     expect(find.textContaining('1 USD ='), findsNothing);
     expect(find.textContaining('≈ 86.40 CNY'), findsOneWidget);
   });
+
+  testWidgets('v5.1 小键盘精简:无备注/标签/时间,保留 C 清空键', (tester) async {
+    await db.customStatement(
+        "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
+    await tester.pumpWidget(host());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('选择标签'), findsNothing);
+    expect(find.text('C'), findsOneWidget);
+    expect(find.text('完成'), findsOneWidget);
+  });
 }

@@ -527,6 +527,12 @@ abstract class AppLocalizations {
   /// **'Account'**
   String get txFormAccount;
 
+  /// No description provided for @accountManage.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Accounts'**
+  String get accountManage;
+
   /// No description provided for @txFormAccountHint.
   ///
   /// In en, this message translates to:
@@ -538,6 +544,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Time'**
   String get txFormTime;
+
+  /// No description provided for @txFormTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Tag'**
+  String get txFormTag;
 
   /// No description provided for @txFormNote.
   ///

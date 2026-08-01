@@ -4,15 +4,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/db.dart';
 import '../../data/repositories/local/local_repository.dart';
+import '../../models/note_history.dart';
+import '../../pages/tag/widgets/tag_selector.dart';
 import '../../providers.dart';
 import '../../providers/shared_ledger_providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
 import '../../services/billing/post_processor.dart';
 import '../../services/attachment_service.dart';
+import '../../services/data/note_history_service.dart';
 import '../../services/data/tx_author_service.dart';
 import '../biz/amount_editor_sheet.dart';
+import '../biz/format_money.dart';
+import '../biz/note_picker_dialog.dart';
 import '../../utils/account_type_utils.dart';
+import '../../utils/currencies.dart';
 import '../../utils/shared_ledger_picker_filter.dart';
 import '../ui/ui.dart';
 
@@ -63,6 +69,12 @@ class _TransferFormState extends ConsumerState<TransferForm> {
   int? _fromAccountId;
   int? _toAccountId;
   bool _autoOpened = false;
+  late DateTime _date;
+  double _amount = 0;
+  List<int> _tagIds = [];
+  late final TextEditingController _noteCtrl;
+  final FocusNode _noteFocusNode = FocusNode();
+  List<NoteHistoryEntry> _frequentNotes = [];
 
   @override
   void initState() {
@@ -70,6 +82,11 @@ class _TransferFormState extends ConsumerState<TransferForm> {
     // 初始化账户ID（用于编辑模式）
     _fromAccountId = widget.initialFromAccountId;
     _toAccountId = widget.initialToAccountId;
+    _date = widget.initialDate ?? DateTime.now();
+    _amount = widget.initialAmount ?? 0;
+    _tagIds = List.from(widget.initialTagIds ?? []);
+    _noteCtrl = TextEditingController(text: widget.initialNote ?? '');
+    _loadFrequentNotes();
 
     // 如果是编辑模式且两个账户都已选择，自动打开金额编辑弹窗
     if (widget.editingTransactionId != null &&
@@ -82,6 +99,13 @@ class _TransferFormState extends ConsumerState<TransferForm> {
         }
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _noteCtrl.dispose();
+    _noteFocusNode.dispose();
+    super.dispose();
   }
 
   // 检查两个账户是否是相同币种
@@ -155,15 +179,16 @@ class _TransferFormState extends ConsumerState<TransferForm> {
       backgroundColor: BeeTokens.surfaceSheet(context),
       builder: (context) => AmountEditorSheet(
         categoryName: l10n.transferTitle,
-        initialDate: widget.initialDate ?? DateTime.now(),
-        initialAmount: widget.initialAmount,
-        initialNote: widget.initialNote,
-        initialTagIds: widget.initialTagIds,
+        initialDate: _date,
+        initialAmount: _amount,
+        initialNote: _noteCtrl.text.isEmpty ? null : _noteCtrl.text,
+        initialTagIds: _tagIds,
         showAccountPicker: false,
         ledgerId: ledgerId,
         editingTransactionId: widget.editingTransactionId,
         transactionKind: 'transfer',
         onSubmit: (result) async {
+          _amount = result.amount;
           final attachmentService = ref.read(attachmentServiceProvider);
           // 获取虚拟转账分类ID
           final transferCategory = await ref.read(transferCategoryProvider.future);
@@ -345,6 +370,256 @@ class _TransferFormState extends ConsumerState<TransferForm> {
     return accounts;
   }
 
+  Future<void> _loadFrequentNotes() async {
+    final repo = ref.read(repositoryProvider);
+    final notes = await NoteHistoryService.getHistoryNotes(
+      repository: repo,
+      ledgerId: ref.read(currentLedgerIdProvider),
+      scope: ref.read(noteHistoryScopeProvider),
+      sort: ref.read(noteHistorySortProvider),
+      categoryId: null,
+      categorySyncId: null,
+      limit: ref.read(noteHistoryLimitProvider),
+    );
+    if (!mounted) return;
+    setState(() => _frequentNotes = notes);
+  }
+
+  Future<void> _openNoteHistory() async {
+    await showDialog(
+      context: context,
+      builder: (context) => NotePickerDialog(
+        ledgerId: ref.read(currentLedgerIdProvider),
+        onNotePicked: (note) {
+          _noteCtrl.text = note;
+          _noteCtrl.selection =
+              TextSelection.fromPosition(TextPosition(offset: note.length));
+        },
+      ),
+    );
+  }
+
+  Future<void> _pickTransferDate() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    await Future.delayed(const Duration(milliseconds: 100));
+    if (!mounted) return;
+
+    final showTime = ref.read(showTransactionTimeProvider);
+    if (showTime) {
+      final res = await showWheelDateTimePicker(
+        context,
+        initial: _date,
+        maxDate: DateTime.now(),
+      );
+      if (res != null && mounted) setState(() => _date = res);
+    } else {
+      final res = await showWheelDatePicker(
+        context,
+        initial: _date,
+        mode: WheelDatePickerMode.ymd,
+        maxDate: DateTime.now(),
+      );
+      if (res != null && mounted) setState(() => _date = res);
+    }
+  }
+
+  Future<void> _pickTransferTag() async {
+    final result = await TagSelector.show(context, selectedTagIds: _tagIds);
+    if (result != null && mounted) {
+      setState(() => _tagIds = result);
+    }
+  }
+
+  Future<void> _openAmountFromRow() async {
+    if (_fromAccountId == null || _toAccountId == null) {
+      showToast(context, AppLocalizations.of(context).transferSelectAccount);
+      return;
+    }
+    await _openAmountSheet();
+  }
+
+  Widget _buildTransferFieldRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required VoidCallback onTap,
+    bool selected = false,
+  }) {
+    final primary = ref.watch(primaryColorProvider);
+    return Material(
+      color: BeeTokens.surfaceSheet(context),
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: BeeTokens.iconSecondary(context)),
+              const SizedBox(width: 12),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: BeeTokens.textSecondary(context),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  value,
+                  textAlign: TextAlign.right,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15,
+                    color: selected
+                        ? primary
+                        : BeeTokens.textTertiary(context),
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.chevron_right,
+                size: 20,
+                color: BeeTokens.iconTertiary(context),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTransferNoteField(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Material(
+      color: BeeTokens.surfaceSheet(context),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 8, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.edit_note_outlined,
+                  size: 18,
+                  color: BeeTokens.iconSecondary(context),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  l10n.txFormNote,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: BeeTokens.textSecondary(context),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _noteCtrl,
+                    focusNode: _noteFocusNode,
+                    minLines: 1,
+                    maxLines: 3,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: BeeTokens.textPrimary(context),
+                    ),
+                    decoration: InputDecoration(
+                      hintText: l10n.txFormNoteHint,
+                      hintStyle: TextStyle(
+                        color: BeeTokens.textTertiary(context),
+                      ),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                      ),
+                    ),
+                  ),
+                ),
+                if (_frequentNotes.isNotEmpty)
+                  IconButton(
+                    onPressed: _openNoteHistory,
+                    icon: Icon(
+                      Icons.history,
+                      size: 20,
+                      color: BeeTokens.iconSecondary(context),
+                    ),
+                    tooltip: l10n.txFormNote,
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatTransferDate() {
+    final showTime = ref.read(showTransactionTimeProvider);
+    final date = '${_date.year}/${_date.month}/${_date.day}';
+    if (!showTime) return date;
+    final hh = _date.hour.toString().padLeft(2, '0');
+    final mm = _date.minute.toString().padLeft(2, '0');
+    return '$date $hh:$mm';
+  }
+
+  /// 转账表单顶部字段区：金额-时间-标签-备注（v5.1 小键盘精简后保留入口）
+  Widget _buildTransferFields(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) {
+    final currency = ref.watch(currentLedgerCurrencyProvider);
+    final tagsAsync = ref.watch(tagsForCurrentLedgerProvider);
+    final tags = tagsAsync.valueOrNull ?? [];
+    final selectedTags = tags.where((t) => _tagIds.contains(t.id)).toList();
+    return Column(
+      children: [
+        _buildTransferFieldRow(
+          icon: Icons.keyboard_alt_outlined,
+          label: l10n.txFormAmount,
+          value: _amount == 0
+              ? '${getCurrencySymbol(currency)} 0.00'
+              : '${getCurrencySymbol(currency)} ${formatMoneyCompact(_amount)}',
+          selected: _amount > 0,
+          onTap: _openAmountFromRow,
+        ),
+        const SizedBox(height: 12),
+        _buildTransferFieldRow(
+          icon: Icons.schedule_outlined,
+          label: l10n.txFormTime,
+          value: _formatTransferDate(),
+          selected: true,
+          onTap: _pickTransferDate,
+        ),
+        const SizedBox(height: 12),
+        _buildTransferFieldRow(
+          icon: Icons.label_outline,
+          label: l10n.txFormTag,
+          value: selectedTags.isEmpty
+              ? l10n.tagSelectTitle
+              : selectedTags.map((t) => t.name).join('、'),
+          selected: selectedTags.isNotEmpty,
+          onTap: _pickTransferTag,
+        ),
+        const SizedBox(height: 12),
+        _buildTransferNoteField(context),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -403,6 +678,8 @@ class _TransferFormState extends ConsumerState<TransferForm> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // v5.1: 金额-时间-标签-备注独立行，小键盘只负责金额
+              _buildTransferFields(context, l10n),
               // 转出账户标题
               Text(
                 l10n.transferFromAccount,

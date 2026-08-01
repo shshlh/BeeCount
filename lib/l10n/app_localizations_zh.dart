@@ -236,10 +236,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get txFormAccount => '账户';
 
   @override
+  String get accountManage => '账户管理';
+
+  @override
   String get txFormAccountHint => '选择账户';
 
   @override
   String get txFormTime => '时间';
+
+  @override
+  String get txFormTag => '标签';
 
   @override
   String get txFormNote => '备注';

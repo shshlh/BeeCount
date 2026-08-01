@@ -7,24 +7,31 @@ import '../../data/db.dart';
 import '../../data/repositories/base_repository.dart';
 import '../../data/repositories/local/local_repository.dart';
 import '../../l10n/app_localizations.dart';
+import '../../models/note_history.dart';
+import '../../pages/account/accounts_page.dart';
+import '../../pages/category/category_manage_page.dart';
+import '../../pages/tag/widgets/tag_selector.dart';
 import '../../providers.dart';
 import '../../providers/budget_providers.dart';
 import '../../services/attachment_service.dart';
 import '../../services/billing/post_processor.dart';
+import '../../services/data/note_history_service.dart';
 import '../../services/data/tx_author_service.dart';
 import '../../styles/tokens.dart';
 import '../../utils/account_type_utils.dart';
 import '../../utils/category_utils.dart';
+import '../../utils/currencies.dart';
 import '../../utils/shared_ledger_picker_filter.dart';
 import '../biz/amount_editor_sheet.dart';
+import '../biz/format_money.dart';
+import '../biz/note_picker_dialog.dart';
 import '../category_icon.dart';
-import '../ui/toast.dart';
 import '../ui/wheel_date_picker.dart';
 
-/// 记账页表单体（v5.0 记账页重构）
+/// 记账页表单体（v5.1 记账界面体验优化）
 ///
-/// 交互顺序：先选表单（分类/账户/时间/备注），再点底部金额栏进入金额编辑。
-/// 支出/收入共用；转账仍走 [TransferForm]。
+/// 字段顺序：金额-分类-账户-时间-标签-备注，全部独立填写；金额不再要求
+/// 分类前置。支出/收入共用；转账仍走 [TransferForm]。
 class TxEntryForm extends ConsumerStatefulWidget {
   final String kind; // 'expense' / 'income'
   final int? initialCategoryId;
@@ -64,14 +71,28 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
   Category? _parentCategory;
   Account? _account;
   late DateTime _date;
-  String _note = '';
+  double _amount = 0;
+  List<int> _tagIds = [];
+  late final TextEditingController _noteCtrl;
+  final FocusNode _noteFocusNode = FocusNode();
+  List<NoteHistoryEntry> _frequentNotes = [];
 
   @override
   void initState() {
     super.initState();
     _date = widget.initialDate ?? DateTime.now();
-    _note = widget.initialNote ?? '';
+    _amount = widget.initialAmount ?? 0;
+    _tagIds = List.from(widget.initialTagIds ?? []);
+    _noteCtrl = TextEditingController(text: widget.initialNote ?? '');
     _resolveInitials();
+    _loadFrequentNotes();
+  }
+
+  @override
+  void dispose() {
+    _noteCtrl.dispose();
+    _noteFocusNode.dispose();
+    super.dispose();
   }
 
   Future<void> _resolveInitials() async {
@@ -85,6 +106,7 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
             _resolveParent(c.parentId!);
           }
         });
+        _loadFrequentNotes();
       }
     }
     final accountId = widget.initialAccountId;
@@ -122,54 +144,53 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final primary = ref.watch(primaryColorProvider);
     ref.watch(showTransactionTimeProvider);
+    final currency = ref.watch(currentLedgerCurrencyProvider);
 
-    return Column(
+    return ListView(
+      padding: const EdgeInsets.all(16),
       children: [
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _buildFieldRow(
-                icon: Icons.category_outlined,
-                label: l10n.txFormCategory,
-                value: _category == null
-                    ? l10n.txFormCategoryHint
-                    : _categoryLabel(context),
-                selected: _category != null,
-                onTap: _pickCategory,
-              ),
-              const SizedBox(height: 12),
-              _buildFieldRow(
-                icon: Icons.account_balance_wallet_outlined,
-                label: l10n.txFormAccount,
-                value: _account == null
-                    ? l10n.txFormAccountHint
-                    : _accountLabel(context),
-                selected: _account != null,
-                onTap: _pickAccount,
-              ),
-              const SizedBox(height: 12),
-              _buildFieldRow(
-                icon: Icons.schedule_outlined,
-                label: l10n.txFormTime,
-                value: _formatDateTime(context),
-                selected: true,
-                onTap: _pickDateTime,
-              ),
-              const SizedBox(height: 12),
-              _buildFieldRow(
-                icon: Icons.edit_note_outlined,
-                label: l10n.txFormNote,
-                value: _note.isEmpty ? l10n.txFormNoteHint : _note,
-                selected: _note.isNotEmpty,
-                onTap: _pickNote,
-              ),
-            ],
-          ),
+        _buildFieldRow(
+          icon: Icons.keyboard_alt_outlined,
+          label: l10n.txFormAmount,
+          value: _amount == 0
+              ? '${getCurrencySymbol(currency)} 0.00'
+              : '${getCurrencySymbol(currency)} ${formatMoneyCompact(_amount)}',
+          selected: _amount > 0,
+          onTap: _openAmountSheet,
         ),
-        _buildAmountBar(context, l10n, primary),
+        const SizedBox(height: 12),
+        _buildFieldRow(
+          icon: Icons.category_outlined,
+          label: l10n.txFormCategory,
+          value: _category == null
+              ? l10n.txFormCategoryHint
+              : _categoryLabel(context),
+          selected: _category != null,
+          onTap: _pickCategory,
+        ),
+        const SizedBox(height: 12),
+        _buildFieldRow(
+          icon: Icons.account_balance_wallet_outlined,
+          label: l10n.txFormAccount,
+          value: _account == null
+              ? l10n.txFormAccountHint
+              : _accountLabel(context),
+          selected: _account != null,
+          onTap: _pickAccount,
+        ),
+        const SizedBox(height: 12),
+        _buildFieldRow(
+          icon: Icons.schedule_outlined,
+          label: l10n.txFormTime,
+          value: _formatDateTime(context),
+          selected: true,
+          onTap: _pickDateTime,
+        ),
+        const SizedBox(height: 12),
+        _buildTagRow(context),
+        const SizedBox(height: 12),
+        _buildNoteField(context),
       ],
     );
   }
@@ -229,6 +250,96 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
     );
   }
 
+  Widget _buildTagRow(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final tagsAsync = ref.watch(tagsForCurrentLedgerProvider);
+    final tags = tagsAsync.valueOrNull ?? [];
+    final selected = tags.where((t) => _tagIds.contains(t.id)).toList();
+    final value = selected.isEmpty
+        ? l10n.tagSelectTitle
+        : selected.map((t) => t.name).join('、');
+    return _buildFieldRow(
+      icon: Icons.label_outline,
+      label: l10n.txFormTag,
+      value: value,
+      selected: selected.isNotEmpty,
+      onTap: _pickTag,
+    );
+  }
+
+  /// 备注行内填写：多行 TextField + 高频备注历史入口（不弹备注编辑框）
+  Widget _buildNoteField(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Material(
+      color: BeeTokens.surfaceSheet(context),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 10, 8, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.edit_note_outlined,
+                  size: 18,
+                  color: BeeTokens.iconSecondary(context),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  l10n.txFormNote,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: BeeTokens.textSecondary(context),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 2),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _noteCtrl,
+                    focusNode: _noteFocusNode,
+                    minLines: 1,
+                    maxLines: 3,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: BeeTokens.textPrimary(context),
+                    ),
+                    decoration: InputDecoration(
+                      hintText: l10n.txFormNoteHint,
+                      hintStyle: TextStyle(
+                        color: BeeTokens.textTertiary(context),
+                      ),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                      ),
+                    ),
+                  ),
+                ),
+                if (_frequentNotes.isNotEmpty)
+                  IconButton(
+                    onPressed: _openNoteHistory,
+                    icon: Icon(
+                      Icons.history,
+                      size: 20,
+                      color: BeeTokens.iconSecondary(context),
+                    ),
+                    tooltip: l10n.txFormNote,
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   String _categoryLabel(BuildContext context) {
     final c = _category;
     if (c == null) return AppLocalizations.of(context).txFormCategoryHint;
@@ -257,6 +368,43 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
     return '$date $hh:$mm';
   }
 
+  Future<void> _loadFrequentNotes() async {
+    final repo = ref.read(repositoryProvider);
+    final category = _category;
+    final notes = await NoteHistoryService.getHistoryNotes(
+      repository: repo,
+      ledgerId: ref.read(currentLedgerIdProvider),
+      scope: ref.read(noteHistoryScopeProvider),
+      sort: ref.read(noteHistorySortProvider),
+      categoryId: category != null && category.id >= 0 ? category.id : null,
+      categorySyncId: category != null && category.id < 0
+          ? category.syncId
+          : null,
+      limit: ref.read(noteHistoryLimitProvider),
+    );
+    if (!mounted) return;
+    setState(() => _frequentNotes = notes);
+  }
+
+  Future<void> _openNoteHistory() async {
+    final category = _category;
+    await showDialog(
+      context: context,
+      builder: (context) => NotePickerDialog(
+        ledgerId: ref.read(currentLedgerIdProvider),
+        categoryId: category != null && category.id >= 0 ? category.id : null,
+        categorySyncId: category != null && category.id < 0
+            ? category.syncId
+            : null,
+        onNotePicked: (note) {
+          _noteCtrl.text = note;
+          _noteCtrl.selection =
+              TextSelection.fromPosition(TextPosition(offset: note.length));
+        },
+      ),
+    );
+  }
+
   Future<void> _pickCategory() async {
     final result = await _showCategoryDrawer(
       context,
@@ -268,6 +416,7 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
         _category = result.category;
         _parentCategory = result.parent;
       });
+      _loadFrequentNotes();
     }
   }
 
@@ -281,6 +430,13 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
     );
     if (account != null && mounted) {
       setState(() => _account = account);
+    }
+  }
+
+  Future<void> _pickTag() async {
+    final result = await TagSelector.show(context, selectedTagIds: _tagIds);
+    if (result != null && mounted) {
+      setState(() => _tagIds = result);
     }
   }
 
@@ -306,117 +462,6 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
       );
       if (res != null && mounted) setState(() => _date = res);
     }
-  }
-
-  Future<void> _pickNote() async {
-    final l10n = AppLocalizations.of(context);
-    final controller = TextEditingController(text: _note);
-    final entered = await showDialog<String>(
-      context: context,
-      builder: (dctx) => AlertDialog(
-        title: Text(l10n.txFormNote),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLines: 3,
-          decoration: InputDecoration(
-            hintText: AppLocalizations.of(dctx).txFormNoteHint,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dctx),
-            child: Text(AppLocalizations.of(dctx).commonCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dctx, controller.text.trim()),
-            child: Text(AppLocalizations.of(dctx).commonConfirm),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (entered != null && mounted) {
-      setState(() => _note = entered);
-    }
-  }
-
-  Widget _buildAmountBar(
-    BuildContext context,
-    AppLocalizations l10n,
-    Color primary,
-  ) {
-    final amount = widget.initialAmount;
-    final hasAmount = amount != null && amount > 0;
-    return Material(
-      color: BeeTokens.surfaceSheet(context),
-      child: InkWell(
-        onTap: _openAmountSheet,
-        child: SafeArea(
-          top: false,
-          child: Container(
-            height: 68,
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(color: BeeTokens.divider(context)),
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.keyboard_alt_outlined,
-                  size: 22,
-                  color: BeeTokens.iconSecondary(context),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  l10n.txFormAmount,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: BeeTokens.textSecondary(context),
-                  ),
-                ),
-                const Spacer(),
-    if (hasAmount)
-      Text(
-        '¥ ${_formatAmount(amount)}',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: primary,
-                    ),
-                  )
-                else
-                  Text(
-                    l10n.txFormAmountHint,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: BeeTokens.textTertiary(context),
-                    ),
-                  ),
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.chevron_right,
-                  size: 22,
-                  color: BeeTokens.iconTertiary(context),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _formatAmount(double value) {
-    final s = value.toStringAsFixed(2);
-    return s
-        .replaceFirst(RegExp(r'0+$'), '')
-        .replaceFirst(RegExp(r'\.$'), '');
   }
 
   /// 获取默认账户ID（验证币种匹配）
@@ -446,14 +491,6 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
   }
 
   Future<void> _openAmountSheet() async {
-    final l10n = AppLocalizations.of(context);
-    final category = _category;
-    if (category == null) {
-      showToast(context, l10n.txFormSelectCategoryFirst);
-      await _pickCategory();
-      return;
-    }
-
     final ledgerId = ref.read(currentLedgerIdProvider);
     int? accountId = _account?.id;
     if (widget.editingTransactionId == null && accountId == null) {
@@ -461,6 +498,7 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
     }
     if (!mounted) return;
 
+    final category = _category;
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -469,14 +507,16 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (sheetContext) => AmountEditorSheet(
-        categoryName: category.name,
-        categoryId: category.id >= 0 ? category.id : null,
-        categorySyncId: category.id < 0 ? category.syncId : null,
+        categoryName: category?.name ?? '',
+        categoryId: category != null && category.id >= 0 ? category.id : null,
+        categorySyncId: category != null && category.id < 0
+            ? category.syncId
+            : null,
         initialDate: _date,
-        initialAmount: widget.initialAmount,
-        initialNote: _note.isEmpty ? null : _note,
+        initialAmount: _amount,
+        initialNote: _noteCtrl.text.isEmpty ? null : _noteCtrl.text,
         initialAccountId: accountId,
-        initialTagIds: widget.initialTagIds,
+        initialTagIds: _tagIds,
         showAccountPicker: false,
         ledgerId: ledgerId,
         editingTransactionId: widget.editingTransactionId,
@@ -497,15 +537,16 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
   ) async {
     final repo = ref.read(repositoryProvider);
     final attachmentService = ref.read(attachmentServiceProvider);
-    final category = _category!;
+    final category = _category;
     final context = this.context;
     int transactionId;
 
     // §7 v25:Category 是来自 SharedLedger* 的 synthetic (id<0)时,
     // categoryId 留 null,override 走 syncId。同理对 account。
-    final isSyntheticCategory = category.id < 0;
+    final isSyntheticCategory = category != null && category.id < 0;
     final isSyntheticAccount = res.accountId != null && res.accountId! < 0;
-    final categoryIdForWrite = isSyntheticCategory ? null : category.id;
+    final categoryIdForWrite =
+        category != null && !isSyntheticCategory ? category.id : null;
     final accountIdForAdd = isSyntheticAccount ? null : res.accountId;
     final accountIdForUpdate = d.Value<int?>(accountIdForAdd);
     final categoryOverride = isSyntheticCategory ? category.syncId : null;
@@ -742,6 +783,18 @@ class _CategoryDrawerSheetState extends ConsumerState<_CategoryDrawerSheet> {
     return _CategoryDrawerData(tops: tops, subs: subs);
   }
 
+  void _openCategoryManage() {
+    final nav = Navigator.of(context, rootNavigator: true);
+    nav.pop();
+    nav.push(
+      MaterialPageRoute(
+        builder: (_) => CategoryManagePage(
+          initialTabIndex: widget.kind == 'expense' ? 0 : 1,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -766,6 +819,14 @@ class _CategoryDrawerSheetState extends ConsumerState<_CategoryDrawerSheet> {
                   ),
                 ),
                 const Spacer(),
+                IconButton(
+                  onPressed: _openCategoryManage,
+                  icon: Icon(
+                    Icons.edit_outlined,
+                    color: BeeTokens.iconSecondary(context),
+                  ),
+                  tooltip: l10n.mineCategoryManagement,
+                ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
                   icon: Icon(
@@ -1001,10 +1062,12 @@ class _CategoryGridItem extends StatelessWidget {
 class _AccountDrawerData {
   final List<String> types;
   final Map<String, List<Account>> accountsByType;
+  final Map<int, double> balances;
 
   const _AccountDrawerData({
     required this.types,
     required this.accountsByType,
+    required this.balances,
   });
 }
 
@@ -1027,7 +1090,7 @@ Future<Account?> _showAccountDrawer(
   );
 }
 
-/// 账户面板：左侧一级账户类型，右侧该类型下账户网格 3 列
+/// 账户面板：左侧一级账户类型，右侧该类型账户一户一行 + 余额
 class _AccountDrawerSheet extends ConsumerStatefulWidget {
   final Account? initialAccount;
   final int? pinnedAccountId;
@@ -1086,6 +1149,15 @@ class _AccountDrawerSheetState extends ConsumerState<_AccountDrawerSheet> {
       }
     }
 
+    Map<int, double> balances = const {};
+    try {
+      balances = await repo.getAllAccountBalances(
+        ref.read(currentLedgerIdProvider),
+      );
+    } catch (_) {
+      balances = const {};
+    }
+
     final byType = <String, List<Account>>{};
     for (final a in visible) {
       final t = normalizeAccountType(a.type);
@@ -1099,7 +1171,32 @@ class _AccountDrawerSheetState extends ConsumerState<_AccountDrawerSheet> {
         ? initialType
         : (types.isEmpty ? null : types.first);
     _selectedType = selected;
-    return _AccountDrawerData(types: types, accountsByType: byType);
+    return _AccountDrawerData(
+      types: types,
+      accountsByType: byType,
+      balances: balances,
+    );
+  }
+
+  String _balanceText(BuildContext context, Account account, double balance) {
+    final l10n = AppLocalizations.of(context);
+    final symbol = getCurrencySymbol(account.currency);
+    if (account.type == accountTypeCreditCard) {
+      // 余额为负 = 欠款，已用额度取其绝对值
+      final used = balance < 0 ? -balance : 0.0;
+      final limit = account.creditLimit;
+      final usedText = '${l10n.creditUsed} $symbol${formatMoneyCompact(used)}';
+      return limit != null && limit > 0
+          ? '$usedText / ${l10n.creditLimit} $symbol${formatMoneyCompact(limit)}'
+          : usedText;
+    }
+    return '${l10n.accountBalance} $symbol${formatMoneyCompact(balance)}';
+  }
+
+  void _openAccountManage() {
+    final nav = Navigator.of(context, rootNavigator: true);
+    nav.pop();
+    nav.push(MaterialPageRoute(builder: (_) => const AccountsPage()));
   }
 
   @override
@@ -1126,6 +1223,14 @@ class _AccountDrawerSheetState extends ConsumerState<_AccountDrawerSheet> {
                   ),
                 ),
                 const Spacer(),
+                IconButton(
+                  onPressed: _openAccountManage,
+                  icon: Icon(
+                    Icons.settings_outlined,
+                    color: BeeTokens.iconSecondary(context),
+                  ),
+                  tooltip: l10n.accountManage,
+                ),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
                   icon: Icon(
@@ -1238,25 +1343,100 @@ class _AccountDrawerSheetState extends ConsumerState<_AccountDrawerSheet> {
                             ),
                           ),
                           Expanded(
-                            child: GridView.builder(
-                              padding: const EdgeInsets.all(12),
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                crossAxisSpacing: 12,
-                                mainAxisSpacing: 12,
-                                childAspectRatio: 0.95,
-                              ),
+                            child: ListView.separated(
+                              padding: const EdgeInsets.only(bottom: 12),
                               itemCount: accounts.length,
+                              separatorBuilder: (_, __) => Divider(
+                                height: 1,
+                                color: BeeTokens.divider(context),
+                              ),
                               itemBuilder: (context, index) {
                                 final account = accounts[index];
-                                final selected = widget.initialAccount?.id ==
-                                    account.id;
-                                return _AccountGridItem(
-                                  account: account,
-                                  selected: selected,
+                                final selected =
+                                    widget.initialAccount?.id == account.id;
+                                final balance = data.balances[account.id] ??
+                                    account.initialBalance;
+                                return InkWell(
                                   onTap: () =>
                                       Navigator.pop(context, account),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 10,
+                                    ),
+                                    color: selected
+                                        ? primary.withValues(alpha: 0.08)
+                                        : Colors.transparent,
+                                    child: Row(
+                                      children: [
+                                        AccountTypeIcon(
+                                          type: account.type,
+                                          size: 30,
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                account.name,
+                                                maxLines: 1,
+                                                overflow:
+                                                    TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontSize: 15,
+                                                  color: BeeTokens.textPrimary(
+                                                    context,
+                                                  ),
+                                                  fontWeight: selected
+                                                      ? FontWeight.w600
+                                                      : FontWeight.w400,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                getAccountTypeLabel(
+                                                  context,
+                                                  account.type,
+                                                ),
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: BeeTokens
+                                                      .textTertiary(context),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          _balanceText(
+                                            context,
+                                            account,
+                                            balance,
+                                          ),
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: selected
+                                                ? primary
+                                                : BeeTokens.textSecondary(
+                                                    context,
+                                                  ),
+                                          ),
+                                        ),
+                                        if (selected) ...[
+                                          const SizedBox(width: 6),
+                                          Icon(
+                                            Icons.check_circle,
+                                            size: 18,
+                                            color: primary,
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
                                 );
                               },
                             ),
@@ -1267,50 +1447,6 @@ class _AccountDrawerSheetState extends ConsumerState<_AccountDrawerSheet> {
                   ],
                 );
               },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AccountGridItem extends StatelessWidget {
-  final Account account;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _AccountGridItem({
-    required this.account,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AccountTypeIcon(type: account.type, size: 30),
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              account.name,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11,
-                color: selected
-                    ? primary
-                    : BeeTokens.textSecondary(context),
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-              ),
             ),
           ),
         ],

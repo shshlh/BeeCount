@@ -33,6 +33,105 @@
 
 ## 2026-08-02
 
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**完成工作**：阶段 5.1 记账界面体验优化（7 项全部完成，对应 PM 9 个问题）
+
+1. **5.1.1 备注弹框报错修复 + 5.1.2 备注行内填写** — [tx_entry_form.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\transaction\tx_entry_form.dart)
+   - 删除备注 AlertDialog（原 TextEditingController 在 pop 后 dispose 导致闪报错），改为表单内嵌多行 TextField
+   - 复用 NoteHistoryService + NotePickerDialog 提供高频备注历史入口
+
+2. **5.1.3 金额行 + 字段顺序** — tx_entry_form.dart
+   - 字段顺序改为：金额-分类-账户-时间-标签-备注
+   - 金额行显示币种 + 金额（如 ¥ 0.00），点击进入小键盘；金额不再要求分类前置（提交支持无分类）
+
+3. **5.1.4 标签行** — tx_entry_form.dart
+   - 时间之后、备注之前新增「标签」行，点击弹 TagSelector 多选，选中标签名称回显
+
+4. **5.1.5 小键盘剥离非金额功能** — [amount_editor_sheet.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\biz\amount_editor_sheet.dart)
+   - 移除备注输入区、账户选择区、标签选择区、时间键（dateKey）
+   - 键盘改为 7-8-9-C / 4-5-6-+ / 1-2-3-- / .-0-⌫-完成；保留币种、金额、汇率、附件、记账标记
+   - 转账 Tab 同步在 [transfer_form.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\transaction\transfer_form.dart) 增加金额/时间/标签/备注行，避免精简后功能丢失
+
+5. **5.1.6 账户选择显示优化** — tx_entry_form.dart
+   - 账户抽屉右栏改为一户一行纵向列表；每行显示账户类型小字 + 余额
+   - 银行卡/储蓄/其它类型显示「余额 ¥x」；信用卡显示「已用额度 ¥x / 信用额度 ¥y」（负余额取绝对值）
+
+6. **5.1.7 分类/账户管理快捷入口** — tx_entry_form.dart
+   - 分类抽屉顶部新增「编辑」按钮 → CategoryManagePage（按支出/收入 tab）
+   - 账户抽屉顶部新增「管理」按钮 → AccountsPage
+
+**测试**：
+- 更新 transaction_editor_page_test：字段顺序/备注行/标签行/账户抽屉余额（一户一行 + 信用卡已用额度）
+- 更新 amount_editor_currency_test：小键盘无备注/标签/时间，保留 C 清空键与完成键
+- 全量 flutter analyze 零 error（866 个预存 info/warning）
+- 全量 flutter test：563 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**下一个任务需要知道的**：
+- AmountEditorSheet 已精简为纯金额键盘；时间/备注/标签由外层表单管理（TxEntryForm / TransferForm）
+- 分类已非必填，addTransaction 允许 categoryId 为 null
+- AmountEditorSheet 的 showAccountPicker 参数仅为 API 兼容保留，UI 不再渲染
+- 视觉布局未做 Windows 实机截图验证（widget 测试覆盖结构与回归）
+
+**git 状态**：当前分支 main，未提交（等待 PM 审查）
+
+---
+
+## 2026-08-02
+
+**移交角色**：项目经理（PM）
+**接收角色**：UI 工程师（invest-ui）+ invest-logic
+
+**任务**：5.1 记账界面体验优化（9 个问题）
+
+**问题 1：备注弹框闪报错（bug）**
+- 文件：lib/widgets/transaction/tx_entry_form.dart _pickNote
+- 现象：按取消/确定都会闪一下报错，但备注实际写入成功
+- 定位：TextEditingController 生命周期/dialog 关闭时序问题（可能在 Navigator.pop 后 dispose controller 导致）
+- 修复：确保 controller dispose 在 widget 卸载后安全执行，或改用 showDialog 内部创建 controller
+
+**问题 2：备注去掉弹框，改为行内填写**
+- 备注行直接内嵌 TextField（或点击行展开输入框），不弹 AlertDialog
+- 支持多行输入 + 高频备注历史（现有 NoteHistoryService 可复用）
+
+**问题 3：分类之上加「金额」行**
+- 表单顺序改为：金额-分类-账户-时间-标签-备注
+- 金额行显示币种 + 金额（如 ¥ 0.00），点击调出数字小键盘（AmountEditorSheet 剥离非金额功能后）
+
+**问题 4：数字小键盘的「标签」上提到界面**
+- 表单加「标签」行（时间之后、备注之前），点击弹 TagSelector
+- 顺序：金额-分类-账户-时间-标签-备注
+
+**问题 5：所有字段独立填写**
+- 分类/账户/金额/时间/标签/备注完全独立，无先后依赖
+- 现状已接近（分类非必填），确认金额无需分类前置
+
+**问题 6：数字小键盘删掉时间/备注/标签功能**
+- 文件：lib/widgets/biz/amount_editor_sheet.dart
+- 小键盘只保留：币种、金额、数字键、快捷操作（若有）、确定
+- 移除备注输入区、标签选择区、时间选择区（这些已在主表单）
+
+**问题 7：账户选择显示优化**
+- 二级账户一户一行，纵向排列
+- 每行显示账户余额小字：
+  - 银行卡/储蓄卡 → 显示余额（如「工商银行  ¥12,345.67」）
+  - 信用卡 → 显示已用额度（欠款/信用额度）
+  - 其它类型 → 显示当前余额
+- 文件：lib/widgets/transaction/tx_entry_form.dart _AccountDrawerSheet
+
+**问题 8：分类弹窗加「编辑」按钮**
+- 分类抽屉顶部「分类」标题旁加编辑图标按钮
+- 点击进入分类管理页（CategoryManagePage）
+
+**问题 9：账户弹窗加「管理」按钮**
+- 账户抽屉顶部「账户」标题旁加管理图标按钮
+- 点击进入账户管理页（AccountsPage 或账户设置）
+
+**约束**：flutter analyze 零 error；新增/更新 widget 测试；金额/备注/标签历史功能不回归
+
+## 2026-08-02
+
 **移交角色**：invest-ui + UI 工程师
 **接收角色**：项目经理（PM）
 

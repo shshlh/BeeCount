@@ -35,8 +35,19 @@ void main() {
       isShared: false,
       monthStartDay: 1,
     );
-    await repo.createAccount(ledgerId: ledgerId, name: '现金');
-    await repo.createAccount(ledgerId: ledgerId, name: '支付宝');
+    await repo.createAccount(
+      ledgerId: ledgerId,
+      name: '钱包A',
+      type: 'cash',
+      initialBalance: 12345.67,
+    );
+    await repo.createAccount(
+      ledgerId: ledgerId,
+      name: '招行信用卡',
+      type: 'credit_card',
+      initialBalance: -800,
+      creditLimit: 50000,
+    );
   });
 
   tearDown(() async => db.close());
@@ -57,16 +68,21 @@ void main() {
     );
   }
 
-  testWidgets('支出页显示表单四行 + 金额栏,无取消按钮', (tester) async {
+  testWidgets('支出页显示金额-分类-账户-时间-标签-备注,无取消按钮',
+      (tester) async {
     await tester.pumpWidget(wrap());
     await tester.pumpAndSettle();
 
     expect(find.text('记一笔'), findsOneWidget);
+    expect(find.text('金额'), findsOneWidget);
     expect(find.text('分类'), findsOneWidget);
     expect(find.text('账户'), findsOneWidget);
     expect(find.text('时间'), findsOneWidget);
+    expect(find.text('标签'), findsOneWidget);
     expect(find.text('备注'), findsOneWidget);
-    expect(find.text('点击输入金额'), findsOneWidget);
+    expect(find.text('¥ 0.00'), findsOneWidget);
+    // 备注行内填写：直接是 TextField，不再弹 AlertDialog
+    expect(find.byType(TextField), findsOneWidget);
     expect(find.text('取消'), findsNothing);
   });
 
@@ -77,7 +93,25 @@ void main() {
     await tester.tap(find.text('转账'));
     await tester.pumpAndSettle();
 
-    expect(find.text('现金'), findsNWidgets(2));
-    expect(find.text('支付宝'), findsNWidgets(2));
+    expect(find.text('钱包A'), findsNWidgets(2));
+    expect(find.text('招行信用卡'), findsNWidgets(2));
+  });
+
+  testWidgets('账户抽屉:一户一行显示余额,信用卡显示已用额度', (tester) async {
+    await tester.pumpWidget(wrap());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('账户'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('钱包A'), findsOneWidget);
+    expect(find.textContaining('12,345.67'), findsOneWidget);
+
+    await tester.tap(find.text('信用卡'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('招行信用卡'), findsOneWidget);
+    expect(find.textContaining('已用额度'), findsOneWidget);
+    expect(find.textContaining('50,000'), findsOneWidget);
   });
 }

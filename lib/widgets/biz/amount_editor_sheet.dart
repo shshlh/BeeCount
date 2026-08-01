@@ -5,24 +5,16 @@ import 'package:flutter/services.dart';
 import 'package:decimal/decimal.dart';
 import 'package:flutter_cloud_sync/flutter_cloud_sync.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:beecount/widgets/ui/wheel_date_picker.dart';
 import '../../data/db.dart';
 import '../../providers/shared_ledger_providers.dart';
 import '../../styles/tokens.dart';
 import '../../l10n/app_localizations.dart';
-import '../../services/data/note_history_service.dart';
-import '../../models/note_history.dart';
 import '../../services/attachment_service.dart';
 import '../../providers.dart';
 import '../../utils/ui_scale_extensions.dart';
-import '../../utils/currencies.dart';
-import '../../pages/tag/widgets/tag_selector.dart';
-import 'note_picker_dialog.dart';
-import 'account_selector.dart';
 import '../currency/currency_picker_sheet.dart';
 import '../currency/currency_flag.dart';
 import '../ui/toast.dart';
-import 'tag_chip.dart';
 import '../../pages/attachment/attachment_preview_page.dart';
 
 /// 共享账本 tx 作者信息(创建人 + 最后编辑人)— 编辑器底部 sheet 用。
@@ -248,7 +240,6 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   late String _amountStr;
   late DateTime _date;
   int? _selectedAccountId;
-  final bool _negative = false; // 显示用途，仅影响UI，不改变保存逻辑
   final TextEditingController _noteCtrl = TextEditingController();
   // 运算缓存：支持简单 + / - 键入累计
   double _acc = 0;
@@ -256,13 +247,6 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   // 两个运算符键各自独立的模式(false=加/减,true=乘/除),长按各自切换,互不影响。
   bool _mulKey1 = false; // 键1:+ ↔ ×
   bool _mulKey2 = false; // 键2:− ↔ ÷
-
-  // 高频备注列表（包含使用次数）
-  List<NoteHistoryEntry> _frequentNotes = [];
-
-  // 备注框焦点节点
-  final FocusNode _noteFocusNode = FocusNode();
-  bool _noteFieldHasFocus = false;
 
   // 防重复提交标志
   bool _isSubmitting = false;
@@ -314,39 +298,12 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
         : s;
     _amountStr = trimmed.isEmpty ? '0' : trimmed;
     _noteCtrl.text = widget.initialNote ?? '';
-
-    // 监听焦点变化
-    _noteFocusNode.addListener(() {
-      setState(() {
-        _noteFieldHasFocus = _noteFocusNode.hasFocus;
-      });
-    });
-
-    // 加载最近使用的备注
-    _loadRecentNotes();
   }
 
   @override
   void dispose() {
-    _noteFocusNode.dispose();
+    _noteCtrl.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadRecentNotes() async {
-    final repo = ref.read(repositoryProvider);
-    final notes = await NoteHistoryService.getHistoryNotes(
-      repository: repo,
-      ledgerId: widget.ledgerId,
-      scope: ref.read(noteHistoryScopeProvider),
-      sort: ref.read(noteHistorySortProvider),
-      categoryId: widget.categoryId,
-      categorySyncId: widget.categorySyncId,
-      limit: ref.read(noteHistoryLimitProvider),
-    );
-    if (!mounted) return; // 弹窗已关时不再 setState(widget 测试暴露的既有问题)
-    setState(() {
-      _frequentNotes = notes;
-    });
   }
 
   Future<void> _loadAccountCurrency(int accountId) async {
@@ -581,40 +538,16 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     SystemSound.play(SystemSoundType.click);
   }
 
-  // 旧 _toggleSign 已废弃，符号由类别含义决定
-
-  // _setToday 移除，改为点击日历按钮选择日期
-
-  void _pickDate() async {
-    // 关闭键盘，避免选择日期后键盘重新弹出
-    FocusManager.instance.primaryFocus?.unfocus();
-
-    // 等待键盘完全关闭
-    await Future.delayed(const Duration(milliseconds: 100));
-
-    if (!mounted) return;
-
-    final showTime = ref.read(showTransactionTimeProvider);
-
-    if (showTime) {
-      // 显示时间功能开启时，使用两步选择器（先日期后时间）
-      final res = await showWheelDateTimePicker(
-        context,
-        initial: _date,
-        maxDate: DateTime.now(),
-      );
-      if (res != null) setState(() => _date = res);
-    } else {
-      // 普通模式，只选择日期
-      final res = await showWheelDatePicker(
-        context,
-        initial: _date,
-        mode: WheelDatePickerMode.ymd,
-        maxDate: DateTime.now(),
-      );
-      if (res != null) setState(() => _date = res);
-    }
+  void _clear() {
+    setState(() {
+      _amountStr = '0';
+      _acc = 0;
+      _op = null;
+    });
+    SystemSound.play(SystemSoundType.click);
   }
+
+  // 旧 _toggleSign 已废弃，符号由类别含义决定
 
   /// 用 Decimal 精确运算(避免浮点漂移,如 0.1+0.2),左到右无运算符优先级,
   /// 除零保护;结果四舍五入到最多两位小数(金额精度)。
@@ -661,10 +594,6 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
     final text = Theme.of(context).textTheme;
-    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
-
-    // 如果备注框有焦点且键盘弹出，固定增加100的padding
-    final extraPadding = (_noteFieldHasFocus && keyboardHeight > 0) ? 100.0 : 0.0;
 
     double parsed() => double.tryParse(_amountStr) ?? 0.0;
 
@@ -786,10 +715,6 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
       );
     }
 
-    String fmtDate(DateTime d) => '${d.year}/${d.month}/${d.day}';
-    String fmtTime(DateTime d) => '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}:${d.second.toString().padLeft(2, '0')}';
-    final showTime = ref.watch(showTransactionTimeProvider);
-
     return SafeArea(
       top: false,
       child: AnimatedPadding(
@@ -798,7 +723,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
           16,
           12,
           16,
-          16 + extraPadding,
+          16,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -893,145 +818,30 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                 _buildCurrencySection(context),
               ],
             ),
-            const SizedBox(height: 10),
-            // 备注输入区域 - 带历史备注图标前缀
-            TextField(
-              focusNode: _noteFocusNode,
-              controller: _noteCtrl,
-              style: TextStyle(color: BeeTokens.textPrimary(context)),
-              decoration: InputDecoration(
-                hintText: AppLocalizations.of(context).commonNoteHint,
-                hintStyle: TextStyle(color: BeeTokens.textTertiary(context)),
-                isDense: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                filled: true,
-                fillColor: BeeTokens.surfaceInput(context),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                // 历史备注图标作为前缀
-                prefixIcon: _frequentNotes.isNotEmpty
-                    ? GestureDetector(
-                        onTap: () async {
-                          await showDialog(
-                            context: context,
-                            builder: (context) => NotePickerDialog(
-                              ledgerId: widget.ledgerId,
-                              categoryId: widget.categoryId,
-                              categorySyncId: widget.categorySyncId,
-                              onNotePicked: (note) {
-                                setState(() {
-                                  _noteCtrl.text = note;
-                                  _noteCtrl.selection =
-                                      TextSelection.fromPosition(
-                                    TextPosition(offset: note.length),
-                                  );
-                                });
-                              },
-                            ),
-                          );
-                        },
-                        child: Icon(
-                          Icons.history,
-                          color: BeeTokens.iconSecondary(context),
-                          size: 20,
-                        ),
-                      )
-                    : null,
-                prefixIconConstraints: _frequentNotes.isNotEmpty
-                    ? const BoxConstraints(
-                        minWidth: 40,
-                        minHeight: 20,
-                      )
-                    : null,
-              ),
-            ),
-            // 账户选择（仅在启用时显示）
-            if (widget.showAccountPicker) ...[
-              const SizedBox(height: 8),
-              Consumer(
-                builder: (context, ref, child) {
-                  // 检查账户功能是否启用
-                  final accountFeatureAsync =
-                      ref.watch(accountFeatureEnabledProvider);
-                  return accountFeatureAsync.when(
-                    data: (enabled) {
-                      if (!enabled) return const SizedBox.shrink();
-
-                      // 使用新的横滑账户选择器
-                      return AccountSelector(
-                        selectedAccountId: _selectedAccountId,
-                        ledgerId: widget.ledgerId,
-                        // 币种优先联动:账户列表只显示当前所选币种的账户
-                        filterCurrency: _txCurrency(),
-                        // 账户隐藏(#240)E1 钉住:该笔交易本来挂的账户(编辑
-                        // 态)若已被隐藏,选择器补回并打灰标,可原样保存。
-                        pinnedAccountId: widget.initialAccountId,
-                        onAccountSelected: (accountId) {
-                          setState(() {
-                            _selectedAccountId = accountId;
-                            _selectedAccountCurrency = null; // 异步刷新
-                          });
-                          if (accountId != null) {
-                            _loadAccountCurrency(accountId);
-                          }
-                        },
-                      );
-                    },
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, __) => const SizedBox.shrink(),
-                  );
-                },
-              ),
-            ],
-            // 标签和附件选择区域（一行）
             const SizedBox(height: 8),
             _buildTagAndAttachmentRow(),
             const SizedBox(height: 10),
             // 数字键盘
             LayoutBuilder(builder: (ctx, c) {
               final w = (c.maxWidth) / 4;
-              Widget dateKey() => Padding(
+              Widget clearKey() => Padding(
                     padding: const EdgeInsets.all(6),
                     child: Material(
-                      color: BeeTokens.surfaceKeySecondary(context),
+                      color: BeeTokens.surfaceKey(context),
                       borderRadius: BorderRadius.circular(12),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(12),
-                        onTap: () {
-                          SystemSound.play(SystemSoundType.click);
-                          _pickDate();
-                        },
-                        child: SizedBox(
+                        onTap: _clear,
+                        child: const SizedBox(
                           height: 60,
                           child: Center(
-                            child: showTime
-                                ? Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        fmtDate(_date),
-                                        style: text.labelSmall?.copyWith(
-                                            color: BeeTokens.textPrimary(context),
-                                            fontWeight: FontWeight.w600),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        fmtTime(_date),
-                                        style: text.labelSmall?.copyWith(
-                                            color: BeeTokens.textSecondary(context),
-                                            fontWeight: FontWeight.w500),
-                                      ),
-                                    ],
-                                  )
-                                : Text(
-                                    fmtDate(_date),
-                                    style: text.labelMedium?.copyWith(
-                                        color: BeeTokens.textPrimary(context),
-                                        fontWeight: FontWeight.w600),
-                                  ),
+                            child: Text(
+                              'C',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ),
                       ),
@@ -1162,7 +972,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                     SizedBox(
                         width: w,
                         child: keyBtn('9', onTap: () => _append('9'))),
-                    SizedBox(width: w, child: dateKey()),
+                    SizedBox(width: w, child: clearKey()),
                   ]),
                   const SizedBox(height: 2),
                   Row(children: [
@@ -1216,28 +1026,16 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     );
   }
 
-  /// 构建标签和附件选择行（一行显示）
+  /// 构建附件 + 记账标记选择行（v5.1:标签选择已上移到记账主表单）
   Widget _buildTagAndAttachmentRow() {
-    // §7 共享账本:用按当前 ledger 过滤后的 tags(Editor 视角下走 SharedLedgerTags,
-    // synthetic id 跟 tag picker 一致),否则编辑模式 tx 已选的 synthetic id 在
-    // 主表里找不到,显示"无标签"。
-    final allTagsAsync = ref.watch(tagsForCurrentLedgerProvider);
-    final allTags = allTagsAsync.valueOrNull ?? [];
-
-    // 获取已选中的标签详情
-    final selectedTags = allTags
-        .where((t) => _selectedTagIds.contains(t.id))
-        .toList();
-
-    // 获取附件数量
     if (widget.editingTransactionId != null) {
       final attachmentsAsync = ref.watch(transactionAttachmentsProvider(widget.editingTransactionId!));
       // 同样使用 valueOrNull 避免闪烁
       final attachments = attachmentsAsync.valueOrNull ?? [];
       final totalCount = attachments.length + _pendingAttachments.length;
-      return _buildRowContent(selectedTags, totalCount, attachments);
+      return _buildRowContent(totalCount, attachments);
     }
-    return _buildRowContent(selectedTags, _pendingAttachments.length, []);
+    return _buildRowContent(_pendingAttachments.length, []);
   }
 
   /// 交易标记弹窗：两个标记开关。
@@ -1283,7 +1081,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                   ),
                 ),
                 value: value,
-                activeColor: primary,
+                activeThumbColor: primary,
                 onChanged: onChanged,
               );
             }
@@ -1341,8 +1139,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
     );
   }
 
-  Widget _buildRowContent(List<Tag> selectedTags, int attachmentCount, List<TransactionAttachment> savedAttachments) {
-    final l10n = AppLocalizations.of(context);
+  Widget _buildRowContent(int attachmentCount, List<TransactionAttachment> savedAttachments) {
     final hasAttachments = attachmentCount > 0;
 
     return Container(
@@ -1353,48 +1150,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
       ),
       child: Row(
         children: [
-          // 标签部分（可点击展开）
-          Expanded(
-            child: GestureDetector(
-              onTap: () async {
-                final result = await TagSelector.show(
-                  context,
-                  selectedTagIds: _selectedTagIds,
-                );
-                if (result != null) {
-                  setState(() {
-                    _selectedTagIds = result;
-                  });
-                }
-              },
-              behavior: HitTestBehavior.opaque,
-              child: selectedTags.isEmpty
-                  ? Text(
-                      l10n.tagSelectTitle,
-                      style: TextStyle(
-                        color: BeeTokens.textTertiary(context),
-                        fontSize: 14,
-                      ),
-                    )
-                  : SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: selectedTags.map((tag) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 6),
-                            child: TagChip(
-                              name: tag.name,
-                              color: tag.color,
-                              size: TagChipSize.small,
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-            ),
-          ),
-          // 间距代替分隔线
-          const SizedBox(width: 16),
+          const Spacer(),
           // 附件部分（图标 + 数字）
           GestureDetector(
             onTap: () => _handleAttachmentTap(savedAttachments),

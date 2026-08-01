@@ -240,10 +240,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get txFormAccount => 'Account';
 
   @override
+  String get accountManage => 'Manage Accounts';
+
+  @override
   String get txFormAccountHint => 'Select account';
 
   @override
   String get txFormTime => 'Time';
+
+  @override
+  String get txFormTag => 'Tag';
 
   @override
   String get txFormNote => 'Note';
