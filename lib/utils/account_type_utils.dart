@@ -110,6 +110,12 @@ bool isTradableType(String type) {
   return t != accountTypeInvestment && t != accountTypeReceivable && t != accountTypeLoan;
 }
 
+/// 是否为记账可选账户类型（支出/收入/转账的账户选择器）
+/// v5.0: 放开债权(receivable)/负债(loan)，仅投资账户保持不可选（投资走专属流程）
+bool isBookingAccountType(String type) {
+  return normalizeAccountType(type) != accountTypeInvestment;
+}
+
 // ─────────────────────── 图标 ───────────────────────
 
 /// 获取账户类型的 Material 图标（备用，用于无 SVG 的场景）

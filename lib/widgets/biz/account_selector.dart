@@ -93,9 +93,10 @@ class _AccountSelectorState extends ConsumerState<AccountSelector> {
       // v30:过滤币种 = 显式传入(记账所选币种)?? 账本本位币(旧行为)
       final wanted =
           (widget.filterCurrency ?? ledger.currency).toUpperCase();
+      // v5.0: 放开债权/负债账户，仅投资账户保持不可选
       var accounts = allAccounts
           .where((a) =>
-              a.currency.toUpperCase() == wanted && isTradableType(a.type))
+              a.currency.toUpperCase() == wanted && isBookingAccountType(a.type))
           .toList();
 
       // 账户隐藏(#240)E1 钉住:above 的 filterAccountsForLedger 已排除隐藏

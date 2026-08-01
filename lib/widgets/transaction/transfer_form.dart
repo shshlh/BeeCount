@@ -370,14 +370,15 @@ class _TransferFormState extends ConsumerState<TransferForm> {
           );
         }
         final allAccounts = snapshot.data ?? const <Account>[];
-        // 只显示与当前账本同币种的可交易账户;E1 钉住的隐藏账户(hidden==true,
-        // 见 _loadFilteredAccounts)直接放行,不重复校验币种/类型,避免刚补回
-        // 又被这里的过滤吃掉(跟 AccountSelector 的钉住语义一致)。
+        // 只显示与当前账本同币种的记账可选账户(v5.0 放开应收款/贷款,投资账户
+        // 仍走专属流程);E1 钉住的隐藏账户(hidden==true,见 _loadFilteredAccounts)
+        // 直接放行,不重复校验币种/类型,避免刚补回又被这里的过滤吃掉(跟
+        // AccountSelector 的钉住语义一致)。
         final accounts = allAccounts
             .where((account) =>
                 account.hidden ||
                 (account.currency == currentCurrency &&
-                    isTradableType(account.type)))
+                    isBookingAccountType(account.type)))
             .toList();
 
         if (accounts.isEmpty) {

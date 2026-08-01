@@ -31,6 +31,78 @@
 
 ---
 
+## 2026-08-02
+
+**移交角色**：invest-ui + UI 工程师
+**接收角色**：项目经理（PM）
+
+**完成工作**：阶段 5.0 记账账户放开 + 记账页重构（3 项全部完成）
+
+1. **5.0.1 转账放开应收款/贷款** — [transfer_form.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\transaction\transfer_form.dart)
+   - 新增 `isBookingAccountType`（仅排除 investment），替换转账表单的 `isTradableType` 过滤
+   - 转出/转入网格现在可选 receivable/loan（贷款作转出=还款、应收款作转入=收款）
+   - hidden 过滤、币种过滤、编辑态 E1 钉住逻辑保持不变
+
+2. **5.0.2 收支放开账户限制** — [account_selector.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\biz\account_selector.dart) + [account_picker.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\biz\account_picker.dart)
+   - 两处过滤改用 `isBookingAccountType`，支出/收入可选 receivable/loan，investment 仍不可选
+   - AccountPicker 顺带补上 hidden 过滤（原来漏了，与账户隐藏 #240 规则对齐）
+
+3. **5.0.3 记账页 UI 重构** — [transaction_editor_page.dart](/D:\codexproject\pj_004_beecount_fork\lib\pages\transaction\transaction_editor_page.dart)（外壳）+ 新增 [tx_entry_form.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\transaction\tx_entry_form.dart)
+   - 顶部两排：第一排返回 + 标题「记一笔」，第二排支出/收入/转账 Tab（取消按钮移除）
+   - 支出/收入改为表单先行：分类（一级 > 二级，抽屉两列联动）、账户（一级类型/账户两列）、时间、备注四行 + 底部金额栏
+   - 分类/账户抽屉：左侧一级竖向导航（选中主题色竖条高亮），右侧二级 3 列图标网格
+   - 点金额栏进入 AmountEditorSheet（showAccountPicker: false，分类/账户/时间/备注预填），保存链路沿用原 repo 写事务逻辑
+   - 转账 Tab 继续走 TransferForm；quickAdd 参数保留兼容，不再自动弹金额窗
+
+**测试**：
+- 新增 test/widgets/account_open_types_test.dart（AccountSelector/AccountPicker/TransferForm 三类账户放开）
+- 新增 test/widgets/transaction_editor_page_test.dart（新表单四行 + 转账 Tab 回归）
+- 全量 flutter analyze 零 error（869 个预存 info/warning）
+- 全量 flutter test：561 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**下一个任务需要知道的**：
+- `isTradableType` 语义未改（buy/sell 弹窗仍排除 receivable/loan）；新谓词 `isBookingAccountType` 只用于记账/转账选择器
+- 记账页交互已从「选分类即弹金额」改为「先表单后金额」，所有 quickAdd 调用方行为随之变化
+- AccountPicker 新增 hidden 过滤（此前会显示隐藏账户）
+- 视觉布局未做 Windows 实机截图验证（widget 测试覆盖结构与回归）
+
+**git 状态**：当前分支 main，未提交（等待 PM 审查）
+
+---
+
+## 2026-08-02
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-ui（账户选择）+ UI 工程师（记账页重构）
+
+**任务**：5.0 记账账户放开 + 记账页 UI 重构（3 个问题）
+
+**问题 1：转账放开应收款/贷款账户**
+- 文件：lib/widgets/transaction/transfer_form.dart:380
+- 根因：isTradableType(account.type) 过滤掉了 receivable/loan，导致无法记录贷款还款/代付
+- 修复：转出/转入账户选择放开，允许 receivable/loan（按用户需求，贷款账户作转出=还款，应收款作转入=收款）
+- 注意：需保持 hidden 账户仍被过滤；币种过滤保留
+
+**问题 2：支出/收入放开账户限制**
+- 文件：lib/widgets/biz/account_selector.dart:98、lib/widgets/biz/account_picker.dart:122
+- 根因：同样 isTradableType 过滤
+- 修复：支出/收入账户选择放开 receivable/loan
+- 注意：investment 账户保持不可选（投资走专属流程）；确认负债账户作支出/收入的方向语义
+
+**问题 3：记账页 UI 重构**
+- 文件：lib/pages/transaction/transaction_editor_page.dart（大改）
+- 现状：TabBar + CategorySelector + 金额弹窗（quickAdd）
+- 目标布局：
+  a) 顶部蓝色菜单两排：第二排基本不变（支出/收入/转账 Tab）；取消按钮移除，第一排最左侧「<」返回 + 标题「记一笔」
+  b) 白色内容第一行「分类」：显示「一级分类 > 二级分类」，点击后抽屉式纵向两列滚动（左侧一级、右侧二级联动，二级必须对应所选一级）
+  c) 第二行「账户」：同样方式显示一级/二级账户
+  d) 第三行「时间」选择
+  e) 第四行「备注」
+- 参考模板：D:/Users/wanji/Downloads/markmap.svg（底部分类面板：左侧一级竖向导航，选中橙色竖条高亮；右侧二级图标网格 3 列）
+- 金额输入仍保留（点金额区弹小键盘或底部金额栏），交互顺序：先表单后金额
+
+**约束**：flutter analyze 零 error；既有 transaction 相关测试全过；问题 1/2 补账户选择测试
+
 ## 2026-08-01
 
 **移交角色**：invest-ui + architect + invest-logic（4.9 联合执行）

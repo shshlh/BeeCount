@@ -503,6 +503,72 @@ abstract class AppLocalizations {
   /// **'Note...'**
   String get commonNoteHint;
 
+  /// No description provided for @txEditorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New Entry'**
+  String get txEditorTitle;
+
+  /// No description provided for @txFormCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get txFormCategory;
+
+  /// No description provided for @txFormCategoryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select category'**
+  String get txFormCategoryHint;
+
+  /// No description provided for @txFormAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get txFormAccount;
+
+  /// No description provided for @txFormAccountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select account'**
+  String get txFormAccountHint;
+
+  /// No description provided for @txFormTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Time'**
+  String get txFormTime;
+
+  /// No description provided for @txFormNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get txFormNote;
+
+  /// No description provided for @txFormNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add note'**
+  String get txFormNoteHint;
+
+  /// No description provided for @txFormAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get txFormAmount;
+
+  /// No description provided for @txFormAmountHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to enter amount'**
+  String get txFormAmountHint;
+
+  /// No description provided for @txFormSelectCategoryFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a category first'**
+  String get txFormSelectCategoryFirst;
+
   /// No description provided for @commonSettings.
   ///
   /// In en, this message translates to:

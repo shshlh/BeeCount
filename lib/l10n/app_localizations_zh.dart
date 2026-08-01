@@ -224,6 +224,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonNoteHint => '备注…';
 
   @override
+  String get txEditorTitle => '记一笔';
+
+  @override
+  String get txFormCategory => '分类';
+
+  @override
+  String get txFormCategoryHint => '选择分类';
+
+  @override
+  String get txFormAccount => '账户';
+
+  @override
+  String get txFormAccountHint => '选择账户';
+
+  @override
+  String get txFormTime => '时间';
+
+  @override
+  String get txFormNote => '备注';
+
+  @override
+  String get txFormNoteHint => '添加备注';
+
+  @override
+  String get txFormAmount => '金额';
+
+  @override
+  String get txFormAmountHint => '点击输入金额';
+
+  @override
+  String get txFormSelectCategoryFirst => '请先选择分类';
+
+  @override
   String get commonSettings => '设置';
 
   @override

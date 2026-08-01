@@ -224,6 +224,39 @@ class AppLocalizationsKo extends AppLocalizations {
   String get commonNoteHint => '메모...';
 
   @override
+  String get txEditorTitle => 'New Entry';
+
+  @override
+  String get txFormCategory => 'Category';
+
+  @override
+  String get txFormCategoryHint => 'Select category';
+
+  @override
+  String get txFormAccount => 'Account';
+
+  @override
+  String get txFormAccountHint => 'Select account';
+
+  @override
+  String get txFormTime => 'Time';
+
+  @override
+  String get txFormNote => 'Note';
+
+  @override
+  String get txFormNoteHint => 'Add note';
+
+  @override
+  String get txFormAmount => 'Amount';
+
+  @override
+  String get txFormAmountHint => 'Tap to enter amount';
+
+  @override
+  String get txFormSelectCategoryFirst => 'Select a category first';
+
+  @override
   String get commonSettings => '설정';
 
   @override

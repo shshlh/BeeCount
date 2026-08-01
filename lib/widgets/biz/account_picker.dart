@@ -117,10 +117,14 @@ class _AccountPickerState extends ConsumerState<AccountPicker> {
 
     return allAccountsAsync.when(
       data: (allAccounts) {
-        // 只显示与当前账本同币种的可交易账户
-        final accounts = allAccounts.where((account) =>
-          account.currency == currentCurrency && isTradableType(account.type)
-        ).toList();
+        // 只显示与当前账本同币种的记账可选账户(v5.0 放开债权/负债,投资账户
+        // 不可选);隐藏账户不进记账选择器(#240)
+        final accounts = allAccounts
+            .where((account) =>
+                !account.hidden &&
+                account.currency == currentCurrency &&
+                isBookingAccountType(account.type))
+            .toList();
 
         _buildOptions(accounts);
 
