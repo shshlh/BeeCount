@@ -3850,6 +3850,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountInitialBalanceHint => '请输入初始资金（可选）';
 
   @override
+  String get accountInitialDate => '初始资金日期';
+
+  @override
   String get accountDeleteWarningTitle => '确认删除';
 
   @override
@@ -11337,6 +11340,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get accountInitialBalanceHint => '請輸入初始資金（可選）';
+
+  @override
+  String get accountInitialDate => '初始資金日期';
 
   @override
   String get accountDeleteWarningTitle => '確認刪除';

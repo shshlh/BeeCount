@@ -1187,6 +1187,7 @@
   "accountTypeOther": "기타",
   "accountInitialBalance": "초기 잔액",
   "accountInitialBalanceHint": "초기 잔액을 입력하세요 (선택 사항)",
+  "accountInitialDate": "초기 잔액 날짜",
   "accountDeleteWarningTitle": "삭제 확인",
   "accountDeleteWarningMessage": "이 계정에는 관련 거래 {count}건이 있습니다. 삭제하면 거래 기록의 계정 정보가 지워집니다. 삭제하시겠습니까?",
   "accountDeleteConfirm": "이 계정을 삭제하시겠습니까?",

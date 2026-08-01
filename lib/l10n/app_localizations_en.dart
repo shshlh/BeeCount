@@ -3993,6 +3993,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountInitialBalanceHint => 'Enter initial balance (optional)';
 
   @override
+  String get accountInitialDate => 'Initial Balance Date';
+
+  @override
   String get accountDeleteWarningTitle => 'Confirm Delete';
 
   @override

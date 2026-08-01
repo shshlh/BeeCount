@@ -3872,6 +3872,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get accountInitialBalanceHint => '초기 잔액을 입력하세요 (선택 사항)';
 
   @override
+  String get accountInitialDate => '초기 잔액 날짜';
+
+  @override
   String get accountDeleteWarningTitle => '삭제 확인';
 
   @override

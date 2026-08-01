@@ -121,4 +121,73 @@ void main() {
     // 排除共享账本 2026-01,起点 = 自己账本最早 2026-03
     expect(earliest, DateTime(2026, 3, 10));
   });
+
+  test('估值账户:initialDate 之前为 0,从 initialDate 起返回固定估值', () async {
+    final aid = await db.into(db.accounts).insert(AccountsCompanion.insert(
+        ledgerId: 1,
+        name: '基金',
+        type: const d.Value('investment'),
+        initialBalance: const d.Value(5000.0),
+        initialDate: d.Value(DateTime(2026, 6, 15))));
+
+    final series = await repo.getAccountDailyBalances(
+        aid,
+        startDate: DateTime(2026, 6, 13),
+        endDate: DateTime(2026, 6, 16));
+
+    expect(series.map((e) => e.balance).toList(), [0.0, 0.0, 5000.0, 5000.0]);
+  });
+
+  test('普通账户:initialDate 之前为 0,之后 = 初始资金 + 流水', () async {
+    final aid = await db.into(db.accounts).insert(AccountsCompanion.insert(
+        ledgerId: 1,
+        name: '现金',
+        type: const d.Value('cash'),
+        initialBalance: const d.Value(1000.0),
+        initialDate: d.Value(DateTime(2026, 6, 10))));
+    // 6/9 支出在 initialDate 之前 → 不计入
+    await db.into(db.transactions).insert(TransactionsCompanion.insert(
+        ledgerId: 1,
+        type: 'expense',
+        amount: 200,
+        accountId: d.Value(aid),
+        happenedAt: d.Value(DateTime(2026, 6, 9))));
+    // 6/11 支出在 initialDate 之后 → 计入
+    await db.into(db.transactions).insert(TransactionsCompanion.insert(
+        ledgerId: 1,
+        type: 'expense',
+        amount: 300,
+        accountId: d.Value(aid),
+        happenedAt: d.Value(DateTime(2026, 6, 11))));
+
+    final series = await repo.getAccountDailyBalances(
+        aid,
+        startDate: DateTime(2026, 6, 8),
+        endDate: DateTime(2026, 6, 12));
+
+    expect(series.map((e) => e.balance).toList(),
+        [0.0, 0.0, 1000.0, 700.0, 700.0]);
+  });
+
+  test('净值趋势:不同账户按各自 initialDate 累加', () async {
+    await db.into(db.accounts).insert(AccountsCompanion.insert(
+        ledgerId: 1,
+        name: '现金',
+        type: const d.Value('cash'),
+        initialBalance: const d.Value(1000.0),
+        initialDate: d.Value(DateTime(2026, 6, 10))));
+    await db.into(db.accounts).insert(AccountsCompanion.insert(
+        ledgerId: 1,
+        name: '基金',
+        type: const d.Value('investment'),
+        initialBalance: const d.Value(5000.0),
+        initialDate: d.Value(DateTime(2026, 6, 12))));
+
+    final series = await repo.getNetWorthTrendSeries(
+        startDate: DateTime(2026, 6, 9),
+        endDate: DateTime(2026, 6, 13),
+        ratesToBase: const {'CNY': 1.0});
+
+    expect(series.map((e) => e.net).toList(), [0.0, 1000.0, 1000.0, 6000.0, 6000.0]);
+  });
 }

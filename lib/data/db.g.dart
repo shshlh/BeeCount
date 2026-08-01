@@ -585,6 +585,12 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
       type: DriftSqlType.double,
       requiredDuringInsert: false,
       defaultValue: const Constant(0.0));
+  static const VerificationMeta _initialDateMeta =
+      const VerificationMeta('initialDate');
+  @override
+  late final GeneratedColumn<DateTime> initialDate = GeneratedColumn<DateTime>(
+      'initial_date', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -654,6 +660,18 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('CHECK ("hidden" IN (0, 1))'),
       defaultValue: const Constant(false));
+  static const VerificationMeta _iconTypeMeta =
+      const VerificationMeta('iconType');
+  @override
+  late final GeneratedColumn<String> iconType = GeneratedColumn<String>(
+      'icon_type', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _customIconPathMeta =
+      const VerificationMeta('customIconPath');
+  @override
+  late final GeneratedColumn<String> customIconPath = GeneratedColumn<String>(
+      'custom_icon_path', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns => [
         id,
@@ -662,6 +680,7 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         type,
         currency,
         initialBalance,
+        initialDate,
         createdAt,
         updatedAt,
         sortOrder,
@@ -672,7 +691,9 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         cardLastFour,
         note,
         syncId,
-        hidden
+        hidden,
+        iconType,
+        customIconPath
       ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -712,6 +733,12 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
           _initialBalanceMeta,
           initialBalance.isAcceptableOrUnknown(
               data['initial_balance']!, _initialBalanceMeta));
+    }
+    if (data.containsKey('initial_date')) {
+      context.handle(
+          _initialDateMeta,
+          initialDate.isAcceptableOrUnknown(
+              data['initial_date']!, _initialDateMeta));
     }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
@@ -765,6 +792,16 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
       context.handle(_hiddenMeta,
           hidden.isAcceptableOrUnknown(data['hidden']!, _hiddenMeta));
     }
+    if (data.containsKey('icon_type')) {
+      context.handle(_iconTypeMeta,
+          iconType.isAcceptableOrUnknown(data['icon_type']!, _iconTypeMeta));
+    }
+    if (data.containsKey('custom_icon_path')) {
+      context.handle(
+          _customIconPathMeta,
+          customIconPath.isAcceptableOrUnknown(
+              data['custom_icon_path']!, _customIconPathMeta));
+    }
     return context;
   }
 
@@ -786,6 +823,8 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
           .read(DriftSqlType.string, data['${effectivePrefix}currency'])!,
       initialBalance: attachedDatabase.typeMapping.read(
           DriftSqlType.double, data['${effectivePrefix}initial_balance'])!,
+      initialDate: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}initial_date']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at']),
       updatedAt: attachedDatabase.typeMapping
@@ -808,6 +847,10 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
           .read(DriftSqlType.string, data['${effectivePrefix}sync_id']),
       hidden: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}hidden'])!,
+      iconType: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}icon_type']),
+      customIconPath: attachedDatabase.typeMapping.read(
+          DriftSqlType.string, data['${effectivePrefix}custom_icon_path']),
     );
   }
 
@@ -824,6 +867,9 @@ class Account extends DataClass implements Insertable<Account> {
   final String type;
   final String currency;
   final double initialBalance;
+
+  /// v4.9: 初始资金生效日期(净值趋势在该日期之前返回 0),默认今天
+  final DateTime? initialDate;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final int sortOrder;
@@ -838,6 +884,12 @@ class Account extends DataClass implements Insertable<Account> {
   /// 隐藏:true 时该账户不再出现在记账/转账/周期选择器,账户管理页移入「已隐藏」分区。
   /// 仍计入账户余额、净资产、资产构成、净值趋势(.docs/account-archive/01 §二 D1)。
   final bool hidden;
+
+  /// 图标类型: null=默认（按账户type自动匹配SVG） / 'custom'=用户自定义图片
+  final String? iconType;
+
+  /// 自定义图标路径（iconType='custom' 时有效）
+  final String? customIconPath;
   const Account(
       {required this.id,
       required this.ledgerId,
@@ -845,6 +897,7 @@ class Account extends DataClass implements Insertable<Account> {
       required this.type,
       required this.currency,
       required this.initialBalance,
+      this.initialDate,
       this.createdAt,
       this.updatedAt,
       required this.sortOrder,
@@ -855,7 +908,9 @@ class Account extends DataClass implements Insertable<Account> {
       this.cardLastFour,
       this.note,
       this.syncId,
-      required this.hidden});
+      required this.hidden,
+      this.iconType,
+      this.customIconPath});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -865,6 +920,9 @@ class Account extends DataClass implements Insertable<Account> {
     map['type'] = Variable<String>(type);
     map['currency'] = Variable<String>(currency);
     map['initial_balance'] = Variable<double>(initialBalance);
+    if (!nullToAbsent || initialDate != null) {
+      map['initial_date'] = Variable<DateTime>(initialDate);
+    }
     if (!nullToAbsent || createdAt != null) {
       map['created_at'] = Variable<DateTime>(createdAt);
     }
@@ -894,6 +952,12 @@ class Account extends DataClass implements Insertable<Account> {
       map['sync_id'] = Variable<String>(syncId);
     }
     map['hidden'] = Variable<bool>(hidden);
+    if (!nullToAbsent || iconType != null) {
+      map['icon_type'] = Variable<String>(iconType);
+    }
+    if (!nullToAbsent || customIconPath != null) {
+      map['custom_icon_path'] = Variable<String>(customIconPath);
+    }
     return map;
   }
 
@@ -905,6 +969,9 @@ class Account extends DataClass implements Insertable<Account> {
       type: Value(type),
       currency: Value(currency),
       initialBalance: Value(initialBalance),
+      initialDate: initialDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(initialDate),
       createdAt: createdAt == null && nullToAbsent
           ? const Value.absent()
           : Value(createdAt),
@@ -931,6 +998,12 @@ class Account extends DataClass implements Insertable<Account> {
       syncId:
           syncId == null && nullToAbsent ? const Value.absent() : Value(syncId),
       hidden: Value(hidden),
+      iconType: iconType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(iconType),
+      customIconPath: customIconPath == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customIconPath),
     );
   }
 
@@ -944,6 +1017,7 @@ class Account extends DataClass implements Insertable<Account> {
       type: serializer.fromJson<String>(json['type']),
       currency: serializer.fromJson<String>(json['currency']),
       initialBalance: serializer.fromJson<double>(json['initialBalance']),
+      initialDate: serializer.fromJson<DateTime?>(json['initialDate']),
       createdAt: serializer.fromJson<DateTime?>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
@@ -955,6 +1029,8 @@ class Account extends DataClass implements Insertable<Account> {
       note: serializer.fromJson<String?>(json['note']),
       syncId: serializer.fromJson<String?>(json['syncId']),
       hidden: serializer.fromJson<bool>(json['hidden']),
+      iconType: serializer.fromJson<String?>(json['iconType']),
+      customIconPath: serializer.fromJson<String?>(json['customIconPath']),
     );
   }
   @override
@@ -967,6 +1043,7 @@ class Account extends DataClass implements Insertable<Account> {
       'type': serializer.toJson<String>(type),
       'currency': serializer.toJson<String>(currency),
       'initialBalance': serializer.toJson<double>(initialBalance),
+      'initialDate': serializer.toJson<DateTime?>(initialDate),
       'createdAt': serializer.toJson<DateTime?>(createdAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
       'sortOrder': serializer.toJson<int>(sortOrder),
@@ -978,6 +1055,8 @@ class Account extends DataClass implements Insertable<Account> {
       'note': serializer.toJson<String?>(note),
       'syncId': serializer.toJson<String?>(syncId),
       'hidden': serializer.toJson<bool>(hidden),
+      'iconType': serializer.toJson<String?>(iconType),
+      'customIconPath': serializer.toJson<String?>(customIconPath),
     };
   }
 
@@ -988,6 +1067,7 @@ class Account extends DataClass implements Insertable<Account> {
           String? type,
           String? currency,
           double? initialBalance,
+          Value<DateTime?> initialDate = const Value.absent(),
           Value<DateTime?> createdAt = const Value.absent(),
           Value<DateTime?> updatedAt = const Value.absent(),
           int? sortOrder,
@@ -998,7 +1078,9 @@ class Account extends DataClass implements Insertable<Account> {
           Value<String?> cardLastFour = const Value.absent(),
           Value<String?> note = const Value.absent(),
           Value<String?> syncId = const Value.absent(),
-          bool? hidden}) =>
+          bool? hidden,
+          Value<String?> iconType = const Value.absent(),
+          Value<String?> customIconPath = const Value.absent()}) =>
       Account(
         id: id ?? this.id,
         ledgerId: ledgerId ?? this.ledgerId,
@@ -1006,6 +1088,7 @@ class Account extends DataClass implements Insertable<Account> {
         type: type ?? this.type,
         currency: currency ?? this.currency,
         initialBalance: initialBalance ?? this.initialBalance,
+        initialDate: initialDate.present ? initialDate.value : this.initialDate,
         createdAt: createdAt.present ? createdAt.value : this.createdAt,
         updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
         sortOrder: sortOrder ?? this.sortOrder,
@@ -1019,6 +1102,9 @@ class Account extends DataClass implements Insertable<Account> {
         note: note.present ? note.value : this.note,
         syncId: syncId.present ? syncId.value : this.syncId,
         hidden: hidden ?? this.hidden,
+        iconType: iconType.present ? iconType.value : this.iconType,
+        customIconPath:
+            customIconPath.present ? customIconPath.value : this.customIconPath,
       );
   Account copyWithCompanion(AccountsCompanion data) {
     return Account(
@@ -1030,6 +1116,8 @@ class Account extends DataClass implements Insertable<Account> {
       initialBalance: data.initialBalance.present
           ? data.initialBalance.value
           : this.initialBalance,
+      initialDate:
+          data.initialDate.present ? data.initialDate.value : this.initialDate,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
@@ -1047,6 +1135,10 @@ class Account extends DataClass implements Insertable<Account> {
       note: data.note.present ? data.note.value : this.note,
       syncId: data.syncId.present ? data.syncId.value : this.syncId,
       hidden: data.hidden.present ? data.hidden.value : this.hidden,
+      iconType: data.iconType.present ? data.iconType.value : this.iconType,
+      customIconPath: data.customIconPath.present
+          ? data.customIconPath.value
+          : this.customIconPath,
     );
   }
 
@@ -1059,6 +1151,7 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('type: $type, ')
           ..write('currency: $currency, ')
           ..write('initialBalance: $initialBalance, ')
+          ..write('initialDate: $initialDate, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('sortOrder: $sortOrder, ')
@@ -1069,7 +1162,9 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('cardLastFour: $cardLastFour, ')
           ..write('note: $note, ')
           ..write('syncId: $syncId, ')
-          ..write('hidden: $hidden')
+          ..write('hidden: $hidden, ')
+          ..write('iconType: $iconType, ')
+          ..write('customIconPath: $customIconPath')
           ..write(')'))
         .toString();
   }
@@ -1082,6 +1177,7 @@ class Account extends DataClass implements Insertable<Account> {
       type,
       currency,
       initialBalance,
+      initialDate,
       createdAt,
       updatedAt,
       sortOrder,
@@ -1092,7 +1188,9 @@ class Account extends DataClass implements Insertable<Account> {
       cardLastFour,
       note,
       syncId,
-      hidden);
+      hidden,
+      iconType,
+      customIconPath);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1103,6 +1201,7 @@ class Account extends DataClass implements Insertable<Account> {
           other.type == this.type &&
           other.currency == this.currency &&
           other.initialBalance == this.initialBalance &&
+          other.initialDate == this.initialDate &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.sortOrder == this.sortOrder &&
@@ -1113,7 +1212,9 @@ class Account extends DataClass implements Insertable<Account> {
           other.cardLastFour == this.cardLastFour &&
           other.note == this.note &&
           other.syncId == this.syncId &&
-          other.hidden == this.hidden);
+          other.hidden == this.hidden &&
+          other.iconType == this.iconType &&
+          other.customIconPath == this.customIconPath);
 }
 
 class AccountsCompanion extends UpdateCompanion<Account> {
@@ -1123,6 +1224,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<String> type;
   final Value<String> currency;
   final Value<double> initialBalance;
+  final Value<DateTime?> initialDate;
   final Value<DateTime?> createdAt;
   final Value<DateTime?> updatedAt;
   final Value<int> sortOrder;
@@ -1134,6 +1236,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<String?> note;
   final Value<String?> syncId;
   final Value<bool> hidden;
+  final Value<String?> iconType;
+  final Value<String?> customIconPath;
   const AccountsCompanion({
     this.id = const Value.absent(),
     this.ledgerId = const Value.absent(),
@@ -1141,6 +1245,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.type = const Value.absent(),
     this.currency = const Value.absent(),
     this.initialBalance = const Value.absent(),
+    this.initialDate = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.sortOrder = const Value.absent(),
@@ -1152,6 +1257,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.note = const Value.absent(),
     this.syncId = const Value.absent(),
     this.hidden = const Value.absent(),
+    this.iconType = const Value.absent(),
+    this.customIconPath = const Value.absent(),
   });
   AccountsCompanion.insert({
     this.id = const Value.absent(),
@@ -1160,6 +1267,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.type = const Value.absent(),
     this.currency = const Value.absent(),
     this.initialBalance = const Value.absent(),
+    this.initialDate = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.sortOrder = const Value.absent(),
@@ -1171,6 +1279,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.note = const Value.absent(),
     this.syncId = const Value.absent(),
     this.hidden = const Value.absent(),
+    this.iconType = const Value.absent(),
+    this.customIconPath = const Value.absent(),
   })  : ledgerId = Value(ledgerId),
         name = Value(name);
   static Insertable<Account> custom({
@@ -1180,6 +1290,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<String>? type,
     Expression<String>? currency,
     Expression<double>? initialBalance,
+    Expression<DateTime>? initialDate,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? sortOrder,
@@ -1191,6 +1302,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<String>? note,
     Expression<String>? syncId,
     Expression<bool>? hidden,
+    Expression<String>? iconType,
+    Expression<String>? customIconPath,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -1199,6 +1312,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (type != null) 'type': type,
       if (currency != null) 'currency': currency,
       if (initialBalance != null) 'initial_balance': initialBalance,
+      if (initialDate != null) 'initial_date': initialDate,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (sortOrder != null) 'sort_order': sortOrder,
@@ -1210,6 +1324,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (note != null) 'note': note,
       if (syncId != null) 'sync_id': syncId,
       if (hidden != null) 'hidden': hidden,
+      if (iconType != null) 'icon_type': iconType,
+      if (customIconPath != null) 'custom_icon_path': customIconPath,
     });
   }
 
@@ -1220,6 +1336,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       Value<String>? type,
       Value<String>? currency,
       Value<double>? initialBalance,
+      Value<DateTime?>? initialDate,
       Value<DateTime?>? createdAt,
       Value<DateTime?>? updatedAt,
       Value<int>? sortOrder,
@@ -1230,7 +1347,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       Value<String?>? cardLastFour,
       Value<String?>? note,
       Value<String?>? syncId,
-      Value<bool>? hidden}) {
+      Value<bool>? hidden,
+      Value<String?>? iconType,
+      Value<String?>? customIconPath}) {
     return AccountsCompanion(
       id: id ?? this.id,
       ledgerId: ledgerId ?? this.ledgerId,
@@ -1238,6 +1357,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       type: type ?? this.type,
       currency: currency ?? this.currency,
       initialBalance: initialBalance ?? this.initialBalance,
+      initialDate: initialDate ?? this.initialDate,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       sortOrder: sortOrder ?? this.sortOrder,
@@ -1249,6 +1369,8 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       note: note ?? this.note,
       syncId: syncId ?? this.syncId,
       hidden: hidden ?? this.hidden,
+      iconType: iconType ?? this.iconType,
+      customIconPath: customIconPath ?? this.customIconPath,
     );
   }
 
@@ -1272,6 +1394,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     }
     if (initialBalance.present) {
       map['initial_balance'] = Variable<double>(initialBalance.value);
+    }
+    if (initialDate.present) {
+      map['initial_date'] = Variable<DateTime>(initialDate.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
@@ -1306,6 +1431,12 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (hidden.present) {
       map['hidden'] = Variable<bool>(hidden.value);
     }
+    if (iconType.present) {
+      map['icon_type'] = Variable<String>(iconType.value);
+    }
+    if (customIconPath.present) {
+      map['custom_icon_path'] = Variable<String>(customIconPath.value);
+    }
     return map;
   }
 
@@ -1318,6 +1449,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('type: $type, ')
           ..write('currency: $currency, ')
           ..write('initialBalance: $initialBalance, ')
+          ..write('initialDate: $initialDate, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('sortOrder: $sortOrder, ')
@@ -1328,7 +1460,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('cardLastFour: $cardLastFour, ')
           ..write('note: $note, ')
           ..write('syncId: $syncId, ')
-          ..write('hidden: $hidden')
+          ..write('hidden: $hidden, ')
+          ..write('iconType: $iconType, ')
+          ..write('customIconPath: $customIconPath')
           ..write(')'))
         .toString();
   }
@@ -12030,6 +12164,7 @@ typedef $$AccountsTableCreateCompanionBuilder = AccountsCompanion Function({
   Value<String> type,
   Value<String> currency,
   Value<double> initialBalance,
+  Value<DateTime?> initialDate,
   Value<DateTime?> createdAt,
   Value<DateTime?> updatedAt,
   Value<int> sortOrder,
@@ -12041,6 +12176,8 @@ typedef $$AccountsTableCreateCompanionBuilder = AccountsCompanion Function({
   Value<String?> note,
   Value<String?> syncId,
   Value<bool> hidden,
+  Value<String?> iconType,
+  Value<String?> customIconPath,
 });
 typedef $$AccountsTableUpdateCompanionBuilder = AccountsCompanion Function({
   Value<int> id,
@@ -12049,6 +12186,7 @@ typedef $$AccountsTableUpdateCompanionBuilder = AccountsCompanion Function({
   Value<String> type,
   Value<String> currency,
   Value<double> initialBalance,
+  Value<DateTime?> initialDate,
   Value<DateTime?> createdAt,
   Value<DateTime?> updatedAt,
   Value<int> sortOrder,
@@ -12060,6 +12198,8 @@ typedef $$AccountsTableUpdateCompanionBuilder = AccountsCompanion Function({
   Value<String?> note,
   Value<String?> syncId,
   Value<bool> hidden,
+  Value<String?> iconType,
+  Value<String?> customIconPath,
 });
 
 class $$AccountsTableFilterComposer
@@ -12089,6 +12229,9 @@ class $$AccountsTableFilterComposer
   ColumnFilters<double> get initialBalance => $composableBuilder(
       column: $table.initialBalance,
       builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get initialDate => $composableBuilder(
+      column: $table.initialDate, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -12122,6 +12265,13 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<bool> get hidden => $composableBuilder(
       column: $table.hidden, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get iconType => $composableBuilder(
+      column: $table.iconType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get customIconPath => $composableBuilder(
+      column: $table.customIconPath,
+      builder: (column) => ColumnFilters(column));
 }
 
 class $$AccountsTableOrderingComposer
@@ -12151,6 +12301,9 @@ class $$AccountsTableOrderingComposer
   ColumnOrderings<double> get initialBalance => $composableBuilder(
       column: $table.initialBalance,
       builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get initialDate => $composableBuilder(
+      column: $table.initialDate, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
@@ -12186,6 +12339,13 @@ class $$AccountsTableOrderingComposer
 
   ColumnOrderings<bool> get hidden => $composableBuilder(
       column: $table.hidden, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get iconType => $composableBuilder(
+      column: $table.iconType, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get customIconPath => $composableBuilder(
+      column: $table.customIconPath,
+      builder: (column) => ColumnOrderings(column));
 }
 
 class $$AccountsTableAnnotationComposer
@@ -12214,6 +12374,9 @@ class $$AccountsTableAnnotationComposer
 
   GeneratedColumn<double> get initialBalance => $composableBuilder(
       column: $table.initialBalance, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get initialDate => $composableBuilder(
+      column: $table.initialDate, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -12247,6 +12410,12 @@ class $$AccountsTableAnnotationComposer
 
   GeneratedColumn<bool> get hidden =>
       $composableBuilder(column: $table.hidden, builder: (column) => column);
+
+  GeneratedColumn<String> get iconType =>
+      $composableBuilder(column: $table.iconType, builder: (column) => column);
+
+  GeneratedColumn<String> get customIconPath => $composableBuilder(
+      column: $table.customIconPath, builder: (column) => column);
 }
 
 class $$AccountsTableTableManager extends RootTableManager<
@@ -12278,6 +12447,7 @@ class $$AccountsTableTableManager extends RootTableManager<
             Value<String> type = const Value.absent(),
             Value<String> currency = const Value.absent(),
             Value<double> initialBalance = const Value.absent(),
+            Value<DateTime?> initialDate = const Value.absent(),
             Value<DateTime?> createdAt = const Value.absent(),
             Value<DateTime?> updatedAt = const Value.absent(),
             Value<int> sortOrder = const Value.absent(),
@@ -12289,6 +12459,8 @@ class $$AccountsTableTableManager extends RootTableManager<
             Value<String?> note = const Value.absent(),
             Value<String?> syncId = const Value.absent(),
             Value<bool> hidden = const Value.absent(),
+            Value<String?> iconType = const Value.absent(),
+            Value<String?> customIconPath = const Value.absent(),
           }) =>
               AccountsCompanion(
             id: id,
@@ -12297,6 +12469,7 @@ class $$AccountsTableTableManager extends RootTableManager<
             type: type,
             currency: currency,
             initialBalance: initialBalance,
+            initialDate: initialDate,
             createdAt: createdAt,
             updatedAt: updatedAt,
             sortOrder: sortOrder,
@@ -12308,6 +12481,8 @@ class $$AccountsTableTableManager extends RootTableManager<
             note: note,
             syncId: syncId,
             hidden: hidden,
+            iconType: iconType,
+            customIconPath: customIconPath,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -12316,6 +12491,7 @@ class $$AccountsTableTableManager extends RootTableManager<
             Value<String> type = const Value.absent(),
             Value<String> currency = const Value.absent(),
             Value<double> initialBalance = const Value.absent(),
+            Value<DateTime?> initialDate = const Value.absent(),
             Value<DateTime?> createdAt = const Value.absent(),
             Value<DateTime?> updatedAt = const Value.absent(),
             Value<int> sortOrder = const Value.absent(),
@@ -12327,6 +12503,8 @@ class $$AccountsTableTableManager extends RootTableManager<
             Value<String?> note = const Value.absent(),
             Value<String?> syncId = const Value.absent(),
             Value<bool> hidden = const Value.absent(),
+            Value<String?> iconType = const Value.absent(),
+            Value<String?> customIconPath = const Value.absent(),
           }) =>
               AccountsCompanion.insert(
             id: id,
@@ -12335,6 +12513,7 @@ class $$AccountsTableTableManager extends RootTableManager<
             type: type,
             currency: currency,
             initialBalance: initialBalance,
+            initialDate: initialDate,
             createdAt: createdAt,
             updatedAt: updatedAt,
             sortOrder: sortOrder,
@@ -12346,6 +12525,8 @@ class $$AccountsTableTableManager extends RootTableManager<
             note: note,
             syncId: syncId,
             hidden: hidden,
+            iconType: iconType,
+            customIconPath: customIconPath,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

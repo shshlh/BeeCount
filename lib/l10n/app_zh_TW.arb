@@ -61,6 +61,7 @@
   "accountEditTitle": "編輯帳戶",
   "accountInitialBalance": "初始資金",
   "accountInitialBalanceHint": "請輸入初始資金（可選）",
+  "accountInitialDate": "初始資金日期",
   "accountNameDuplicate": "帳戶名稱已存在，請使用其他名稱",
   "accountNameHint": "例如：工商銀行、支付寶等",
   "accountNameLabel": "帳戶名稱",

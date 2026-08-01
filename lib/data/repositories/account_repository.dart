@@ -27,12 +27,15 @@ abstract class AccountRepository {
   /// 创建账户。撞同名抛 [DuplicateNameException](name 全局唯一)。
   /// 静默路径(import / app-link 等)请用 [upsertAccount](get-or-create 语义)。
   /// [syncId] 可选:seed 类路径显式塞确定性 id,UI 不传走 auto v4。
+  /// [initialDate] 初始资金生效日期,缺省保持 null(净值趋势不做日期截断;
+  /// UI 新建账户默认传今天,存量账户由 v34 迁移回填 created_at)。
   Future<int> createAccount({
     required int ledgerId,
     required String name,
     String type = 'cash',
     String currency = 'CNY',
     double initialBalance = 0.0,
+    DateTime? initialDate,
     double? creditLimit,
     int? billingDay,
     int? paymentDueDay,
@@ -65,6 +68,7 @@ abstract class AccountRepository {
     String? type,
     String? currency,
     double? initialBalance,
+    DateTime? initialDate,
     double? creditLimit,
     int? billingDay,
     int? paymentDueDay,

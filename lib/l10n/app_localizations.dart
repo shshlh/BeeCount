@@ -7300,6 +7300,12 @@ abstract class AppLocalizations {
   /// **'Enter initial balance (optional)'**
   String get accountInitialBalanceHint;
 
+  /// No description provided for @accountInitialDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Initial Balance Date'**
+  String get accountInitialDate;
+
   /// No description provided for @accountDeleteWarningTitle.
   ///
   /// In en, this message translates to:

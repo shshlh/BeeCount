@@ -88,6 +88,7 @@ class LocalAccountRepository implements AccountRepository {
     String type = 'cash',
     String currency = 'CNY',
     double initialBalance = 0.0,
+    DateTime? initialDate,
     double? creditLimit,
     int? billingDay,
     int? paymentDueDay,
@@ -122,6 +123,9 @@ class LocalAccountRepository implements AccountRepository {
         type: d.Value(type),
         currency: d.Value(currency),
         initialBalance: d.Value(initialBalance),
+        // 未传 initialDate 时保持 null(历史趋势不受日期约束);UI 新建账户
+        // 会显式传「今天」,存量账户由 v34 迁移回填 created_at。
+        initialDate: d.Value(initialDate),
         createdAt: d.Value(DateTime.now()),
         sortOrder: d.Value(nextSortOrder),
         creditLimit: d.Value(creditLimit),
@@ -173,6 +177,7 @@ class LocalAccountRepository implements AccountRepository {
     String? type,
     String? currency,
     double? initialBalance,
+    DateTime? initialDate,
     double? creditLimit,
     int? billingDay,
     int? paymentDueDay,
@@ -189,6 +194,7 @@ class LocalAccountRepository implements AccountRepository {
         type: type != null ? d.Value(type) : const d.Value.absent(),
         currency: currency != null ? d.Value(currency) : const d.Value.absent(),
         initialBalance: initialBalance != null ? d.Value(initialBalance) : const d.Value.absent(),
+        initialDate: initialDate != null ? d.Value(initialDate) : const d.Value.absent(),
         creditLimit: clearCreditCardFields ? const d.Value(null) : (creditLimit != null ? d.Value(creditLimit) : const d.Value.absent()),
         billingDay: clearCreditCardFields ? const d.Value(null) : (billingDay != null ? d.Value(billingDay) : const d.Value.absent()),
         paymentDueDay: clearCreditCardFields ? const d.Value(null) : (paymentDueDay != null ? d.Value(paymentDueDay) : const d.Value.absent()),
@@ -696,13 +702,26 @@ class LocalAccountRepository implements AccountRepository {
     final account = await getAccount(accountId);
     if (account == null) return [];
 
-    // 估值账户：每天返回固定估值
+    // v4.9.4: 初始资金日期(initialDate)之前的余额一律为 0,从该日起才计入。
+    // 不同账户可登记不同日期,净值趋势按各自 initialDate 累加。
+    final initDay = account.initialDate != null
+        ? DateTime(account.initialDate!.year, account.initialDate!.month,
+            account.initialDate!.day)
+        : null;
+
+    // 估值账户：从 initialDate 起每天返回固定估值,之前返回 0
     if (isValuationOrInvestmentType(account.type)) {
       final result = <({DateTime date, double balance})>[];
       var currentDate = DateTime(startDate.year, startDate.month, startDate.day);
       final end = DateTime(endDate.year, endDate.month, endDate.day);
       while (!currentDate.isAfter(end)) {
-        result.add((date: currentDate, balance: account.initialBalance));
+        result.add((
+          date: currentDate,
+          balance:
+              initDay != null && currentDate.isBefore(initDay)
+                  ? 0.0
+                  : account.initialBalance,
+        ));
         currentDate = currentDate.add(const Duration(days: 1));
       }
       return result;
@@ -722,41 +741,21 @@ class LocalAccountRepository implements AccountRepository {
           ..orderBy([(t) => d.OrderingTerm(expression: t.happenedAt)]))
         .get();
 
-    // 计算 startDate 之前的余额
-    double runningBalance = account.initialBalance;
+    // 有效余额起点:initialDate 与 startDate 中较晚者;initialDate 之后
+    // 才注入初始资金,其前的流水同样不计入。
+    final start = DateTime(startDate.year, startDate.month, startDate.day);
+    final end = DateTime(endDate.year, endDate.month, endDate.day);
+    final balanceStart = initDay != null && initDay.isAfter(start) ? initDay : start;
+    double runningBalance = initDay == null || !initDay.isAfter(balanceStart)
+        ? account.initialBalance
+        : 0.0;
     int txIndex = 0;
 
-    // 先累加 startDate 之前的交易
-    while (txIndex < allTxs.length && allTxs[txIndex].happenedAt.isBefore(startDate)) {
+    // 先累加 balanceStart 之前的交易(initialDate 之前的流水不累计)
+    while (txIndex < allTxs.length &&
+        allTxs[txIndex].happenedAt.isBefore(balanceStart)) {
       final tx = allTxs[txIndex];
-      if (tx.accountId == accountId) {
-        if (tx.type == 'income') {
-          runningBalance += tx.amount;
-        } else if (tx.type == 'expense') {
-          runningBalance -= tx.amount;
-        } else if (tx.type == 'transfer') {
-          runningBalance -= tx.amount;
-        } else if (tx.type == 'adjustment') {
-          runningBalance += tx.amount;
-        }
-      }
-      if (tx.toAccountId == accountId && tx.type == 'transfer') {
-        runningBalance += tx.amount;
-      }
-      txIndex++;
-    }
-
-    // 按天填充
-    final result = <({DateTime date, double balance})>[];
-    var currentDate = DateTime(startDate.year, startDate.month, startDate.day);
-    final end = DateTime(endDate.year, endDate.month, endDate.day);
-
-    while (!currentDate.isAfter(end)) {
-      final nextDate = currentDate.add(const Duration(days: 1));
-
-      // 累加当天的交易
-      while (txIndex < allTxs.length && allTxs[txIndex].happenedAt.isBefore(nextDate)) {
-        final tx = allTxs[txIndex];
+      if (initDay == null || !tx.happenedAt.isBefore(initDay)) {
         if (tx.accountId == accountId) {
           if (tx.type == 'income') {
             runningBalance += tx.amount;
@@ -770,6 +769,48 @@ class LocalAccountRepository implements AccountRepository {
         }
         if (tx.toAccountId == accountId && tx.type == 'transfer') {
           runningBalance += tx.amount;
+        }
+      }
+      txIndex++;
+    }
+
+    // 按天填充
+    final result = <({DateTime date, double balance})>[];
+    var currentDate = start;
+
+    while (!currentDate.isAfter(end)) {
+      final nextDate = currentDate.add(const Duration(days: 1));
+
+      // initialDate 之前:余额恒为 0,当日交易不累计(只消费指针)
+      if (initDay != null && currentDate.isBefore(initDay)) {
+        while (txIndex < allTxs.length &&
+            allTxs[txIndex].happenedAt.isBefore(nextDate)) {
+          txIndex++;
+        }
+        result.add((date: currentDate, balance: 0.0));
+        currentDate = nextDate;
+        continue;
+      }
+
+      // 累加当天的交易
+      while (txIndex < allTxs.length &&
+          allTxs[txIndex].happenedAt.isBefore(nextDate)) {
+        final tx = allTxs[txIndex];
+        if (initDay == null || !tx.happenedAt.isBefore(initDay)) {
+          if (tx.accountId == accountId) {
+            if (tx.type == 'income') {
+              runningBalance += tx.amount;
+            } else if (tx.type == 'expense') {
+              runningBalance -= tx.amount;
+            } else if (tx.type == 'transfer') {
+              runningBalance -= tx.amount;
+            } else if (tx.type == 'adjustment') {
+              runningBalance += tx.amount;
+            }
+          }
+          if (tx.toAccountId == accountId && tx.type == 'transfer') {
+            runningBalance += tx.amount;
+          }
         }
         txIndex++;
       }

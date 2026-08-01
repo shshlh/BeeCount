@@ -45,6 +45,8 @@ class Accounts extends Table {
   TextColumn get currency =>
       text().withDefault(const Constant('CNY'))(); // v1.15.0新增：币种
   RealColumn get initialBalance => real().withDefault(const Constant(0.0))();
+  /// v4.9: 初始资金生效日期(净值趋势在该日期之前返回 0),默认今天
+  DateTimeColumn get initialDate => dateTime().nullable()();
   DateTimeColumn get createdAt =>
       dateTime().nullable()(); // v1.15.0: 改为可空，避免迁移问题
   DateTimeColumn get updatedAt => dateTime().nullable()();
@@ -505,7 +507,8 @@ class BeeDatabase extends _$BeeDatabase {
   BeeDatabase.forTesting(QueryExecutor executor) : super(executor);
 
  @override
-  int get schemaVersion => 33; // v31: 账户隐藏 / v32: 投资数据层 / v33: 账户体系改造 — 7类型 + icon字段
+  int get schemaVersion =>
+      34; // v31: 账户隐藏 / v32: 投资数据层 / v33: 账户体系改造 / v34: 账户初始资金日期
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1279,6 +1282,17 @@ class BeeDatabase extends _$BeeDatabase {
             }
 
             logger.info('DBMigration', 'v33 迁移完成');
+          }
+          if (from < 34) {
+            logger.info('DBMigration', '开始迁移到 v34: 账户初始资金日期(initial_date)');
+            await _addColumnIfMissing('accounts', 'initial_date',
+                'ALTER TABLE accounts ADD COLUMN initial_date DATETIME;');
+            // 已有账户回填:优先 created_at,缺失则用当前时间(与 UI 默认「今天」一致)。
+            await customStatement(
+                'UPDATE accounts SET initial_date = COALESCE(created_at, '
+                "CAST(strftime('%s','now') AS INTEGER)) "
+                'WHERE initial_date IS NULL;');
+            logger.info('DBMigration', 'v34 迁移完成');
           }
        },
        onCreate: (m) async {

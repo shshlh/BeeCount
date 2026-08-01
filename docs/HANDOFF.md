@@ -33,6 +33,45 @@
 
 ## 2026-08-01
 
+**移交角色**：invest-ui + architect + invest-logic（4.9 联合执行）
+**接收角色**：PM
+
+**完成工作**：阶段 4.9 账户创建与净值趋势优化（4 项全部完成）
+
+1. **4.9.1 虚拟账户不显示卡信息** — [account_edit_page.dart](/D:\codexproject\pj_004_beecount_fork\lib\pages\account\account_edit_page.dart)
+   - `isBankCard` 从 `bank_card || virtual_account` 改为仅 `bank_card`
+   - 编辑保存时 `clearMetadataFields = !isBankOrCredit`，虚拟账户等非卡账户保存会清掉历史开户行/卡号，避免残留
+
+2. **4.9.2 应收款改初始资金语义** — [account_type_utils.dart](/D:\codexproject\pj_004_beecount_fork\lib\utils\account_type_utils.dart)
+   - `isValuationOrInvestmentType` 移除 `receivable`（仅保留 investment/loan）
+   - 应收款余额 = 初始资金 + 流水；详情页自动走普通账户分支，不再显示「更新估值」按钮
+
+3. **4.9.3 初始资金日期字段** — [db.dart](/D:\codexproject\pj_004_beecount_fork\lib\data\db.dart) + account_edit_page + Repository 三层
+   - Accounts 表新增 `initial_date`（nullable DATETIME），schemaVersion 33→34，v34 迁移回填 `COALESCE(created_at, now)`
+   - account_edit_page 初始资金区新增日期选择器（默认今天），createAccount/updateAccount（接口 + LocalAccountRepository + LocalRepository）支持 initialDate
+   - 未传 initialDate 时保持 null（不约束历史趋势；小组件/导入/种子路径行为不变），UI 新建默认今天
+
+4. **4.9.4 净值趋势按初始日期** — [local_account_repository.dart](/D:\codexproject\pj_004_beecount_fork\lib\data\repositories\local\local_account_repository.dart)
+   - `getAccountDailyBalances`：估值账户 initialDate 之前返回 0；普通账户 initialDate 前为 0，从该日起才累计初始资金 + 流水
+   - getNetWorthTrendSeries 按各账户 initialDate 累加
+
+**测试**：
+- 新增 4 组：migration_v34_test（列 + 回填 + 幂等）、account_initial_fund_test（应收款余额语义 + initialDate 落库）、net_worth_trend_test 新增 3 个趋势用例、account_edit_page_card_info_test（虚拟账户无卡信息 + 银行卡保留）
+- flutter analyze 零 error（873 个预存 warning/info）
+- 全量 flutter test：556 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**下一个任务需要知道的**：
+- 存量账户升级到 v34 时 initial_date 回填 created_at；无 created_at 用当前时间
+- 应收款已不是估值类型，投资账户仍为估值类型（市值由持仓自动计算），loan 保留负债估值语义
+- 小组件/导入/种子创建的账户 initialDate 为 null，趋势不做日期截断；只有 UI 新建账户默认今天
+- 若需给既有账户补初始资金日期，编辑账户即可改日期
+
+**git 状态**：当前分支 main，未提交（等待 PM 审查）
+
+---
+
+## 2026-08-01
+
 **移交角色**：invest-ui
 **接收角色**：PM
 
@@ -237,6 +276,42 @@
 - P2 两项仍未做：主流水未过滤 excludeFromStats 的初始持仓（local_transaction_repository.dart 671/781/813）、导入按钮未移到 PrimaryHeader 顶部
 
 **git 状态**：当前分支 main，未提交（等待 PM 审查）
+
+## 2026-08-01
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-ui + invest-logic（账户体验优化）
+
+**任务**：4.9 账户创建与净值趋势优化（4 个问题）
+
+**问题 1：虚拟账户不应显示开户行/卡号后四位**
+- 文件：lib/pages/account/account_edit_page.dart:200
+- 根因：`isBankCard = _selectedType == 'bank_card' || _selectedType == 'virtual_account'`，导致支付宝/微信等虚拟账户也显示「开户行/卡号后四位」
+- 修复：改为仅 `_selectedType == 'bank_card'` 显示该区块
+
+**问题 2：应收款账户应用「初始资金」而非「当前估值」**
+- 文件：lib/utils/account_type_utils.dart:100-103 + lib/pages/account/account_detail_page.dart
+- 根因：`isValuationOrInvestmentType` 包含 `receivable`，导致应收款账户走估值逻辑（显示"当前估值"+「更新估值」按钮）
+- 修复：将 `accountTypeReceivable` 从估值类型中移除；应收款账户余额语义改为「初始资金」（余额=初始资金+流水），删除应收款账户的「更新估值」入口
+- 注意：`investment` 仍为估值类型（市值由持仓自动计算）；`loan` 需确认是否保留估值语义，建议保留负债估值
+
+**问题 3：新建账户支持选择初始资金日期**
+- 文件：lib/data/db.dart（Account 表）+ lib/pages/account/account_edit_page.dart
+- 需求：新建所有账户时，初始资金可指定某年某月某日（默认今天），便于后期补充历史流水
+- 实现：
+  a) Accounts 表加 `initial_date`（nullable DateTimeColumn）→ schema v33→v34 迁移
+  b) account_edit_page 在初始资金输入区加日期选择器（默认 DateTime.now()）
+  c) 保存时写入 initialDate；已有账户迁移时回填 created_at（或默认当天）
+  d) LocalAccountRepository createAccount/updateAccount 支持该字段
+
+**问题 4：净值趋势按初始资金日期计算**
+- 文件：lib/data/repositories/local/local_account_repository.dart:694-709
+- 根因：`getAccountDailyBalances` 对估值账户每天返回固定估值，导致 6 个月趋势全部显示同一个数，即使前 5 个月没有登记
+- 修复：账户在 `initialDate`（问题 3 新字段）之前应返回 0（不计入），从 initialDate 起才返回余额；普通账户同样遵循：初始资金日期之前为 0
+- 联动：不同账户可登记不同日期的初始资金，净值趋势按各自日期累加
+- 注意：确认 trend 页面 6M/12M 的 startDate 语义，避免破坏既有测试（test/utils/net_worth_trend_utils_test.dart 等）
+
+**约束**：flutter analyze 零 error；相关测试全过并补充：虚拟账户无卡信息、应收款余额语义、initialDate 趋势计算、迁移 v34 测试。
 
 ## 2026-07-31
 

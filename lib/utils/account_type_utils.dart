@@ -97,9 +97,10 @@ AccountClassification getAccountClassification(String type) {
 bool isAssetType(String type) => !isLiabilityType(type);
 
 /// 是否为估值/投资类账户（不参与日常收支记账的账户选择器）
+/// v4.9: 应收款(receivable)移出估值类型 —— 余额语义 = 初始资金 + 流水,
+/// 详情页不再提供「更新估值」入口;仅 investment / loan 保留估值语义。
 bool isValuationOrInvestmentType(String type) {
-  return type == accountTypeInvestment || type == accountTypeLoan
-      || type == accountTypeReceivable;
+  return type == accountTypeInvestment || type == accountTypeLoan;
 }
 
 /// 是否为可交易账户类型（参与日常转账/支出选择器）

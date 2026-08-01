@@ -37,6 +37,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
   late final TextEditingController _noteController;
   late String _selectedType;
   late String _selectedCurrency;
+  late DateTime _initialDate;
   int? _billingDay;
   int? _paymentDueDay;
   bool _reminderEnabled = false;
@@ -68,6 +69,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
     _noteController = TextEditingController(text: widget.account?.note ?? '');
     _selectedType = widget.account?.type ?? 'cash';
     _selectedCurrency = widget.account?.currency ?? 'CNY';
+    _initialDate = widget.account?.initialDate ?? DateTime.now();
     _billingDay = widget.account?.billingDay;
     _paymentDueDay = widget.account?.paymentDueDay;
     _loadReminderSettings();
@@ -128,6 +130,9 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
         return l10n.accountInitialBalanceHint;
     }
   }
+
+  String _formatDate(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
   /// v1.15.0: 检查账户名称是否重复
   Future<void> _checkNameDuplicate(String name) async {
@@ -197,7 +202,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
             label: label, hint: hint, prefix: prefix, errorText: errorText);
 
     final isCreditCard = _selectedType == 'credit_card';
-    final isBankCard = _selectedType == 'bank_card' || _selectedType == 'virtual_account';
+    // v4.9.1: 仅银行卡显示开户行/卡号后四位,支付宝/微信等虚拟账户不再显示
+    final isBankCard = _selectedType == 'bank_card';
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
@@ -363,6 +369,43 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                                 ),
                               ),
                             ],
+                          ),
+                          SizedBox(height: 12.0.scaled(context, ref)),
+                          // v4.9.3: 初始资金日期(默认今天,便于补历史流水)
+                          InkWell(
+                            borderRadius: BorderRadius.circular(12),
+                            onTap: () async {
+                              FocusManager.instance.primaryFocus?.unfocus();
+                              if (!context.mounted) return;
+                              final picked = await showDatePicker(
+                                context: context,
+                                initialDate: _initialDate,
+                                firstDate: DateTime(2000),
+                                lastDate: DateTime.now(),
+                              );
+                              if (picked != null) {
+                                setState(() => _initialDate = picked);
+                              }
+                            },
+                            child: InputDecorator(
+                              decoration: filledDec(
+                                  label: l10n.accountInitialDate),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      _formatDate(_initialDate),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 16),
+                                    ),
+                                  ),
+                                  Icon(Icons.expand_more,
+                                      size: 18.0.scaled(context, ref),
+                                      color: BeeTokens.iconTertiary(context)),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -730,10 +773,10 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
         final wasCreditCard = widget.account!.type == 'credit_card';
         final clearCreditCardFields = wasCreditCard && !isCreditCard;
 
-        // 元信息字段
+        // 元信息字段(开户行/卡号后四位)仅 bank_card/credit_card 显示;
+        // v4.9.1: 虚拟账户等非卡账户保存时清掉历史元信息,避免残留卡号。
         final isBankOrCredit = _selectedType == 'bank_card' || _selectedType == 'credit_card';
-        final wasBankOrCredit = widget.account!.type == 'bank_card' || widget.account!.type == 'credit_card';
-        final clearMetadataFields = wasBankOrCredit && !isBankOrCredit;
+        final clearMetadataFields = !isBankOrCredit;
         final bankName = isBankOrCredit ? _bankNameController.text.trim() : null;
         final cardLastFour = isBankOrCredit ? _cardLastFourController.text.trim() : null;
         final noteText = _noteController.text.trim();
@@ -744,6 +787,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
           type: _selectedType,
           currency: currencyToUpdate,
           initialBalance: initialBalance,
+          initialDate: _initialDate,
           creditLimit: isCreditCard ? creditLimit : null,
           billingDay: isCreditCard ? _billingDay : null,
           paymentDueDay: isCreditCard ? _paymentDueDay : null,
@@ -770,6 +814,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
           type: _selectedType,
           currency: _selectedCurrency,
           initialBalance: initialBalance,
+          initialDate: _initialDate,
           creditLimit: creditLimit,
           billingDay: isCreditCard ? _billingDay : null,
           paymentDueDay: isCreditCard ? _paymentDueDay : null,
