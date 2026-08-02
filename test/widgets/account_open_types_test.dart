@@ -42,10 +42,10 @@ void main() {
     await repo.createAccount(ledgerId: ledgerId, name: '现金', type: 'cash');
     await repo.createAccount(
       ledgerId: ledgerId,
-      name: '应收款',
+      name: '借出款',
       type: 'receivable',
     );
-    await repo.createAccount(ledgerId: ledgerId, name: '贷款', type: 'loan');
+    await repo.createAccount(ledgerId: ledgerId, name: '房贷', type: 'loan');
     await repo.createAccount(
       ledgerId: ledgerId,
       name: '基金账户',
@@ -89,8 +89,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('现金'), findsOneWidget);
-    expect(find.text('应收款'), findsOneWidget);
-    expect(find.text('贷款'), findsOneWidget);
+    expect(find.text('借出款'), findsOneWidget);
+    expect(find.text('房贷'), findsOneWidget);
     expect(find.text('基金账户'), findsNothing);
     expect(find.text('隐藏账户'), findsNothing);
 
@@ -113,22 +113,41 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.text('应收款'), findsWidgets);
-    expect(find.text('贷款'), findsWidgets);
+    expect(find.text('借出款'), findsWidgets);
+    expect(find.text('房贷'), findsWidgets);
     expect(find.text('基金账户'), findsNothing);
     expect(find.text('隐藏账户'), findsNothing);
   });
 
-  testWidgets('TransferForm: 转出/转入网格出现应收款/贷款,投资与隐藏不可选',
+  testWidgets('TransferForm: 抽屉分格出现债权/负债类型,投资与隐藏不可选',
       (tester) async {
     await tester.pumpWidget(wrap(TransferForm(onTransferComplete: () {})));
     await tester.pumpAndSettle();
 
-    // 未选转出账户时,转入网格 = 转出网格,每个候选出现 2 次
-    expect(find.text('现金'), findsNWidgets(2));
-    expect(find.text('应收款'), findsNWidgets(2));
-    expect(find.text('贷款'), findsNWidgets(2));
+    // 点击账户行打开转出抽屉
+    await tester.tap(find.text('账户'));
+    await tester.pumpAndSettle();
+    expect(find.text('转出账户'), findsOneWidget);
+
+    // 左侧类型导航包含债权/负债（应收款/贷款类型已放开）
+    expect(find.text('应收款'), findsOneWidget);
+    expect(find.text('贷款'), findsOneWidget);
+
+    // 切换到债权类型 → 借出款可见
+    await tester.tap(find.text('应收款'));
+    await tester.pumpAndSettle();
+    expect(find.text('借出款'), findsOneWidget);
+
+    // 切换到负债类型 → 房贷可见
+    await tester.tap(find.text('贷款'));
+    await tester.pumpAndSettle();
+    expect(find.text('房贷'), findsOneWidget);
+
+    // 投资/隐藏账户始终不可选
     expect(find.text('基金账户'), findsNothing);
     expect(find.text('隐藏账户'), findsNothing);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
   });
 }

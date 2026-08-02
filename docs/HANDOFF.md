@@ -36,6 +36,67 @@
 **移交角色**：invest-ui
 **接收角色**：项目经理（PM）
 
+**完成工作**：阶段 5.2 转账模式体验统一（2 项全部完成）
+
+1. **5.2.1 转账金额独立填写** — [transfer_form.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\transaction\transfer_form.dart)
+   - 金额作为表单顶部第一行，点击直接打开 AmountEditorSheet，不再依赖「两个账户都选后自动弹出」
+   - 提交时若两端账户未选，留在金额弹窗内 toast 提示「选择账户」，不丢已输金额
+
+2. **5.2.2 转账账户抽屉分格** — 新增 [account_drawer_sheet.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\transaction\account_drawer_sheet.dart) + transfer_form.dart
+   - 抽出公共账户抽屉组件 showAccountDrawerSheet（左侧一级类型竖向导航 + 右侧一户一行余额；支持 title / pinnedAccountId（隐藏账户钉住灰标）/ excludedAccountId / 管理入口），TxEntryForm 与 TransferForm 共用
+   - TransferForm 改为 金额-账户-时间-标签-备注 五行；账户行显示「A ⇄ B」
+   - 点击账户行：先选转出抽屉 → 自动进入转入抽屉（排除已选转出账户）；两端已选后再次点击可弹「修改转出/修改转入」
+   - 转账保存逻辑不变（transfer 类型 + from/to + 金额）
+
+**测试**：
+- transfer_form_account_hidden_test 重写为抽屉流程（编辑态钉住隐藏账户灰标 / 新建不出现）
+- account_open_types_test 的 TransferForm 用例改为抽屉分格验证（债权/负债类型可选，投资/隐藏不可选）
+- transaction_editor_page_test 新增：转账 Tab 五行结构、金额独立打开小键盘、抽屉两段选择回显 A ⇄ B
+- 全量 flutter analyze 零 error（866 个预存 info/warning）
+- 全量 flutter test：566 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**下一个任务需要知道的**：
+- 公共组件：lib/widgets/transaction/account_drawer_sheet.dart，支出/收入/转账统一走 showAccountDrawerSheet
+- TransferForm 不再有转出/转入双网格；账户行回显格式「A ⇄ B」
+- 转账金额与账户完全解耦，提交时统一校验两端账户
+- 视觉布局未做 Windows 实机截图验证（widget 测试覆盖结构与回归）
+
+**git 状态**：当前分支 main，未提交（等待 PM 审查）
+
+---
+
+## 2026-08-02
+
+**移交角色**：项目经理（PM）
+**接收角色**：UI 工程师（invest-ui）
+
+**任务**：5.2 转账模式体验统一（2 个问题）
+
+**问题 1：转账无法独立填写金额**
+- 文件：lib/widgets/transaction/transfer_form.dart
+- 现状：金额依赖「两个账户都选后自动弹出金额弹窗」（_openAmountSheet），不是独立字段
+- 要求：转账模式与支出/收入一致，金额作为独立行（顶部第一行），点击金额行才弹数字小键盘，不依赖账户选择
+
+**问题 2：转出/转入账户太大，改为抽屉分格**
+- 现状：转出/转入是两个大型选择器（可能是下拉/大卡片）
+- 要求：与 TxEntryForm 新版一致
+  a) 字段顺序：金额-转账-时间-标签-备注
+  b) 转账行显示「账户：转出⇄转入」（如「账户：支付宝 ⇄ 储蓄卡」），点击弹出抽屉分格
+  c) 抽屉分格：左侧一级账户类型竖向导航 + 右侧账户一户一行显示余额（复用 tx_entry_form 的 _AccountDrawerSheet 设计，建议抽公共组件 _AccountDrawerSheet 或直接复用）
+  d) 首次选择转出账户后，再选转入账户（或转出/转入同一抽屉内两段选择）
+
+**实现建议**：
+- 将 tx_entry_form.dart 的 _AccountDrawerSheet / _showAccountDrawer 抽为公共组件（如 lib/widgets/transaction/account_drawer_sheet.dart），转账和收支共用
+- TransferForm 的 build 改为与 TxEntryForm 相同的 ListView 字段行结构
+- 转账保存逻辑不变（transfer 类型 + from/to 账户 + 金额）
+
+**约束**：flutter analyze 零 error；transaction_editor_page_test / transfer 相关测试全过；补充转账金额独立、抽屉分格测试
+
+## 2026-08-02
+
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
 **完成工作**：阶段 5.1 记账界面体验优化（7 项全部完成，对应 PM 9 个问题）
 
 1. **5.1.1 备注弹框报错修复 + 5.1.2 备注行内填写** — [tx_entry_form.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\transaction\tx_entry_form.dart)

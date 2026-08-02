@@ -4,26 +4,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/db.dart';
 import '../../data/repositories/local/local_repository.dart';
+import '../../l10n/app_localizations.dart';
 import '../../models/note_history.dart';
 import '../../pages/tag/widgets/tag_selector.dart';
 import '../../providers.dart';
-import '../../providers/shared_ledger_providers.dart';
-import '../../l10n/app_localizations.dart';
-import '../../styles/tokens.dart';
-import '../../services/billing/post_processor.dart';
 import '../../services/attachment_service.dart';
+import '../../services/billing/post_processor.dart';
 import '../../services/data/note_history_service.dart';
 import '../../services/data/tx_author_service.dart';
+import '../../styles/tokens.dart';
+import '../../utils/currencies.dart';
+import '../../utils/shared_ledger_picker_filter.dart';
 import '../biz/amount_editor_sheet.dart';
 import '../biz/format_money.dart';
 import '../biz/note_picker_dialog.dart';
-import '../../utils/account_type_utils.dart';
-import '../../utils/currencies.dart';
-import '../../utils/shared_ledger_picker_filter.dart';
 import '../ui/ui.dart';
+import 'account_drawer_sheet.dart';
 
-/// 转账表单组件
-/// 用于创建或编辑转账记录
+/// 转账表单组件（v5.2 转账模式体验统一）
+/// 字段顺序：金额-账户-时间-标签-备注；账户行点击弹抽屉分格，
+/// 先选转出再选转入；金额可独立填写，不依赖账户选择。
 class TransferForm extends ConsumerStatefulWidget {
   /// 转账完成回调
   final VoidCallback onTransferComplete;
@@ -66,9 +66,10 @@ class TransferForm extends ConsumerStatefulWidget {
 }
 
 class _TransferFormState extends ConsumerState<TransferForm> {
+  Account? _fromAccount;
+  Account? _toAccount;
   int? _fromAccountId;
   int? _toAccountId;
-  bool _autoOpened = false;
   late DateTime _date;
   double _amount = 0;
   List<int> _tagIds = [];
@@ -79,7 +80,6 @@ class _TransferFormState extends ConsumerState<TransferForm> {
   @override
   void initState() {
     super.initState();
-    // 初始化账户ID（用于编辑模式）
     _fromAccountId = widget.initialFromAccountId;
     _toAccountId = widget.initialToAccountId;
     _date = widget.initialDate ?? DateTime.now();
@@ -87,18 +87,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
     _tagIds = List.from(widget.initialTagIds ?? []);
     _noteCtrl = TextEditingController(text: widget.initialNote ?? '');
     _loadFrequentNotes();
-
-    // 如果是编辑模式且两个账户都已选择，自动打开金额编辑弹窗
-    if (widget.editingTransactionId != null &&
-        _fromAccountId != null &&
-        _toAccountId != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        if (mounted && !_autoOpened) {
-          _autoOpened = true;
-          await _openAmountSheet();
-        }
-      });
-    }
+    _resolveInitialAccounts();
   }
 
   @override
@@ -106,6 +95,19 @@ class _TransferFormState extends ConsumerState<TransferForm> {
     _noteCtrl.dispose();
     _noteFocusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _resolveInitialAccounts() async {
+    final fromId = widget.initialFromAccountId;
+    if (fromId != null) {
+      final a = await _lookupAccount(fromId);
+      if (a != null && mounted) setState(() => _fromAccount = a);
+    }
+    final toId = widget.initialToAccountId;
+    if (toId != null) {
+      final a = await _lookupAccount(toId);
+      if (a != null && mounted) setState(() => _toAccount = a);
+    }
   }
 
   // 检查两个账户是否是相同币种
@@ -144,230 +146,6 @@ class _TransferFormState extends ConsumerState<TransferForm> {
       if (syntheticIdForSyncId(r.syncId) == accountId) return r.syncId;
     }
     return null;
-  }
-
-  // 当两个账户都选择后，自动弹出金额输入弹窗
-  Future<void> _openAmountSheet() async {
-    final l10n = AppLocalizations.of(context);
-
-    // 检查币种是否一致(跨币种转账守卫,.docs/multi-currency-ledger 01 §4.4)
-    final sameCurrency = await _checkSameCurrency();
-    if (!sameCurrency) {
-      // 存量数据放行(2026-07-12 细则):编辑模式且账户对未改动(老数据在
-      // 守卫上线前就是跨币种)→ 放行让用户能改备注/日期等,不强迫重选账户。
-      final isOriginalPair = widget.editingTransactionId != null &&
-          _fromAccountId == widget.initialFromAccountId &&
-          _toAccountId == widget.initialToAccountId;
-      if (!isOriginalPair) {
-        if (mounted) {
-          showToast(context, l10n.transferDifferentCurrencyError);
-          // 重置转入账户
-          setState(() => _toAccountId = null);
-        }
-        return;
-      }
-    }
-
-    final repo = ref.read(repositoryProvider);
-    final ledgerId = ref.read(currentLedgerIdProvider);
-
-    if (!mounted) return;
-
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: BeeTokens.surfaceSheet(context),
-      builder: (context) => AmountEditorSheet(
-        categoryName: l10n.transferTitle,
-        initialDate: _date,
-        initialAmount: _amount,
-        initialNote: _noteCtrl.text.isEmpty ? null : _noteCtrl.text,
-        initialTagIds: _tagIds,
-        showAccountPicker: false,
-        ledgerId: ledgerId,
-        editingTransactionId: widget.editingTransactionId,
-        transactionKind: 'transfer',
-        onSubmit: (result) async {
-          _amount = result.amount;
-          final attachmentService = ref.read(attachmentServiceProvider);
-          // 获取虚拟转账分类ID
-          final transferCategory = await ref.read(transferCategoryProvider.future);
-          final transferCategoryId = transferCategory.id;
-
-          // §7 共享账本:Editor picker 给的是 synthetic Account(负数 id)。
-          // 写本地 Drift 时 accountId / toAccountId 留 null,override 字段
-          // 走 Owner 的 syncId;push 序列化时按 override 输出 payload。
-          final isSyntheticFrom =
-              _fromAccountId != null && _fromAccountId! < 0;
-          final isSyntheticTo = _toAccountId != null && _toAccountId! < 0;
-          final fromAccountForAdd = isSyntheticFrom ? null : _fromAccountId;
-          final toAccountForAdd = isSyntheticTo ? null : _toAccountId;
-          final fromOverride = isSyntheticFrom
-              ? await _resolveSyncIdByAccountId(_fromAccountId!, ledgerId)
-              : null;
-          final toOverride = isSyntheticTo
-              ? await _resolveSyncIdByAccountId(_toAccountId!, ledgerId)
-              : null;
-
-          try {
-            if (widget.editingTransactionId != null) {
-              // 编辑模式：更新现有转账记录
-              await repo.updateTransaction(
-                id: widget.editingTransactionId!,
-                type: 'transfer',
-                amount: result.amount,
-                categoryId: transferCategoryId, // 使用虚拟转账分类ID
-                note: result.note,
-                happenedAt: result.date,
-                accountId: d.Value<int?>(fromAccountForAdd),
-                accountSyncIdOverride: fromOverride,
-              );
-              // 更新 toAccountId(同时写 toAccountSyncIdOverride,共享账本场景)
-              await repo.updateTransactionFields(
-                id: widget.editingTransactionId!,
-                toAccountId: d.Value<int?>(toAccountForAdd),
-                toAccountSyncIdOverride: toOverride,
-                writeToAccountSyncIdOverride: true,
-              );
-              // 共享账本:回填编辑人,UI 头像组立即展示
-              await TxAuthorService.markEdited(
-                  ref, widget.editingTransactionId!);
-              // 更新标签
-              if (result.tagIds.isNotEmpty) {
-                await repo.updateTransactionTags(
-                  transactionId: widget.editingTransactionId!,
-                  tagIds: result.tagIds,
-                );
-                // 刷新标签列表缓存
-                ref.read(tagListRefreshProvider.notifier).state++;
-              } else {
-                // 编辑模式：如果没有选择标签，清除原有标签
-                await repo.removeAllTagsFromTransaction(widget.editingTransactionId!);
-                ref.read(tagListRefreshProvider.notifier).state++;
-              }
-
-              // 保存待上传的附件
-              if (result.pendingAttachments.isNotEmpty) {
-                await attachmentService.saveAttachments(
-                  transactionId: widget.editingTransactionId!,
-                  sourceFiles: result.pendingAttachments,
-                  startIndex: 0,
-                );
-                // 刷新附件列表缓存
-                ref.read(attachmentListRefreshProvider.notifier).state++;
-              }
-
-              // 统一处理：自动/手动同步与状态刷新
-              await PostProcessor.sync(ref, ledgerId: ledgerId);
-              // 刷新统计
-              ref.invalidate(countsForLedgerProvider(ledgerId));
-              ref.read(statsRefreshProvider.notifier).state++;
-
-              if (!context.mounted) return;
-              Navigator.of(context).pop(); // 关闭金额输入弹窗
-              showToast(context, l10n.transferUpdateSuccess);
-              widget.onTransferComplete();
-            } else {
-              // 创建模式：新建转账记录
-              final txId = await repo.addTransaction(
-                ledgerId: ledgerId,
-                type: 'transfer',
-                amount: result.amount,
-                categoryId: transferCategoryId, // 使用虚拟转账分类ID
-                accountId: fromAccountForAdd,
-                toAccountId: toAccountForAdd,
-                accountSyncIdOverride: fromOverride,
-                toAccountSyncIdOverride: toOverride,
-                note: result.note,
-                happenedAt: result.date,
-              );
-              // 共享账本:本地立即标记创建人 + 编辑人
-              await TxAuthorService.markCreated(ref, txId);
-
-              // 关联标签
-              if (result.tagIds.isNotEmpty) {
-                await repo.updateTransactionTags(
-                  transactionId: txId,
-                  tagIds: result.tagIds,
-                );
-                // 刷新标签列表缓存
-                ref.read(tagListRefreshProvider.notifier).state++;
-              }
-
-              // 保存待上传的附件
-              if (result.pendingAttachments.isNotEmpty) {
-                await attachmentService.saveAttachments(
-                  transactionId: txId,
-                  sourceFiles: result.pendingAttachments,
-                  startIndex: 0,
-                );
-                // 刷新附件列表缓存
-                ref.read(attachmentListRefreshProvider.notifier).state++;
-              }
-
-              // 统一处理：自动/手动同步与状态刷新
-              await PostProcessor.sync(ref, ledgerId: ledgerId);
-              // 刷新统计
-              ref.invalidate(countsForLedgerProvider(ledgerId));
-              ref.read(statsRefreshProvider.notifier).state++;
-
-              if (!context.mounted) return;
-              Navigator.of(context).pop(); // 关闭金额输入弹窗
-              showToast(context, l10n.transferCreateSuccess);
-
-              // 重置状态
-              setState(() {
-                _fromAccountId = null;
-                _toAccountId = null;
-              });
-
-              widget.onTransferComplete();
-            }
-          } catch (e) {
-            if (context.mounted) {
-              Navigator.of(context).pop();
-              showToast(context, '${l10n.commonError}: $e');
-            }
-          }
-        },
-      ),
-    );
-  }
-
-  /// §7 共享账本:Editor 在共享账本下转账要选 Owner 的账户(SharedLedger
-  /// Accounts 镜像),而非自己的 user-global。跟 AccountPicker / category_selector
-  /// 一致用 filterAccountsForLedger 转 synthetic Account。
-  ///
-  /// 账户隐藏(#240)E1 钉住:编辑历史转账(editingTransactionId != null)时,
-  /// 若转出/转入账户当前已被隐藏(因而被上面 filterAccountsForLedger 排
-  /// 除),补回候选(hidden=true,build() 渲染网格时打「已隐藏」灰标),让用
-  /// 户能原样保存;其余隐藏账户仍不出现。新建转账场景不钉住。跟
-  /// AccountSelector.pinnedAccountId 同一范式(见 account_selector.dart)。
-  Future<List<Account>> _loadFilteredAccounts() async {
-    final repo = ref.read(repositoryProvider);
-    final allAccounts = await repo.getAllAccounts();
-    var accounts = allAccounts;
-    if (repo is LocalRepository) {
-      final currentLedgerId = ref.read(currentLedgerIdProvider);
-      final ctx = await repo.db.loadLedgerPickerContext(currentLedgerId);
-      accounts = await repo.db.filterAccountsForLedger(allAccounts, ctx);
-    }
-
-    if (widget.editingTransactionId != null) {
-      for (final pinnedId in {
-        widget.initialFromAccountId,
-        widget.initialToAccountId,
-      }) {
-        if (pinnedId == null) continue;
-        if (accounts.any((a) => a.id == pinnedId)) continue;
-        final pinned = await _lookupAccount(pinnedId);
-        if (pinned != null && pinned.hidden) {
-          accounts = [...accounts, pinned];
-        }
-      }
-    }
-
-    return accounts;
   }
 
   Future<void> _loadFrequentNotes() async {
@@ -430,12 +208,312 @@ class _TransferFormState extends ConsumerState<TransferForm> {
     }
   }
 
-  Future<void> _openAmountFromRow() async {
-    if (_fromAccountId == null || _toAccountId == null) {
-      showToast(context, AppLocalizations.of(context).transferSelectAccount);
+  int? _pinnedIdFor(String side) {
+    if (widget.editingTransactionId == null) return null;
+    return side == 'from'
+        ? widget.initialFromAccountId
+        : widget.initialToAccountId;
+  }
+
+  /// 转账账户选择：抽屉先选转出，再自动进入转入抽屉（两端都选后允许改任一端）
+  Future<void> _pickTransferAccount() async {
+    final l10n = AppLocalizations.of(context);
+    if (_fromAccountId == null || _fromAccount == null) {
+      final from = await showAccountDrawerSheet(
+        context,
+        title: l10n.transferFromAccount,
+        pinnedAccountId: _pinnedIdFor('from'),
+      );
+      if (from == null || !mounted) return;
+      setState(() {
+        _fromAccount = from;
+        _fromAccountId = from.id;
+        if (_toAccountId == from.id) {
+          _toAccount = null;
+          _toAccountId = null;
+        }
+      });
+      final to = await showAccountDrawerSheet(
+        context,
+        title: l10n.transferToAccount,
+        excludedAccountId: from.id,
+        pinnedAccountId: _pinnedIdFor('to'),
+      );
+      if (to != null && mounted) {
+        setState(() {
+          _toAccount = to;
+          _toAccountId = to.id;
+        });
+      }
       return;
     }
-    await _openAmountSheet();
+
+    if (_toAccountId == null || _toAccount == null) {
+      final to = await showAccountDrawerSheet(
+        context,
+        title: l10n.transferToAccount,
+        excludedAccountId: _fromAccountId,
+        pinnedAccountId: _pinnedIdFor('to'),
+      );
+      if (to != null && mounted) {
+        setState(() {
+          _toAccount = to;
+          _toAccountId = to.id;
+        });
+      }
+      return;
+    }
+
+    // 两端都已选择：让用户选择修改哪一端
+    final side = await showModalBottomSheet<String>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.arrow_upward),
+              title: Text(l10n.transferFromAccount),
+              onTap: () => Navigator.pop(sheetContext, 'from'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.arrow_downward),
+              title: Text(l10n.transferToAccount),
+              onTap: () => Navigator.pop(sheetContext, 'to'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || side == null) return;
+
+    if (side == 'from') {
+      final from = await showAccountDrawerSheet(
+        context,
+        title: l10n.transferFromAccount,
+        initialAccount: _fromAccount,
+        pinnedAccountId: _pinnedIdFor('from'),
+      );
+      if (from != null && mounted) {
+        setState(() {
+          _fromAccount = from;
+          _fromAccountId = from.id;
+          if (_toAccountId == from.id) {
+            _toAccount = null;
+            _toAccountId = null;
+          }
+        });
+      }
+    } else {
+      final to = await showAccountDrawerSheet(
+        context,
+        title: l10n.transferToAccount,
+        initialAccount: _toAccount,
+        excludedAccountId: _fromAccountId,
+        pinnedAccountId: _pinnedIdFor('to'),
+      );
+      if (to != null && mounted) {
+        setState(() {
+          _toAccount = to;
+          _toAccountId = to.id;
+        });
+      }
+    }
+  }
+
+  // 金额独立填写，不依赖账户选择；提交时才校验两端账户
+  Future<void> _openAmountSheet() async {
+    final l10n = AppLocalizations.of(context);
+
+    // 两端已选时做币种守卫(跨币种转账守卫,.docs/multi-currency-ledger 01 §4.4)
+    if (_fromAccountId != null && _toAccountId != null) {
+      final sameCurrency = await _checkSameCurrency();
+      if (!sameCurrency) {
+        // 存量数据放行(2026-07-12 细则):编辑模式且账户对未改动(老数据在
+        // 守卫上线前就是跨币种)→ 放行让用户能改备注/日期等,不强迫重选账户。
+        final isOriginalPair = widget.editingTransactionId != null &&
+            _fromAccountId == widget.initialFromAccountId &&
+            _toAccountId == widget.initialToAccountId;
+        if (!isOriginalPair) {
+          if (mounted) {
+            showToast(context, l10n.transferDifferentCurrencyError);
+            setState(() {
+              _toAccountId = null;
+              _toAccount = null;
+            });
+          }
+          return;
+        }
+      }
+    }
+
+    final repo = ref.read(repositoryProvider);
+    final ledgerId = ref.read(currentLedgerIdProvider);
+
+    if (!mounted) return;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: BeeTokens.surfaceSheet(context),
+      builder: (sheetContext) => AmountEditorSheet(
+        categoryName: l10n.transferTitle,
+        initialDate: _date,
+        initialAmount: _amount,
+        initialNote: _noteCtrl.text.isEmpty ? null : _noteCtrl.text,
+        initialTagIds: _tagIds,
+        showAccountPicker: false,
+        ledgerId: ledgerId,
+        editingTransactionId: widget.editingTransactionId,
+        transactionKind: 'transfer',
+        onSubmit: (result) async {
+          _amount = result.amount;
+          if (_fromAccountId == null || _toAccountId == null) {
+            if (mounted) {
+              showToast(context, l10n.transferSelectAccount);
+            }
+            return;
+          }
+          final attachmentService = ref.read(attachmentServiceProvider);
+          // 获取虚拟转账分类ID
+          final transferCategory =
+              await ref.read(transferCategoryProvider.future);
+          final transferCategoryId = transferCategory.id;
+
+          // §7 共享账本:Editor picker 给的是 synthetic Account(负数 id)。
+          // 写本地 Drift 时 accountId / toAccountId 留 null,override 字段
+          // 走 Owner 的 syncId;push 序列化时按 override 输出 payload。
+          final isSyntheticFrom =
+              _fromAccountId != null && _fromAccountId! < 0;
+          final isSyntheticTo = _toAccountId != null && _toAccountId! < 0;
+          final fromAccountForAdd = isSyntheticFrom ? null : _fromAccountId;
+          final toAccountForAdd = isSyntheticTo ? null : _toAccountId;
+          final fromOverride = isSyntheticFrom
+              ? await _resolveSyncIdByAccountId(_fromAccountId!, ledgerId)
+              : null;
+          final toOverride = isSyntheticTo
+              ? await _resolveSyncIdByAccountId(_toAccountId!, ledgerId)
+              : null;
+
+          try {
+            if (widget.editingTransactionId != null) {
+              // 编辑模式：更新现有转账记录
+              await repo.updateTransaction(
+                id: widget.editingTransactionId!,
+                type: 'transfer',
+                amount: result.amount,
+                categoryId: transferCategoryId, // 使用虚拟转账分类ID
+                note: result.note,
+                happenedAt: result.date,
+                accountId: d.Value<int?>(fromAccountForAdd),
+                accountSyncIdOverride: fromOverride,
+              );
+              // 更新 toAccountId(同时写 toAccountSyncIdOverride,共享账本场景)
+              await repo.updateTransactionFields(
+                id: widget.editingTransactionId!,
+                toAccountId: d.Value<int?>(toAccountForAdd),
+                toAccountSyncIdOverride: toOverride,
+                writeToAccountSyncIdOverride: true,
+              );
+              // 共享账本:回填编辑人,UI 头像组立即展示
+              await TxAuthorService.markEdited(
+                  ref, widget.editingTransactionId!);
+              // 更新标签
+              if (result.tagIds.isNotEmpty) {
+                await repo.updateTransactionTags(
+                  transactionId: widget.editingTransactionId!,
+                  tagIds: result.tagIds,
+                );
+                ref.read(tagListRefreshProvider.notifier).state++;
+              } else {
+                await repo.removeAllTagsFromTransaction(
+                    widget.editingTransactionId!);
+                ref.read(tagListRefreshProvider.notifier).state++;
+              }
+
+              // 保存待上传的附件
+              if (result.pendingAttachments.isNotEmpty) {
+                await attachmentService.saveAttachments(
+                  transactionId: widget.editingTransactionId!,
+                  sourceFiles: result.pendingAttachments,
+                  startIndex: 0,
+                );
+                ref.read(attachmentListRefreshProvider.notifier).state++;
+              }
+
+              // 统一处理：自动/手动同步与状态刷新
+              await PostProcessor.sync(ref, ledgerId: ledgerId);
+              ref.invalidate(countsForLedgerProvider(ledgerId));
+              ref.read(statsRefreshProvider.notifier).state++;
+
+              if (!mounted) return;
+              Navigator.of(context).pop(); // 关闭金额输入弹窗
+              showToast(context, l10n.transferUpdateSuccess);
+              widget.onTransferComplete();
+            } else {
+              // 创建模式：新建转账记录
+              final txId = await repo.addTransaction(
+                ledgerId: ledgerId,
+                type: 'transfer',
+                amount: result.amount,
+                categoryId: transferCategoryId, // 使用虚拟转账分类ID
+                accountId: fromAccountForAdd,
+                toAccountId: toAccountForAdd,
+                accountSyncIdOverride: fromOverride,
+                toAccountSyncIdOverride: toOverride,
+                note: result.note,
+                happenedAt: result.date,
+              );
+              // 共享账本:本地立即标记创建人 + 编辑人
+              await TxAuthorService.markCreated(ref, txId);
+
+              // 关联标签
+              if (result.tagIds.isNotEmpty) {
+                await repo.updateTransactionTags(
+                  transactionId: txId,
+                  tagIds: result.tagIds,
+                );
+                ref.read(tagListRefreshProvider.notifier).state++;
+              }
+
+              // 保存待上传的附件
+              if (result.pendingAttachments.isNotEmpty) {
+                await attachmentService.saveAttachments(
+                  transactionId: txId,
+                  sourceFiles: result.pendingAttachments,
+                  startIndex: 0,
+                );
+                ref.read(attachmentListRefreshProvider.notifier).state++;
+              }
+
+              // 统一处理：自动/手动同步与状态刷新
+              await PostProcessor.sync(ref, ledgerId: ledgerId);
+              ref.invalidate(countsForLedgerProvider(ledgerId));
+              ref.read(statsRefreshProvider.notifier).state++;
+
+              if (!mounted) return;
+              Navigator.of(context).pop(); // 关闭金额输入弹窗
+              showToast(context, l10n.transferCreateSuccess);
+
+              // 重置状态
+              setState(() {
+                _fromAccountId = null;
+                _toAccountId = null;
+                _fromAccount = null;
+                _toAccount = null;
+              });
+
+              widget.onTransferComplete();
+            }
+          } catch (e) {
+            if (mounted) {
+              Navigator.of(context).pop();
+              showToast(context, '${l10n.commonError}: $e');
+            }
+          }
+        },
+      ),
+    );
   }
 
   Widget _buildTransferFieldRow({
@@ -575,16 +653,29 @@ class _TransferFormState extends ConsumerState<TransferForm> {
     return '$date $hh:$mm';
   }
 
-  /// 转账表单顶部字段区：金额-时间-标签-备注（v5.1 小键盘精简后保留入口）
-  Widget _buildTransferFields(
-    BuildContext context,
-    AppLocalizations l10n,
-  ) {
+  String _transferAccountLabel(AppLocalizations l10n) {
+    final fromName = _fromAccount?.name;
+    final toName = _toAccount?.name;
+    if (fromName != null && toName != null) {
+      return '$fromName ⇄ $toName';
+    }
+    if (fromName != null) {
+      return '$fromName ⇄ ${l10n.transferSelectAccount}';
+    }
+    return l10n.transferSelectAccount;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final currency = ref.watch(currentLedgerCurrencyProvider);
     final tagsAsync = ref.watch(tagsForCurrentLedgerProvider);
     final tags = tagsAsync.valueOrNull ?? [];
     final selectedTags = tags.where((t) => _tagIds.contains(t.id)).toList();
-    return Column(
+    final hasAccount = _fromAccount != null || _toAccount != null;
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
       children: [
         _buildTransferFieldRow(
           icon: Icons.keyboard_alt_outlined,
@@ -593,7 +684,15 @@ class _TransferFormState extends ConsumerState<TransferForm> {
               ? '${getCurrencySymbol(currency)} 0.00'
               : '${getCurrencySymbol(currency)} ${formatMoneyCompact(_amount)}',
           selected: _amount > 0,
-          onTap: _openAmountFromRow,
+          onTap: _openAmountSheet,
+        ),
+        const SizedBox(height: 12),
+        _buildTransferFieldRow(
+          icon: Icons.account_balance_wallet_outlined,
+          label: l10n.txFormAccount,
+          value: _transferAccountLabel(l10n),
+          selected: hasAccount,
+          onTap: _pickTransferAccount,
         ),
         const SizedBox(height: 12),
         _buildTransferFieldRow(
@@ -615,219 +714,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
         ),
         const SizedBox(height: 12),
         _buildTransferNoteField(context),
-        const SizedBox(height: 20),
       ],
     );
   }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final primary = ref.watch(primaryColorProvider);
-    final currentLedgerAsync = ref.watch(currentLedgerProvider);
-    final currentCurrency = currentLedgerAsync.asData?.value?.currency ?? 'CNY';
-    // WS shared_resource_change 推 Owner 账户更新后 rebuild,重查 SharedLedger
-    // Accounts。
-    ref.watch(sharedResourceRefreshProvider);
-
-    return FutureBuilder<List<Account>>(
-      future: _loadFilteredAccounts(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        if (snapshot.hasError) {
-          return Center(
-            child: Text(
-              '${l10n.commonError}: ${snapshot.error}',
-              style: const TextStyle(color: Colors.red),
-            ),
-          );
-        }
-        final allAccounts = snapshot.data ?? const <Account>[];
-        // 只显示与当前账本同币种的记账可选账户(v5.0 放开应收款/贷款,投资账户
-        // 仍走专属流程);E1 钉住的隐藏账户(hidden==true,见 _loadFilteredAccounts)
-        // 直接放行,不重复校验币种/类型,避免刚补回又被这里的过滤吃掉(跟
-        // AccountSelector 的钉住语义一致)。
-        final accounts = allAccounts
-            .where((account) =>
-                account.hidden ||
-                (account.currency == currentCurrency &&
-                    isBookingAccountType(account.type)))
-            .toList();
-
-        if (accounts.isEmpty) {
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Text(
-                l10n.transferSelectAccount,
-                style: TextStyle(color: BeeTokens.textSecondary(context)),
-              ),
-            ),
-          );
-        }
-
-        // 根据转出账户过滤转入账户列表
-        final toAccounts = _fromAccountId != null
-            ? accounts.where((a) => a.id != _fromAccountId).toList()
-            : accounts;
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // v5.1: 金额-时间-标签-备注独立行，小键盘只负责金额
-              _buildTransferFields(context, l10n),
-              // 转出账户标题
-              Text(
-                l10n.transferFromAccount,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: BeeTokens.textSecondary(context),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // 转出账户网格
-              _buildAccountGrid(accounts, true, primary),
-              const SizedBox(height: 24),
-              // 转账箭头
-              Center(
-                child: Icon(
-                  Icons.arrow_downward,
-                  color: primary,
-                  size: 32,
-                ),
-              ),
-              const SizedBox(height: 24),
-              // 转入账户标题
-              Text(
-                l10n.transferToAccount,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: BeeTokens.textSecondary(context),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // 转入账户网格
-              _buildAccountGrid(toAccounts, false, primary),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildAccountGrid(List<Account> accounts, bool isFrom, Color primary) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        childAspectRatio: 0.85,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: accounts.length,
-      itemBuilder: (context, index) {
-        final account = accounts[index];
-        final isSelected = isFrom
-            ? _fromAccountId == account.id
-            : _toAccountId == account.id;
-
-        return _buildAccountCard(account, isSelected, isFrom, primary);
-      },
-    );
-  }
-
-  Widget _buildAccountCard(
-    Account account,
-    bool isSelected,
-    bool isFrom,
-    Color primary,
-  ) {
-    return InkWell(
-      onTap: () async {
-        setState(() {
-          if (isFrom) {
-            _fromAccountId = account.id;
-            // 如果转入账户已选择且与转出账户相同，则清空转入账户
-            if (_toAccountId == account.id) {
-              _toAccountId = null;
-            }
-          } else {
-            _toAccountId = account.id;
-          }
-        });
-
-        // 如果两个账户都已选择，自动弹出金额输入弹窗
-        if (_fromAccountId != null && _toAccountId != null) {
-          await _openAmountSheet();
-        }
-      },
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        decoration: BoxDecoration(
-          // 未选中跟随页面底色(亮色白/暗黑纯黑),避免暗黑模式下突兀的白卡片
-          color: isSelected
-              ? primary.withValues(alpha: 0.1)
-              : BeeTokens.surfaceSheet(context),
-          border: Border.all(
-            color: isSelected ? primary : BeeTokens.borderStrong(context),
-            width: isSelected ? 2 : 1,
-          ),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            AccountTypeIcon(
-              type: account.type,
-              size: 32,
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // 账户隐藏(#240)E1 钉住:account.hidden 只可能在编辑历史
-                  // 转账、该账户被补回候选时为 true(其余隐藏账户已被过滤,
-                  // 不会出现在候选里),借该字段直接打灰标。
-                  if (account.hidden) ...[
-                    Icon(
-                      Icons.visibility_off,
-                      size: 10,
-                      color: BeeTokens.textTertiary(context),
-                    ),
-                    const SizedBox(width: 2),
-                  ],
-                  Flexible(
-                    child: Text(
-                      account.name,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.normal,
-                        color: isSelected
-                            ? primary
-                            : BeeTokens.textPrimary(context),
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
 }

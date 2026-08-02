@@ -86,15 +86,61 @@ void main() {
     expect(find.text('取消'), findsNothing);
   });
 
-  testWidgets('转账 Tab 仍加载 TransferForm 账户网格', (tester) async {
+  testWidgets('转账 Tab: 金额-账户-时间-标签-备注行,无账户网格', (tester) async {
     await tester.pumpWidget(wrap());
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('转账'));
     await tester.pumpAndSettle();
 
-    expect(find.text('钱包A'), findsNWidgets(2));
-    expect(find.text('招行信用卡'), findsNWidgets(2));
+    expect(find.text('金额'), findsOneWidget);
+    expect(find.text('账户'), findsOneWidget);
+    expect(find.text('时间'), findsOneWidget);
+    expect(find.text('标签'), findsOneWidget);
+    expect(find.text('备注'), findsOneWidget);
+    // 旧的转出/转入大网格已移除
+    expect(find.text('钱包A'), findsNothing);
+    expect(find.text('招行信用卡'), findsNothing);
+  });
+
+  testWidgets('转账金额独立:未选账户也能打开小键盘', (tester) async {
+    await tester.pumpWidget(wrap());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('转账'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('金额'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('完成'), findsOneWidget);
+    expect(find.text('C'), findsOneWidget);
+    // 关闭小键盘
+    await tester.tapAt(const Offset(20, 100));
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('转账抽屉两段选择:先转出后转入,回显 A ⇄ B', (tester) async {
+    await tester.pumpWidget(wrap());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('转账'));
+    await tester.pumpAndSettle();
+
+    // 账户行 → 转出抽屉
+    await tester.tap(find.text('账户'));
+    await tester.pumpAndSettle();
+    expect(find.text('转出账户'), findsOneWidget);
+
+    await tester.tap(find.text('钱包A'));
+    await tester.pumpAndSettle();
+
+    // 自动进入转入抽屉
+    expect(find.text('转入账户'), findsOneWidget);
+    await tester.tap(find.text('招行信用卡'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('钱包A ⇄ 招行信用卡'), findsOneWidget);
   });
 
   testWidgets('账户抽屉:一户一行显示余额,信用卡显示已用额度', (tester) async {
