@@ -278,6 +278,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get txSwapAccounts => '反转转出/转入';
 
   @override
+  String get txTransferFrom => '转出';
+
+  @override
+  String get txTransferTo => '转入';
+
+  @override
+  String get txFormPleaseSelect => '请选择';
+
+  @override
   String get txFormNote => '备注';
 
   @override

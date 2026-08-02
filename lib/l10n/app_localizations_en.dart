@@ -282,6 +282,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get txSwapAccounts => 'Swap accounts';
 
   @override
+  String get txTransferFrom => 'From';
+
+  @override
+  String get txTransferTo => 'To';
+
+  @override
+  String get txFormPleaseSelect => 'Please select';
+
+  @override
   String get txFormNote => 'Note';
 
   @override

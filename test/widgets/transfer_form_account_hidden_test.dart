@@ -86,20 +86,17 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    // 账户行回显 转出 ⇄ 转入（独立名称 + 反转按钮）
+    // 账户行两格回显：转出 / 转入 + 反转按钮
     expect(find.text('旧钱包'), findsOneWidget);
     expect(find.text('现金'), findsOneWidget);
+    expect(find.text('转出'), findsOneWidget);
+    expect(find.text('转入'), findsOneWidget);
     expect(find.byIcon(Icons.swap_horiz), findsOneWidget);
 
-    // 两端已选 → 先弹「修改哪一端」选择
-    await tester.tap(find.text('账户'));
+    // 点转出格 → 转出抽屉钉住隐藏的旧钱包并打灰标
+    await tester.tap(find.text('转出'));
     await tester.pumpAndSettle();
-    expect(find.text('转出账户'), findsWidgets);
-    expect(find.text('转入账户'), findsWidgets);
-
-    // 修改转出 → 抽屉钉住隐藏的旧钱包并打灰标
-    await tester.tap(find.text('转出账户').first);
-    await tester.pumpAndSettle();
+    expect(find.text('转出账户'), findsOneWidget);
     // 表单账户行 + 抽屉内各出现一次
     expect(find.text('旧钱包'), findsNWidgets(2));
     expect(find.byIcon(Icons.visibility_off), findsOneWidget);
@@ -114,7 +111,7 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('账户'));
+    await tester.tap(find.text('转入'));
     await tester.pumpAndSettle();
 
     // 转出已选 → 直接是转入抽屉;隐藏的旧钱包不出现
@@ -127,7 +124,7 @@ void main() {
     await tester.pumpWidget(host());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('账户'));
+    await tester.tap(find.text('转出'));
     await tester.pumpAndSettle();
 
     expect(find.text('转出账户'), findsOneWidget);

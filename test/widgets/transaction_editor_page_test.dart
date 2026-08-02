@@ -97,7 +97,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('金额'), findsOneWidget);
-    expect(find.text('账户'), findsOneWidget);
+    expect(find.text('转出'), findsOneWidget);
+    expect(find.text('转入'), findsOneWidget);
     expect(find.text('时间'), findsOneWidget);
     expect(find.text('标签'), findsOneWidget);
     expect(find.text('备注'), findsOneWidget);
@@ -132,15 +133,20 @@ void main() {
     await tester.tap(find.text('转账'));
     await tester.pumpAndSettle();
 
-    // 账户行 → 转出抽屉
-    await tester.tap(find.text('账户'));
+    // 转出格 → 只弹转出抽屉
+    await tester.tap(find.text('转出'));
     await tester.pumpAndSettle();
     expect(find.text('转出账户'), findsOneWidget);
 
     await tester.tap(find.text('钱包A'));
     await tester.pumpAndSettle();
 
-    // 自动进入转入抽屉
+    // 转出选择后不会自动连选转入
+    expect(find.text('转入账户'), findsNothing);
+
+    // 再点转入格 → 转入抽屉
+    await tester.tap(find.text('转入'));
+    await tester.pumpAndSettle();
     expect(find.text('转入账户'), findsOneWidget);
     await tester.tap(find.text('招行信用卡'));
     await tester.pumpAndSettle();

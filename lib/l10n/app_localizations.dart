@@ -611,6 +611,24 @@ abstract class AppLocalizations {
   /// **'Swap accounts'**
   String get txSwapAccounts;
 
+  /// No description provided for @txTransferFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get txTransferFrom;
+
+  /// No description provided for @txTransferTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get txTransferTo;
+
+  /// No description provided for @txFormPleaseSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select'**
+  String get txFormPleaseSelect;
+
   /// No description provided for @txFormNote.
   ///
   /// In en, this message translates to:

@@ -9,16 +9,21 @@ String formatEntryDateTime(
   DateTime date, {
   required bool showTime,
 }) {
-  final l10n = AppLocalizations.of(context);
-  final now = DateTime.now();
-  final isToday =
-      date.year == now.year && date.month == now.month && date.day == now.day;
-  final dayPart = isToday ? l10n.txDateToday : _weekdayLabel(l10n, date.weekday);
+  final dayPart = txDayLabel(context, date);
   final base = '${date.year}年${date.month}月${date.day}日 $dayPart';
   if (!showTime) return base;
   final hh = date.hour.toString().padLeft(2, '0');
   final mm = date.minute.toString().padLeft(2, '0');
   return '$base $hh:$mm';
+}
+
+/// 短日期标签：今天显示「今天」，其它显示周几（周六/周日…）
+String txDayLabel(BuildContext context, DateTime date) {
+  final l10n = AppLocalizations.of(context);
+  final now = DateTime.now();
+  final isToday =
+      date.year == now.year && date.month == now.month && date.day == now.day;
+  return isToday ? l10n.txDateToday : _weekdayLabel(l10n, date.weekday);
 }
 
 String _weekdayLabel(AppLocalizations l10n, int weekday) {

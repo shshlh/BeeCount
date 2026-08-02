@@ -162,7 +162,12 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
                 selected: _amount > 0,
                 onTap: _openAmountSheet,
               ),
-              const SizedBox(height: 12),
+              // v5.5: 字段行间浅灰分隔线
+              Divider(
+                height: 13,
+                thickness: 0.5,
+                color: BeeTokens.divider(context),
+              ),
               _buildFieldRow(
                 icon: Icons.category_outlined,
                 label: l10n.txFormCategory,
@@ -172,7 +177,11 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
                 selected: _category != null,
                 onTap: _pickCategory,
               ),
-              const SizedBox(height: 12),
+              Divider(
+                height: 13,
+                thickness: 0.5,
+                color: BeeTokens.divider(context),
+              ),
               _buildFieldRow(
                 icon: Icons.account_balance_wallet_outlined,
                 label: l10n.txFormAccount,
@@ -182,7 +191,11 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
                 selected: _account != null,
                 onTap: _pickAccount,
               ),
-              const SizedBox(height: 12),
+              Divider(
+                height: 13,
+                thickness: 0.5,
+                color: BeeTokens.divider(context),
+              ),
               _buildFieldRow(
                 icon: Icons.schedule_outlined,
                 label: l10n.txFormTime,
@@ -190,9 +203,17 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
                 selected: true,
                 onTap: _pickDateTime,
               ),
-              const SizedBox(height: 12),
+              Divider(
+                height: 13,
+                thickness: 0.5,
+                color: BeeTokens.divider(context),
+              ),
               _buildTagRow(context),
-              const SizedBox(height: 12),
+              Divider(
+                height: 13,
+                thickness: 0.5,
+                color: BeeTokens.divider(context),
+              ),
               _buildNoteField(context),
             ],
           ),
@@ -491,7 +512,6 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
       final res = await showWheelDateTimePicker(
         context,
         initial: _date,
-        maxDate: DateTime.now(),
       );
       if (res != null && mounted) setState(() => _date = res);
     } else {
@@ -499,7 +519,6 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
         context,
         initial: _date,
         mode: WheelDatePickerMode.ymd,
-        maxDate: DateTime.now(),
       );
       if (res != null && mounted) setState(() => _date = res);
     }

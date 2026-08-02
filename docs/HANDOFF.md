@@ -31,6 +31,80 @@
 
 ---
 
+
+## 2026-08-03
+
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**完成工作**：阶段 5.5 转账独立 + 记账视觉 + 日期选择器（5 项全部完成）
+
+1. **5.5.1 转出/转入独立选择** — [transfer_form.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\transaction\transfer_form.dart)
+   - 去掉自动连选：点转出只弹转出抽屉、点转入只弹转入抽屉；两端已选后点各自区域直接改对应端（删除中间「修改哪一端」弹窗）
+
+2. **5.5.2 反转按钮固定** — transfer_form.dart
+   - 账户行改为 转出 | 转入 两格（Expanded 均分）+ 中间固定 44px 宽按钮列，名称长度变化不移动按钮
+
+3. **5.5.3 转出/转入灰字标签** — transfer_form.dart
+   - 每格左上灰字小标签「转出」「转入」，下方账户名；未选显示「请选择」灰字
+
+4. **5.5.4 字段行分隔线** — [tx_entry_form.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\transaction\tx_entry_form.dart) + transfer_form.dart
+   - 金额/分类/账户/时间/标签/备注行间加浅灰 Divider（height 13 / 0.5px）
+
+5. **5.5.5 日期选择器周几 + 放宽范围** — [wheel_date_picker.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\ui\wheel_date_picker.dart) + 调用处
+   - 日期滚轮每格显示「M月d日 周X」，今天显示「今天」
+   - 年份范围改为今年 ±30 年（2026 → 1996~2056），月份 1-12 完整、日期按自然月
+   - tx_entry_form / transfer_form 调用处去掉 maxDate=今天限制
+
+**测试**：
+- 新增 wheel_date_picker_test（年份 ±30 / 月份 1-12 / 日期格周几与今天）
+- 更新 transaction_editor_page_test / transfer_form_account_hidden_test / account_open_types_test：独立选择流程、两格标签
+- 全量 flutter analyze 零 error（871 个预存 info/warning）
+- 全量 flutter test：575 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**下一个任务需要知道的**：
+- 转账账户选择已完全解耦：转出/转入各自独立弹抽屉，不再自动连选
+- 日期滚轮默认年份范围 ±30 年；其它调用方仍可传 minDate/maxDate 自定义范围
+- 字段行间分隔线沿用 BeeTokens.divider，视觉统一
+- 视觉布局未做 Windows 实机截图验证（widget 测试覆盖结构与回归）
+
+**git 状态**：当前分支 main，未提交（等待 PM 审查）
+
+---
+## 2026-08-03
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-ui（UI 工程师）
+
+**任务**：5.5 转账账户独立 + 记账页视觉 + 日期选择器（5 个问题）
+
+**问题 1：转出/转入账户完全独立选择**
+- 文件：lib/widgets/transaction/transfer_form.dart _pickTransferAccount
+- 现状：选完转出后自动连弹转入抽屉
+- 要求：点转出只弹转出抽屉；点转入只弹转入抽屉。完全独立，可先选转出再填金额再选转入。去掉自动连选；两端已选时点各自区域修改对应端（去掉中间选择弹窗）
+
+**问题 2：反转按钮固定位置**
+- 文件：transfer_form.dart _buildTransferAccountRow
+- 现状：Flexible + IconButton 布局，两侧名称长度变化导致中间按钮移动
+- 要求：按钮固定在中间（固定宽度列或 Expanded 均分两侧），不随名称长度移动
+
+**问题 3：转出/转入增加灰色小字标签**
+- 要求：账户行改为两格布局（转出 | 转入），每格左上灰字标签「转出」「转入」，下方显示账户名；未选显示「请选择」灰字；反转按钮在中间固定
+
+**问题 4：记账页字段行间加浅灰分隔线**
+- 文件：tx_entry_form.dart _buildFieldRow + transfer_form.dart 字段行
+- 要求：金额/分类/账户/时间/标签/备注每行之间加浅灰细线（Divider），替换或叠加现有间距
+
+**问题 5：日期选择器显示周几 + 放宽日期范围**
+- 文件：lib/widgets/ui/wheel_date_picker.dart + tx_entry_form/transfer_form 调用处
+- 要求：
+  a) 日期滚轮每格显示周几（8月2日 周六 / 8月3日 今天 / 8月4日 周二）
+  b) 不再限制 maxDate=今天：年份范围 = 今年上下 30 年（1996~2056），月份 1-12 完整，日期按月份自然天数，周几按真实日历
+  c) 调用处去掉 maxDate 限制（或传 null）
+  d) 最终显示栏仍保留周几（已有 tx_date_format）
+
+**约束**：flutter analyze 零 error；相关 widget 测试更新（转账独立选择、按钮固定、日期周几、日期范围）
+
 ## 2026-08-03
 
 **移交角色**：项目经理（PM）审查结论
@@ -256,6 +330,105 @@
 
 **约束**：flutter analyze 零 error；transaction_editor_page_test / transfer 相关测试全过；补充转账金额独立、抽屉分格测试
 
+
+## 2026-08-02
+
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**完成工作**：阶段 5.1 记账界面体验优化（7 项全部完成，对应 PM 9 个问题）
+
+1. **5.1.1 备注弹框报错修复 + 5.1.2 备注行内填写** — [tx_entry_form.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\transaction\tx_entry_form.dart)
+   - 删除备注 AlertDialog（原 TextEditingController 在 pop 后 dispose 导致闪报错），改为表单内嵌多行 TextField
+   - 复用 NoteHistoryService + NotePickerDialog 提供高频备注历史入口
+
+2. **5.1.3 金额行 + 字段顺序** — tx_entry_form.dart
+   - 字段顺序改为：金额-分类-账户-时间-标签-备注
+   - 金额行显示币种 + 金额（如 ¥ 0.00），点击进入小键盘；金额不再要求分类前置（提交支持无分类）
+
+3. **5.1.4 标签行** — tx_entry_form.dart
+   - 时间之后、备注之前新增「标签」行，点击弹 TagSelector 多选，选中标签名称回显
+
+4. **5.1.5 小键盘剥离非金额功能** — [amount_editor_sheet.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\biz\amount_editor_sheet.dart)
+   - 移除备注输入区、账户选择区、标签选择区、时间键（dateKey）
+   - 键盘改为 7-8-9-C / 4-5-6-+ / 1-2-3-- / .-0-⌫-完成；保留币种、金额、汇率、附件、记账标记
+   - 转账 Tab 同步在 [transfer_form.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\transaction\transfer_form.dart) 增加金额/时间/标签/备注行，避免精简后功能丢失
+
+5. **5.1.6 账户选择显示优化** — tx_entry_form.dart
+   - 账户抽屉右栏改为一户一行纵向列表；每行显示账户类型小字 + 余额
+   - 银行卡/储蓄/其它类型显示「余额 ¥x」；信用卡显示「已用额度 ¥x / 信用额度 ¥y」（负余额取绝对值）
+
+6. **5.1.7 分类/账户管理快捷入口** — tx_entry_form.dart
+   - 分类抽屉顶部新增「编辑」按钮 → CategoryManagePage（按支出/收入 tab）
+   - 账户抽屉顶部新增「管理」按钮 → AccountsPage
+
+**测试**：
+- 更新 transaction_editor_page_test：字段顺序/备注行/标签行/账户抽屉余额（一户一行 + 信用卡已用额度）
+- 更新 amount_editor_currency_test：小键盘无备注/标签/时间，保留 C 清空键与完成键
+- 全量 flutter analyze 零 error（866 个预存 info/warning）
+- 全量 flutter test：563 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**下一个任务需要知道的**：
+- AmountEditorSheet 已精简为纯金额键盘；时间/备注/标签由外层表单管理（TxEntryForm / TransferForm）
+- 分类已非必填，addTransaction 允许 categoryId 为 null
+- AmountEditorSheet 的 showAccountPicker 参数仅为 API 兼容保留，UI 不再渲染
+- 视觉布局未做 Windows 实机截图验证（widget 测试覆盖结构与回归）
+
+**git 状态**：当前分支 main，未提交（等待 PM 审查）
+
+---
+
+## 2026-08-02
+
+**移交角色**：项目经理（PM）
+**接收角色**：UI 工程师（invest-ui）+ invest-logic
+
+**任务**：5.1 记账界面体验优化（9 个问题）
+
+**问题 1：备注弹框闪报错（bug）**
+- 文件：lib/widgets/transaction/tx_entry_form.dart _pickNote
+- 现象：按取消/确定都会闪一下报错，但备注实际写入成功
+- 定位：TextEditingController 生命周期/dialog 关闭时序问题（可能在 Navigator.pop 后 dispose controller 导致）
+- 修复：确保 controller dispose 在 widget 卸载后安全执行，或改用 showDialog 内部创建 controller
+
+**问题 2：备注去掉弹框，改为行内填写**
+- 备注行直接内嵌 TextField（或点击行展开输入框），不弹 AlertDialog
+- 支持多行输入 + 高频备注历史（现有 NoteHistoryService 可复用）
+
+**问题 3：分类之上加「金额」行**
+- 表单顺序改为：金额-分类-账户-时间-标签-备注
+- 金额行显示币种 + 金额（如 ¥ 0.00），点击调出数字小键盘（AmountEditorSheet 剥离非金额功能后）
+
+**问题 4：数字小键盘的「标签」上提到界面**
+- 表单加「标签」行（时间之后、备注之前），点击弹 TagSelector
+- 顺序：金额-分类-账户-时间-标签-备注
+
+**问题 5：所有字段独立填写**
+- 分类/账户/金额/时间/标签/备注完全独立，无先后依赖
+- 现状已接近（分类非必填），确认金额无需分类前置
+
+**问题 6：数字小键盘删掉时间/备注/标签功能**
+- 文件：lib/widgets/biz/amount_editor_sheet.dart
+- 小键盘只保留：币种、金额、数字键、快捷操作（若有）、确定
+- 移除备注输入区、标签选择区、时间选择区（这些已在主表单）
+
+**问题 7：账户选择显示优化**
+- 二级账户一户一行，纵向排列
+- 每行显示账户余额小字：
+  - 银行卡/储蓄卡 → 显示余额（如「工商银行  ¥12,345.67」）
+  - 信用卡 → 显示已用额度（欠款/信用额度）
+  - 其它类型 → 显示当前余额
+- 文件：lib/widgets/transaction/tx_entry_form.dart _AccountDrawerSheet
+
+**问题 8：分类弹窗加「编辑」按钮**
+- 分类抽屉顶部「分类」标题旁加编辑图标按钮
+- 点击进入分类管理页（CategoryManagePage）
+
+**问题 9：账户弹窗加「管理」按钮**
+- 账户抽屉顶部「账户」标题旁加管理图标按钮
+- 点击进入账户管理页（AccountsPage 或账户设置）
+
+**约束**：flutter analyze 零 error；新增/更新 widget 测试；金额/备注/标签历史功能不回归
 ## 2026-08-02
 
 **移交角色**：invest-ui + UI 工程师

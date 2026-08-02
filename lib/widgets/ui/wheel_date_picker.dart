@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
+import '../../utils/tx_date_format.dart';
 
 enum WheelDatePickerMode { y, ym, ymd }
 
@@ -68,8 +69,11 @@ class _WheelDatePickerState extends State<WheelDatePicker> {
     // month/day 控制器在 build 中根据当前 year/month 的有效范围惰性创建
   }
 
-  DateTime get _min => widget.minDate ?? DateTime(2000, 1, 1);
-  DateTime get _max => widget.maxDate ?? DateTime(2100, 12, 31);
+  // v5.5: 年份范围 = 今年上下 30 年（如 2026 → 1996~2056），月份/日期按自然历
+  DateTime get _min =>
+      widget.minDate ?? DateTime(DateTime.now().year - 30, 1, 1);
+  DateTime get _max =>
+      widget.maxDate ?? DateTime(DateTime.now().year + 30, 12, 31);
 
   DateTime _clamp(DateTime d) {
     if (d.isBefore(_min)) return _min;
@@ -243,8 +247,14 @@ class _WheelDatePickerState extends State<WheelDatePicker> {
                       children: [
                         for (final d in days)
                           Center(
-                              child: Text('$d',
-                                  style: TextStyle(fontSize: 18, color: _textPrimary(context)))),
+                            child: Text(
+                              '$month月$d日 ${txDayLabel(context, DateTime(year, month, d))}',
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: _textPrimary(context),
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -330,8 +340,11 @@ class _DateStepPickerState extends State<_DateStepPicker> {
   FixedExtentScrollController? _monthCtrl;
   FixedExtentScrollController? _dayCtrl;
 
-  DateTime get _min => DateTime(2000, 1, 1);
-  DateTime get _max => widget.maxDate ?? DateTime(2100, 12, 31);
+  // v5.5: 与主日期选择器一致，年份范围 = 今年上下 30 年
+  DateTime get _min =>
+      DateTime(DateTime.now().year - 30, 1, 1);
+  DateTime get _max =>
+      widget.maxDate ?? DateTime(DateTime.now().year + 30, 12, 31);
 
   @override
   void initState() {
@@ -489,7 +502,15 @@ class _DateStepPickerState extends State<_DateStepPicker> {
                     }),
                     children: [
                       for (final d in days)
-                        Center(child: Text('$d', style: TextStyle(fontSize: 18, color: BeeTokens.textPrimary(context)))),
+                        Center(
+                          child: Text(
+                            '$month月$d日 ${txDayLabel(context, DateTime(year, month, d))}',
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: BeeTokens.textPrimary(context),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
                 ),

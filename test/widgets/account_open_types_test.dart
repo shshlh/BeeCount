@@ -124,8 +124,8 @@ void main() {
     await tester.pumpWidget(wrap(TransferForm(onTransferComplete: () {})));
     await tester.pumpAndSettle();
 
-    // 点击账户行打开转出抽屉
-    await tester.tap(find.text('账户'));
+    // 点击转出格打开转出抽屉
+    await tester.tap(find.text('转出'));
     await tester.pumpAndSettle();
     expect(find.text('转出账户'), findsOneWidget);
 

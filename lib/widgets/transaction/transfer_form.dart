@@ -189,7 +189,6 @@ class _TransferFormState extends ConsumerState<TransferForm> {
       final res = await showWheelDateTimePicker(
         context,
         initial: _date,
-        maxDate: DateTime.now(),
       );
       if (res != null && mounted) setState(() => _date = res);
     } else {
@@ -197,7 +196,6 @@ class _TransferFormState extends ConsumerState<TransferForm> {
         context,
         initial: _date,
         mode: WheelDatePickerMode.ymd,
-        maxDate: DateTime.now(),
       );
       if (res != null && mounted) setState(() => _date = res);
     }
@@ -217,109 +215,42 @@ class _TransferFormState extends ConsumerState<TransferForm> {
         : widget.initialToAccountId;
   }
 
-  /// 转账账户选择：抽屉先选转出，再自动进入转入抽屉（两端都选后允许改任一端）
-  Future<void> _pickTransferAccount() async {
+  /// v5.5: 转出/转入完全独立选择——点哪端只弹哪端抽屉，不再自动连选
+  Future<void> _pickFromAccount() async {
     final l10n = AppLocalizations.of(context);
-    if (_fromAccountId == null || _fromAccount == null) {
-      final from = await showAccountDrawerSheet(
-        context,
-        title: l10n.transferFromAccount,
-        pinnedAccountId: _pinnedIdFor('from'),
-      );
-      if (from == null || !mounted) return;
-      setState(() {
-        _fromAccount = from;
-        _fromAccountId = from.id;
-        if (_toAccountId == from.id) {
-          _toAccount = null;
-          _toAccountId = null;
-        }
-      });
-      final to = await showAccountDrawerSheet(
-        context,
-        title: l10n.transferToAccount,
-        excludedAccountId: from.id,
-        pinnedAccountId: _pinnedIdFor('to'),
-      );
-      if (to != null && mounted) {
-        setState(() {
-          _toAccount = to;
-          _toAccountId = to.id;
-        });
-      }
-      return;
-    }
-
-    if (_toAccountId == null || _toAccount == null) {
-      final to = await showAccountDrawerSheet(
-        context,
-        title: l10n.transferToAccount,
-        excludedAccountId: _fromAccountId,
-        pinnedAccountId: _pinnedIdFor('to'),
-      );
-      if (to != null && mounted) {
-        setState(() {
-          _toAccount = to;
-          _toAccountId = to.id;
-        });
-      }
-      return;
-    }
-
-    // 两端都已选择：让用户选择修改哪一端
-    final side = await showModalBottomSheet<String>(
-      context: context,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.arrow_upward),
-              title: Text(l10n.transferFromAccount),
-              onTap: () => Navigator.pop(sheetContext, 'from'),
-            ),
-            ListTile(
-              leading: const Icon(Icons.arrow_downward),
-              title: Text(l10n.transferToAccount),
-              onTap: () => Navigator.pop(sheetContext, 'to'),
-            ),
-          ],
-        ),
-      ),
+    final from = await showAccountDrawerSheet(
+      context,
+      title: l10n.transferFromAccount,
+      initialAccount: _fromAccount,
+      excludedAccountId: _toAccountId,
+      pinnedAccountId: _pinnedIdFor('from'),
     );
-    if (!mounted || side == null) return;
+    if (from == null || !mounted) return;
+    setState(() {
+      _fromAccount = from;
+      _fromAccountId = from.id;
+      if (_toAccountId == from.id) {
+        _toAccount = null;
+        _toAccountId = null;
+      }
+    });
+  }
 
-    if (side == 'from') {
-      final from = await showAccountDrawerSheet(
-        context,
-        title: l10n.transferFromAccount,
-        initialAccount: _fromAccount,
-        pinnedAccountId: _pinnedIdFor('from'),
-      );
-      if (from != null && mounted) {
-        setState(() {
-          _fromAccount = from;
-          _fromAccountId = from.id;
-          if (_toAccountId == from.id) {
-            _toAccount = null;
-            _toAccountId = null;
-          }
-        });
-      }
-    } else {
-      final to = await showAccountDrawerSheet(
-        context,
-        title: l10n.transferToAccount,
-        initialAccount: _toAccount,
-        excludedAccountId: _fromAccountId,
-        pinnedAccountId: _pinnedIdFor('to'),
-      );
-      if (to != null && mounted) {
-        setState(() {
-          _toAccount = to;
-          _toAccountId = to.id;
-        });
-      }
+  /// v5.5: 转入独立选择，排除已选转出账户
+  Future<void> _pickToAccount() async {
+    final l10n = AppLocalizations.of(context);
+    final to = await showAccountDrawerSheet(
+      context,
+      title: l10n.transferToAccount,
+      initialAccount: _toAccount,
+      excludedAccountId: _fromAccountId,
+      pinnedAccountId: _pinnedIdFor('to'),
+    );
+    if (to != null && mounted) {
+      setState(() {
+        _toAccount = to;
+        _toAccountId = to.id;
+      });
     }
   }
 
@@ -566,78 +497,97 @@ class _TransferFormState extends ConsumerState<TransferForm> {
     });
   }
 
-  /// 账户行：转出名 + ⇄ 反转按钮 + 转入名，点击行进入抽屉选择
+  /// 账户行：转出 | 转入 两格布局，中间固定反转按钮（v5.5）
   Widget _buildTransferAccountRow(
     BuildContext context,
     AppLocalizations l10n,
   ) {
-    final primary = ref.watch(primaryColorProvider);
-    final fromName = _fromAccount?.name;
-    final toName = _toAccount?.name;
-    final canSwap = fromName != null && toName != null;
+    final canSwap = _fromAccount != null && _toAccount != null;
     return Material(
       color: BeeTokens.surfaceSheet(context),
       borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: _pickTransferAccount,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(14, 6, 6, 6),
-          child: Row(
-            children: [
-              Icon(
-                Icons.account_balance_wallet_outlined,
-                size: 20,
-                color: BeeTokens.iconSecondary(context),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        child: Row(
+          children: [
+            Expanded(
+              child: _buildAccountSide(
+                context,
+                l10n,
+                side: 'from',
+                onTap: _pickFromAccount,
               ),
-              const SizedBox(width: 12),
-              Text(
-                l10n.txFormAccount,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: BeeTokens.textSecondary(context),
-                ),
-              ),
-              const Spacer(),
-              Flexible(
-                child: Text(
-                  fromName ?? l10n.transferSelectAccount,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: fromName != null
-                        ? primary
-                        : BeeTokens.textTertiary(context),
-                    fontWeight: fromName != null
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                  ),
-                ),
-              ),
-              IconButton(
+            ),
+            const SizedBox(width: 4),
+            // 固定宽度列，两侧名称长度变化不移动按钮
+            SizedBox(
+              width: 44,
+              child: IconButton(
                 onPressed: canSwap ? _swapTransferAccounts : null,
-                icon: const Icon(Icons.swap_horiz, size: 20),
+                icon: const Icon(Icons.swap_horiz, size: 22),
                 tooltip: l10n.txSwapAccounts,
               ),
-              Flexible(
-                child: Text(
-                  toName ?? l10n.transferSelectAccount,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: toName != null
-                        ? primary
-                        : BeeTokens.textTertiary(context),
-                    fontWeight: toName != null
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                  ),
-                ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: _buildAccountSide(
+                context,
+                l10n,
+                side: 'to',
+                onTap: _pickToAccount,
               ),
-            ],
-          ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 转出/转入单格：左上灰字标签 + 账户名（未选显示「请选择」）
+  Widget _buildAccountSide(
+    BuildContext context,
+    AppLocalizations l10n, {
+    required String side,
+    required VoidCallback onTap,
+  }) {
+    final isFrom = side == 'from';
+    final account = isFrom ? _fromAccount : _toAccount;
+    final label = isFrom ? l10n.txTransferFrom : l10n.txTransferTo;
+    final selected = account != null;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: BeeTokens.surfaceInput(context),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: BeeTokens.textTertiary(context),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              account?.name ?? l10n.txFormPleaseSelect,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 14,
+                color: selected
+                    ? BeeTokens.textPrimary(context)
+                    : BeeTokens.textTertiary(context),
+                fontWeight:
+                    selected ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -836,9 +786,18 @@ class _TransferFormState extends ConsumerState<TransferForm> {
                 selected: _amount > 0,
                 onTap: _openAmountSheet,
               ),
-              const SizedBox(height: 12),
+              // v5.5: 字段行间浅灰分隔线
+              Divider(
+                height: 13,
+                thickness: 0.5,
+                color: BeeTokens.divider(context),
+              ),
               _buildTransferAccountRow(context, l10n),
-              const SizedBox(height: 12),
+              Divider(
+                height: 13,
+                thickness: 0.5,
+                color: BeeTokens.divider(context),
+              ),
               _buildTransferFieldRow(
                 icon: Icons.schedule_outlined,
                 label: l10n.txFormTime,
@@ -846,7 +805,11 @@ class _TransferFormState extends ConsumerState<TransferForm> {
                 selected: true,
                 onTap: _pickTransferDate,
               ),
-              const SizedBox(height: 12),
+              Divider(
+                height: 13,
+                thickness: 0.5,
+                color: BeeTokens.divider(context),
+              ),
               _buildTransferFieldRow(
                 icon: Icons.label_outline,
                 label: l10n.txFormTag,
@@ -856,7 +819,11 @@ class _TransferFormState extends ConsumerState<TransferForm> {
                 selected: selectedTags.isNotEmpty,
                 onTap: _pickTransferTag,
               ),
-              const SizedBox(height: 12),
+              Divider(
+                height: 13,
+                thickness: 0.5,
+                color: BeeTokens.divider(context),
+              ),
               _buildTransferNoteField(context),
             ],
           ),
