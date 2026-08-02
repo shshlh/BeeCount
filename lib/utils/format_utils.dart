@@ -135,6 +135,22 @@ String formatBalanceFull(double balance, String currencyCode) {
   return '$sign${buffer.toString()}.$decPart';
 }
 
+/// 完整金额：千分号 + 固定小数位（v5.3 资产页统一格式，不做万/k/M 缩写）
+String formatFullAmount(double value, {int decimals = 2, bool signed = false}) {
+  final sign = value < 0 ? '-' : (signed ? '+' : '');
+  final absText = value.abs().toStringAsFixed(decimals);
+  final parts = absText.split('.');
+  final intPart = parts[0];
+  final buffer = StringBuffer();
+  for (int i = 0; i < intPart.length; i++) {
+    if (i > 0 && (intPart.length - i) % 3 == 0) {
+      buffer.write(',');
+    }
+    buffer.write(intPart[i]);
+  }
+  return '$sign$buffer.${parts[1]}';
+}
+
 /// 翻译账本名称
 ///
 /// 如果账本名称是 "Default Ledger"，则返回国际化后的名称

@@ -819,7 +819,8 @@ class _BeeAppState extends ConsumerState<BeeApp>
       child: Stack(
         children: [
           Scaffold(
-            extendBody: true, // 让页面内容延伸到底部栏后面
+            // v5.4: 底部导航固定占位，内容区不被覆盖（各 Tab 页面无需再自算底部 padding）
+            extendBody: false,
             body: IndexedStack(
               index: idx,
               children: _pages,

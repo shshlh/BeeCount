@@ -83,7 +83,7 @@ class HoldingCard extends ConsumerWidget {
                     AmountText(
                       value: holding.marketValue,
                       signed: false,
-                      useCompactFormat: true,
+                      useCompactFormat: false,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,

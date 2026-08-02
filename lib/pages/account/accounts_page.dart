@@ -7,18 +7,16 @@ import 'package:collection/collection.dart';
 import '../../providers.dart';
 import '../../services/billing/post_processor.dart';
 import '../../services/currency/rate_math.dart';
-import '../../services/marketing/product_promos.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/amount_text.dart';
-import '../../widgets/biz/format_money.dart';
 import '../../widgets/biz/section_card.dart';
-import '../../widgets/biz/product_promo_card.dart';
 import '../../data/db.dart' as db;
 import '../../l10n/app_localizations.dart';
 import '../../styles/tokens.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../../utils/account_type_utils.dart';
 import '../../utils/currencies.dart';
+import '../../utils/format_utils.dart';
 import '../../widgets/charts/asset_composition_chart.dart';
 import '../../widgets/charts/line_chart.dart';
 import '../../utils/net_worth_trend_utils.dart';
@@ -113,18 +111,13 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
             title: l10n.accountsTitle,
             showBack: !widget.asTab,
             compact: true,
-            // 顺序(左 → 右):加号 / 蜜蜂家当入口 / 设置。
-            // 设置放最右边(Material 设计惯例,溢出 / 设置类放最右),
-            // 蜜蜂家当放中间,顺手能点到但不抢主操作位。
+            // 顺序(左 → 右):加号 / 设置。
             actions: [
               IconButton(
                 onPressed: () => _addAccount(context, ref, ledgerId),
                 icon: const Icon(Icons.add),
                 tooltip: l10n.accountAddTooltip,
               ),
-              // 蜜蜂家当 BeeAssets 入口 — 行为走 ProductPromoLauncher
-              // (iOS 跳商店 / Android 弹窗)。
-              _BeeAssetsHeaderEntry(),
               IconButton(
                 onPressed: () => _showSettingsSheet(context, ref, accountFeatureAsync, accountsAsync),
                 icon: const Icon(Icons.settings_outlined),
@@ -352,7 +345,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     Map<String, ({double totalAssets, double totalLiabilities, double netWorth})> nwByCurrency,
   ) {
     final l10n = AppLocalizations.of(context);
-    final useCompact = ref.watch(compactAmountProvider);
+    // v5.3: 资产页不使用万/k/M 缩写，统一完整数字 + 2 位小数
+    final useCompact = false;
 
     // 多币种态总闸开启且折算结果就绪 → 走折算视图;否则原 per-currency 渲染原样回退。
     final multiCurrencyActive = ref.watch(multiCurrencyActiveProvider);
@@ -1005,7 +999,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
         }
       }
     }
-    final useCompact = ref.watch(compactAmountProvider);
+    // v5.3: 资产页不使用万/k/M 缩写，统一完整数字 + 2 位小数
+    final useCompact = false;
     final isSingleCurrency = subtotalByCurrency.length <= 1;
 
     // 折算态(总闸开启且汇率就绪)且组内多币种 → 小计折算并支持点击详情。
@@ -1344,7 +1339,7 @@ class _StatCell extends ConsumerWidget {
           value: value,
           signed: false,
           showCurrency: false,
-          useCompactFormat: ref.watch(compactAmountProvider),
+          useCompactFormat: false,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -1870,11 +1865,11 @@ class _HiddenAccountsSectionState
         rates: rates,
         base: base,
       );
-      return '${getCurrencySymbol(base)}${result.total.abs().toStringAsFixed(2)}';
+      return '${getCurrencySymbol(base)}${formatFullAmount(result.total.abs())}';
     }
     final currency = subtotalByCurrency.keys.firstOrNull ?? base;
     final value = subtotalByCurrency.values.firstOrNull ?? 0;
-    return '${getCurrencySymbol(currency)}${formatMoneyCompact(value, maxDecimals: 2, signed: false)}';
+    return '${getCurrencySymbol(currency)}${formatFullAmount(value)}';
   }
 }
 
@@ -2205,7 +2200,7 @@ class _AccountCard extends ConsumerWidget {
                 value: displayValue,
                 signed: false,
                 showCurrency: false,
-                useCompactFormat: ref.watch(compactAmountProvider),
+                useCompactFormat: false,
                 currencyCode: account.currency,
                 style: TextStyle(
                   fontSize: 20,
@@ -2352,7 +2347,7 @@ class _CardStat extends StatelessWidget {
           value: value,
           signed: false,
           showCurrency: false,
-          useCompactFormat: ref.watch(compactAmountProvider),
+                useCompactFormat: false,
           currencyCode: currencyCode,
           style: TextStyle(
             fontSize: 14,
@@ -2512,28 +2507,6 @@ class _CompactDefaultAccount extends ConsumerWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// 资产管理页 header 右上角的「蜜蜂家当」入口。
-///
-/// 用 Material 标准的 Premium / 进阶版图标(`workspace_premium_outlined`),
-/// 跟 setting / add 等 outlined 图标视觉重量完全一致;语义上暗示「升级 /
-/// 进阶版本」,鼓励点击。颜色自适应 header 背景。点击进入介绍弹窗。
-class _BeeAssetsHeaderEntry extends StatelessWidget {
-  const _BeeAssetsHeaderEntry();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final info = beeAssetsPromo(context);
-    final texts = buildPromoTexts(context, l10n.aboutBeeAssets);
-
-    return IconButton(
-      onPressed: () => ProductPromoLauncher.open(context, info, texts),
-      tooltip: info.title,
-      icon: const Icon(Icons.auto_awesome_outlined),
     );
   }
 }

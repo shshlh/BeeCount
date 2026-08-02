@@ -86,8 +86,10 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    // 账户行回显 转出 ⇄ 转入
-    expect(find.text('旧钱包 ⇄ 现金'), findsOneWidget);
+    // 账户行回显 转出 ⇄ 转入（独立名称 + 反转按钮）
+    expect(find.text('旧钱包'), findsOneWidget);
+    expect(find.text('现金'), findsOneWidget);
+    expect(find.byIcon(Icons.swap_horiz), findsOneWidget);
 
     // 两端已选 → 先弹「修改哪一端」选择
     await tester.tap(find.text('账户'));
@@ -98,7 +100,8 @@ void main() {
     // 修改转出 → 抽屉钉住隐藏的旧钱包并打灰标
     await tester.tap(find.text('转出账户').first);
     await tester.pumpAndSettle();
-    expect(find.text('旧钱包'), findsOneWidget);
+    // 表单账户行 + 抽屉内各出现一次
+    expect(find.text('旧钱包'), findsNWidgets(2));
     expect(find.byIcon(Icons.visibility_off), findsOneWidget);
     await closeDrawer(tester);
   });

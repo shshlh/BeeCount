@@ -393,7 +393,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                   value: isLiability ? stats.balance.abs() : stats.balance,
                   signed: false,
                   showCurrency: true,
-                  useCompactFormat: ref.watch(compactAmountProvider),
+                  useCompactFormat: false,
                   currencyCode: currencyCode,
                   style: TextStyle(
                     fontSize: 28,
@@ -665,7 +665,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                 value: usedAmount,
                 signed: false,
                 showCurrency: false,
-                useCompactFormat: ref.watch(compactAmountProvider),
+                useCompactFormat: false,
                 currencyCode: currencyCode,
                 style: TextStyle(
                   fontSize: 20,
@@ -1083,7 +1083,7 @@ class _OverviewStatCell extends ConsumerWidget {
           value: value,
           signed: false,
           showCurrency: false,
-          useCompactFormat: ref.watch(compactAmountProvider),
+          useCompactFormat: false,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -1183,7 +1183,7 @@ class _DetailStatCell extends ConsumerWidget {
           value: value,
           signed: false,
           showCurrency: true,
-          useCompactFormat: ref.watch(compactAmountProvider),
+          useCompactFormat: false,
           currencyCode: currencyCode,
           style: TextStyle(
             fontSize: 16,

@@ -252,6 +252,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get txFormTag => 'Tag';
 
   @override
+  String get txDateToday => 'Today';
+
+  @override
+  String get txDateSunday => 'Sun';
+
+  @override
+  String get txDateMonday => 'Mon';
+
+  @override
+  String get txDateTuesday => 'Tue';
+
+  @override
+  String get txDateWednesday => 'Wed';
+
+  @override
+  String get txDateThursday => 'Thu';
+
+  @override
+  String get txDateFriday => 'Fri';
+
+  @override
+  String get txDateSaturday => 'Sat';
+
+  @override
+  String get txSaveAndContinue => 'Save & add another';
+
+  @override
+  String get txSwapAccounts => 'Swap accounts';
+
+  @override
   String get txFormNote => 'Note';
 
   @override

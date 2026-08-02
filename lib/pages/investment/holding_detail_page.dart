@@ -132,7 +132,7 @@ class HoldingDetailPage extends ConsumerWidget {
             child: AmountText(
               value: holding.marketValue,
               signed: false,
-              useCompactFormat: true,
+              useCompactFormat: false,
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,

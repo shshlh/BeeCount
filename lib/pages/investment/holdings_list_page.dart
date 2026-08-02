@@ -13,11 +13,12 @@ import '../../widgets/investment/initial_holding_dialog.dart';
 
 /// 持仓列表页 — 展示当前账本下所有投资持仓。
 ///
-/// v4.7: 导入初始持仓按钮常驻顶部（不仅限于空态）。
+/// v4.7: 导入初始持仓按钮常驻（不仅限于空态）。
+/// v5.4: 投资组合摘要固定占位，只滚动持仓列表；导入按钮移入顶部栏右侧。
 ///
 /// 功能：
-/// - 顶部组合摘要卡片（总市值/总成本/盈亏/收益率/持仓数）
-/// - v4.7: 导入初始持仓按钮（常驻，摘要卡片下方）
+/// - 顶部固定组合摘要卡片（总市值/总成本/盈亏/收益率/持仓数）
+/// - v5.4: 顶部栏右侧「导入初始持仓」按钮（常驻）
 /// - 持仓卡片列表（基金名称、代码、份额、市值、盈亏）
 /// - 下拉刷新（刷新净值数据）
 /// - 空状态提示（无持仓时）
@@ -39,6 +40,23 @@ class HoldingsListPage extends ConsumerWidget {
             title: '投资持仓',
             showBack: !asTab,
             compact: true,
+            actions: [
+              IconButton(
+                onPressed: () => _importInitialHoldings(context, ref),
+                icon: const Icon(Icons.file_upload_outlined),
+                tooltip: '导入初始持仓',
+              ),
+            ],
+          ),
+          // 投资组合摘要固定占位，不随持仓滚动（v5.4）
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              BeeDimens.p12,
+              BeeDimens.p8,
+              BeeDimens.p12,
+              0,
+            ),
+            child: _buildSummaryCard(context, ref, summaryAsync),
           ),
           Expanded(
             child: RefreshIndicator(
@@ -60,21 +78,9 @@ class HoldingsListPage extends ConsumerWidget {
                       BeeDimens.p12,
                       BeeDimens.p12,
                     ),
-                    itemCount: holdings.length + 2, // +1 摘要卡片 +1 导入按钮（v4.7）
+                    itemCount: holdings.length,
                     itemBuilder: (context, index) {
-                      if (index == 0) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: BeeDimens.p8),
-                          child: _buildSummaryCard(context, ref, summaryAsync),
-                        );
-                      }
-                      if (index == 1) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: BeeDimens.p8),
-                          child: _buildImportButton(context, ref),
-                        );
-                      }
-                      final holding = holdings[index - 2];
+                      final holding = holdings[index];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: BeeDimens.p8),
                         child: HoldingCard(
@@ -105,44 +111,19 @@ class HoldingsListPage extends ConsumerWidget {
     );
   }
 
-  /// v4.7: 导入初始持仓按钮（常驻，在摘要卡片下方）
-  Widget _buildImportButton(BuildContext context, WidgetRef ref) {
-    final primaryColor = ref.watch(primaryColorProvider);
-    return SectionCard(
-      padding: const EdgeInsets.all(BeeDimens.p12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () async {
-          final result = await showInitialHoldingDialog(
-            context,
-            ledgerId: ref.read(currentLedgerIdProvider),
-          );
-          if (result == true) {
-            ref.invalidate(currentHoldingsProvider);
-            ref.invalidate(portfolioSummaryProvider);
-          }
-        },
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.file_upload_outlined,
-                  size: 18, color: primaryColor),
-              const SizedBox(width: 8),
-              Text(
-                '导入初始持仓',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: primaryColor,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+  /// 打开导入初始持仓弹窗（顶部栏 + 空态共用）
+  Future<void> _importInitialHoldings(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final result = await showInitialHoldingDialog(
+      context,
+      ledgerId: ref.read(currentLedgerIdProvider),
     );
+    if (result == true) {
+      ref.invalidate(currentHoldingsProvider);
+      ref.invalidate(portfolioSummaryProvider);
+    }
   }
 
   /// 空态：暂无持仓
@@ -190,16 +171,7 @@ class HoldingsListPage extends ConsumerWidget {
          ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
-            onPressed: () async {
-              final result = await showInitialHoldingDialog(
-                context,
-                ledgerId: ref.read(currentLedgerIdProvider),
-              );
-              if (result == true) {
-                ref.invalidate(currentHoldingsProvider);
-                ref.invalidate(portfolioSummaryProvider);
-              }
-            },
+            onPressed: () => _importInitialHoldings(context, ref),
             icon: const Icon(Icons.file_upload_outlined, size: 20),
             label: const Text('导入初始持仓'),
           ),
@@ -288,7 +260,7 @@ class HoldingsListPage extends ConsumerWidget {
         AmountText(
           value: value,
           signed: false,
-          useCompactFormat: true,
+          useCompactFormat: false,
           style: TextStyle(
             fontSize: isMain ? 20 : 14,
             fontWeight: isMain ? FontWeight.bold : FontWeight.w500,

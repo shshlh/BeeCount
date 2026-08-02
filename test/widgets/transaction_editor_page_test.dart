@@ -83,6 +83,9 @@ void main() {
     expect(find.text('¥ 0.00'), findsOneWidget);
     // 备注行内填写：直接是 TextField，不再弹 AlertDialog
     expect(find.byType(TextField), findsOneWidget);
+    // 底部「再记一笔」+「保存」
+    expect(find.text('再记一笔'), findsOneWidget);
+    expect(find.text('保存'), findsOneWidget);
     expect(find.text('取消'), findsNothing);
   });
 
@@ -98,6 +101,8 @@ void main() {
     expect(find.text('时间'), findsOneWidget);
     expect(find.text('标签'), findsOneWidget);
     expect(find.text('备注'), findsOneWidget);
+    expect(find.text('再记一笔'), findsOneWidget);
+    expect(find.text('保存'), findsOneWidget);
     // 旧的转出/转入大网格已移除
     expect(find.text('钱包A'), findsNothing);
     expect(find.text('招行信用卡'), findsNothing);
@@ -140,7 +145,15 @@ void main() {
     await tester.tap(find.text('招行信用卡'));
     await tester.pumpAndSettle();
 
-    expect(find.text('钱包A ⇄ 招行信用卡'), findsOneWidget);
+    expect(find.text('钱包A'), findsOneWidget);
+    expect(find.text('招行信用卡'), findsOneWidget);
+
+    // ⇄ 反转按钮交换转出/转入
+    double xOf(String text) => tester.getCenter(find.text(text)).dx;
+    expect(xOf('钱包A') < xOf('招行信用卡'), isTrue);
+    await tester.tap(find.byIcon(Icons.swap_horiz));
+    await tester.pump();
+    expect(xOf('招行信用卡') < xOf('钱包A'), isTrue);
   });
 
   testWidgets('账户抽屉:一户一行显示余额,信用卡显示已用额度', (tester) async {

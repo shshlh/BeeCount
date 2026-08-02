@@ -248,6 +248,36 @@ class AppLocalizationsZh extends AppLocalizations {
   String get txFormTag => '标签';
 
   @override
+  String get txDateToday => '今天';
+
+  @override
+  String get txDateSunday => '周日';
+
+  @override
+  String get txDateMonday => '周一';
+
+  @override
+  String get txDateTuesday => '周二';
+
+  @override
+  String get txDateWednesday => '周三';
+
+  @override
+  String get txDateThursday => '周四';
+
+  @override
+  String get txDateFriday => '周五';
+
+  @override
+  String get txDateSaturday => '周六';
+
+  @override
+  String get txSaveAndContinue => '再记一笔';
+
+  @override
+  String get txSwapAccounts => '反转转出/转入';
+
+  @override
   String get txFormNote => '备注';
 
   @override

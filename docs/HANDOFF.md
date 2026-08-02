@@ -31,6 +31,170 @@
 
 ---
 
+## 2026-08-03
+
+**移交角色**：项目经理（PM）审查结论
+**接收角色**：invest-ui / invest-logic（返工）
+
+**审查结论**：5.3 + 5.4 大部分通过，1 个 P1 未完成，返工补齐。
+
+**（已撤销）净资产无需 4 位，保持 2 位小数，与基金 App 一致；基金净值仍 4 位**
+- 用户要求：净值（净资产）精确到小数点后 4 位（如 1.0000）
+- 现状：lib/pages/account/accounts_page.dart 净资产显示（约 375-388 行）AmountText 未传 decimals，默认 2 位
+- 修复：
+  a) 净资产 AmountText 加 decimals: 4
+  b) 检查多币种净资产行（nwByCurrency 分支）同样 4 位
+  c) 净值趋势页（net_worth_trend_page.dart）数值也 4 位
+  d) 市值/成本保持 2 位不变（已正确）
+- 补充测试：净资产 4 位断言
+
+**其余全部通过**：转账反转 / 日期周几 / 再记一笔+保存 / 蜜蜂家当删除 / 市值成本2位无万 / extendBody false / 组合摘要固定 / 导入按钮顶部。
+
+## 2026-08-03
+
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**完成工作**：阶段 5.4 界面布局固定（4 项全部完成，5.3 在工作区一并待审查）
+
+1. **5.4.1 底部导航不遮挡内容** — [app.dart](/D:\codexproject\pj_004_beecount_fork\lib\app.dart)
+   - 外层 Scaffold `extendBody: true` → `false`，底部导航栏固定占位，四个 Tab 页面内容区自动避开导航栏高度
+2. **5.4.2 明细/洞察/我的适配** — 同 app.dart 全局修复
+   - HomePage / AnalyticsPage / MinePage 不再被底部导航覆盖，无需逐页补 padding（记账页未改）
+3. **5.4.3 投资组合固定占位** — [holdings_list_page.dart](/D:\codexproject\pj_004_beecount_fork\lib\pages\investment\holdings_list_page.dart)
+   - 组合摘要卡从 ListView item 移出，改为 Header 下方固定区；只滚动持仓卡片列表；空态/加载/错误仍显示在摘要下方
+4. **5.4.4 导入初始持仓移顶部** — holdings_list_page.dart
+   - 移除摘要卡下方导入按钮；PrimaryHeader actions 增加 file_upload IconButton（tooltip「导入初始持仓」），标题左、按钮右；空态保留原有导入按钮作补充入口
+
+**测试**：
+- 新增 holdings_list_page_layout_test（摘要固定 + 顶部导入按钮 tooltip + 空态）
+- 全量 flutter analyze 零 error（870 个预存 info/warning）
+- 全量 flutter test：573 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**下一个任务需要知道的**：
+- extendBody 全局改 false 后，各 Tab 页不再需要手动加底部导航高度 padding；若未来页面有全出血背景需求，可在页内自行 extendBody
+- holdings_list 的导入入口现有顶部 IconButton（主）+ 空态按钮（次）
+- 视觉布局未做 Windows 实机截图验证（widget 测试覆盖结构与回归）
+
+**git 状态**：当前分支 main，未提交（5.3 + 5.4 一并等待 PM 审查）
+
+---
+
+## 2026-08-03
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-ui（继续 5.3 会话）
+
+**任务**：5.4 界面布局固定（4 个问题，与 5.3 一起改完后统一审查）
+
+**问题 1：资产界面底部导航栏遮挡**
+- 现象：11 只基金时，底部导航栏（明细/洞察/记账/资产/我的）挡住最后一只基金内容
+- 根因：推测根 Scaffold 用 extendBody:true，底部导航覆盖内容；或 Tab 页面无底部 padding
+- 要求：底部导航栏固定占位，内容区不被覆盖；ListView 底部加 SafeArea / MediaQuery padding 等于导航栏高度
+
+**问题 2：同一原则应用到明细/洞察/我的**
+- 文件：lib/app.dart（底部导航布局）+ 对应页面容器
+- 明细（TransactionListPage）、洞察（AnalyticsPage）、我的（MinePage）同样确保底部内容不被导航栏覆盖
+- 记账界面不用改
+
+**问题 3：资产界面顶部「投资组合」固定**
+- 文件：lib/pages/investment/holdings_list_page.dart
+- 现状：组合摘要卡片在 ListView 内随持仓滚动
+- 要求：投资组合摘要固定占位（列表头部固定，只滚动持仓卡片部分）
+- 实现：Column + 固定摘要区 + Expanded(ListView 持仓)；或 CustomScrollView + SliverPinnedHeader
+
+**问题 4：「导入初始持仓」移到顶部栏右侧**
+- 文件：lib/pages/investment/holdings_list_page.dart
+- 现状：导入按钮在摘要卡下方
+- 要求：移到资产界面顶部栏，与「投资持仓」标题分列左右（标题左、导入按钮右）
+- PrimaryHeader 支持 actions 参数则直接加 IconButton；否则在 header 右侧放文本/图标按钮
+
+**约束**：flutter analyze 零 error；widget 测试同步更新（若涉及滚动/布局断言）
+
+## 2026-08-02
+
+**移交角色**：invest-ui + invest-logic
+**接收角色**：项目经理（PM）
+
+**完成工作**：阶段 5.3 记账/资产体验改进（5 项全部完成）
+
+1. **5.3.1 转账账户反转按键** — [transfer_form.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\transaction\transfer_form.dart)
+   - 账户行拆为「转出名 + swap_horiz IconButton + 转入名」，⇄ 独立可点
+   - 点击交换 _from/_to（含 id），两端不同才可反转
+
+2. **5.3.2 日期显示周几** — 新增 [tx_date_format.dart](/D:\codexproject\pj_004_beecount_fork\lib\utils\tx_date_format.dart)
+   - 支出/收入/转账统一格式：`2026年8月2日 今天` / `2026年8月1日 周六`
+   - 周几按 DateTime.weekday 自动算出；显示时间开启时追加 HH:mm
+
+3. **5.3.3 记账页底部「再记一笔」+「保存」** — tx_entry_form.dart + transfer_form.dart
+   - 支出/收入/转账底部固定两按钮：「再记一笔」保存后保留分类/账户/时间（转账保留转出/转入/时间），清空金额/标签/备注并留在当前页；「保存」保存后关闭编辑器并跳到首页「明细」流水列表（bottomTabIndexProvider=0）
+   - 保存逻辑抽成 _submitTransaction / _performTransferSave，金额小键盘与底部按钮共用；金额可独立填写（允许 0）
+
+4. **5.3.4 删除资产管理页「蜜蜂家当」推荐** — [accounts_page.dart](/D:\codexproject\pj_004_beecount_fork\lib\pages\account\accounts_page.dart)
+   - 移除 header 右上角 _BeeAssetsHeaderEntry、相关注释与 product_promos/product_promo_card 引用
+
+5. **5.3.5 资产金额精度** — [format_utils.dart](/D:\codexproject\pj_004_beecount_fork\lib\utils\format_utils.dart) + 资产/投资页
+   - 新增 formatFullAmount（千分号 + 固定小数位，不做万/k/M 缩写）
+   - accounts_page / account_detail_page 全部 useCompactFormat 改传 false；holding_card / holdings_list_page / holding_detail_page 同步关闭紧凑格式
+   - 净值保持 4 位小数（holding_detail 已 toStringAsFixed(4)），市值/成本/小计统一 2 位完整数字
+
+**测试**：
+- 新增 format_utils_test（2 位/4 位小数、千分号、无万单位）、tx_date_format_test（今天/周几/HH:mm）、amount_text_precision_test（关闭紧凑后无万/k/M）
+- 更新 transaction_editor_page_test（底部按钮、⇄ 反转交换顺序）、transfer_form_account_hidden_test（账户行独立名称 + 反转按钮）
+- 全量 flutter analyze 零 error（869 个预存 info/warning）
+- 全量 flutter test：572 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**下一个任务需要知道的**：
+- 日期格式统一走 formatEntryDateTime（tx_date_format.dart），不要在表单里再手拼 yyyy/M/d
+- 「再记一笔」只清金额/标签/备注，分类/账户/时间（转账为转出/转入/时间）保留
+- 保存（exit）统一跳到 bottomTabIndex=0（首页明细）；从账户详情等入口进入编辑器时，保存后先返回原页面再切 tab
+- 资产页不再跟随 compactAmountProvider 设置，useCompactFormat 固定 false
+- 视觉布局未做 Windows 实机截图验证（widget 测试覆盖结构与回归）
+
+**git 状态**：当前分支 main，未提交（等待 PM 审查）
+
+---
+
+## 2026-08-02
+
+**移交角色**：项目经理（PM）
+**接收角色**：UI 工程师（invest-ui）+ invest-logic
+
+**任务**：5.3 记账/资产体验改进（5 项）
+
+**1. 转账账户反转按键**
+- 文件：lib/widgets/transaction/transfer_form.dart
+- 账户行当前显示「A ⇄ B」；要求 ⇄ 是独立可点击按钮，点击后 A/B 对调（B ⇄ A）
+- 实现：账户行拆为 Row（转出名 + ⇄ IconButton + 转入名），点 ⇄ 时交换 _fromAccount/_toAccount（含 id）
+- 注意：反转后仍保持两账户不同
+
+**2. 日期显示周几**
+- 文件：lib/widgets/transaction/tx_entry_form.dart _formatDateTime + transfer_form.dart _formatTransferDate
+- 日期格式改为：2026年8月2日 今天 / 2026年8月1日 周六（今日显示「今天」，其他显示周几）
+- 周几由日期自动算出（DateTime.weekday → 周日/周一/…/周六），不手动选
+- 若显示时间开启，追加 HH:mm（如 2026年8月2日 今天 15:30）
+
+**3. 记账页底部「再记一笔」+「保存」**
+- 文件：lib/widgets/transaction/tx_entry_form.dart + transfer_form.dart
+- 底部固定两按钮：
+  a) 「再记一笔」：保存当前笔后保留分类/账户/时间（转账保留转出/转入/时间），清空金额/标签/备注；停留当前界面继续记
+  b) 「保存」：保存后跳到明细界面（流水列表）
+- 支出/收入/转账三种模式都适用
+- 实现：现有保存逻辑（AmountEditorSheet onSubmit）需支持「保存并继续」与「保存并退出」两种模式；建议抽出保存方法，底部按钮直接调用（金额未填时弹提示或允许保存金额0）
+
+**4. 删除资产管理页「蜜蜂家当」推荐**
+- 文件：lib/pages/account/accounts_page.dart（_BeeAssetsHeaderEntry 约 116-130、2519-2531）
+- 删除 header 右上角蜜蜂家当入口及相关代码
+
+**5. 资产界面金额精度**
+- 文件：lib/utils/format_utils.dart（万单位压缩）+ 资产相关页面（净资产业务格式）
+- 净值：精确到小数点后 4 位（如 1.0000）
+- 市值/成本/总市值/总成本：精确到小数点后 2 位
+- 禁止「万」为单位：资产页不使用 formatMoneyCompact / 万/k/M 缩写，用完整数字+2位小数（净值4位）
+- 注意：AmountText 有 useCompactFormat 开关，资产页改传 false；确认报表/图表等是否也要同步
+
+**约束**：flutter analyze 零 error；相关 widget/format 测试更新；金额精度测试（净值4位、市值2位、无万单位）
+
 ## 2026-08-02
 
 **移交角色**：invest-ui
@@ -91,105 +255,6 @@
 - 转账保存逻辑不变（transfer 类型 + from/to 账户 + 金额）
 
 **约束**：flutter analyze 零 error；transaction_editor_page_test / transfer 相关测试全过；补充转账金额独立、抽屉分格测试
-
-## 2026-08-02
-
-**移交角色**：invest-ui
-**接收角色**：项目经理（PM）
-
-**完成工作**：阶段 5.1 记账界面体验优化（7 项全部完成，对应 PM 9 个问题）
-
-1. **5.1.1 备注弹框报错修复 + 5.1.2 备注行内填写** — [tx_entry_form.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\transaction\tx_entry_form.dart)
-   - 删除备注 AlertDialog（原 TextEditingController 在 pop 后 dispose 导致闪报错），改为表单内嵌多行 TextField
-   - 复用 NoteHistoryService + NotePickerDialog 提供高频备注历史入口
-
-2. **5.1.3 金额行 + 字段顺序** — tx_entry_form.dart
-   - 字段顺序改为：金额-分类-账户-时间-标签-备注
-   - 金额行显示币种 + 金额（如 ¥ 0.00），点击进入小键盘；金额不再要求分类前置（提交支持无分类）
-
-3. **5.1.4 标签行** — tx_entry_form.dart
-   - 时间之后、备注之前新增「标签」行，点击弹 TagSelector 多选，选中标签名称回显
-
-4. **5.1.5 小键盘剥离非金额功能** — [amount_editor_sheet.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\biz\amount_editor_sheet.dart)
-   - 移除备注输入区、账户选择区、标签选择区、时间键（dateKey）
-   - 键盘改为 7-8-9-C / 4-5-6-+ / 1-2-3-- / .-0-⌫-完成；保留币种、金额、汇率、附件、记账标记
-   - 转账 Tab 同步在 [transfer_form.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\transaction\transfer_form.dart) 增加金额/时间/标签/备注行，避免精简后功能丢失
-
-5. **5.1.6 账户选择显示优化** — tx_entry_form.dart
-   - 账户抽屉右栏改为一户一行纵向列表；每行显示账户类型小字 + 余额
-   - 银行卡/储蓄/其它类型显示「余额 ¥x」；信用卡显示「已用额度 ¥x / 信用额度 ¥y」（负余额取绝对值）
-
-6. **5.1.7 分类/账户管理快捷入口** — tx_entry_form.dart
-   - 分类抽屉顶部新增「编辑」按钮 → CategoryManagePage（按支出/收入 tab）
-   - 账户抽屉顶部新增「管理」按钮 → AccountsPage
-
-**测试**：
-- 更新 transaction_editor_page_test：字段顺序/备注行/标签行/账户抽屉余额（一户一行 + 信用卡已用额度）
-- 更新 amount_editor_currency_test：小键盘无备注/标签/时间，保留 C 清空键与完成键
-- 全量 flutter analyze 零 error（866 个预存 info/warning）
-- 全量 flutter test：563 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
-
-**下一个任务需要知道的**：
-- AmountEditorSheet 已精简为纯金额键盘；时间/备注/标签由外层表单管理（TxEntryForm / TransferForm）
-- 分类已非必填，addTransaction 允许 categoryId 为 null
-- AmountEditorSheet 的 showAccountPicker 参数仅为 API 兼容保留，UI 不再渲染
-- 视觉布局未做 Windows 实机截图验证（widget 测试覆盖结构与回归）
-
-**git 状态**：当前分支 main，未提交（等待 PM 审查）
-
----
-
-## 2026-08-02
-
-**移交角色**：项目经理（PM）
-**接收角色**：UI 工程师（invest-ui）+ invest-logic
-
-**任务**：5.1 记账界面体验优化（9 个问题）
-
-**问题 1：备注弹框闪报错（bug）**
-- 文件：lib/widgets/transaction/tx_entry_form.dart _pickNote
-- 现象：按取消/确定都会闪一下报错，但备注实际写入成功
-- 定位：TextEditingController 生命周期/dialog 关闭时序问题（可能在 Navigator.pop 后 dispose controller 导致）
-- 修复：确保 controller dispose 在 widget 卸载后安全执行，或改用 showDialog 内部创建 controller
-
-**问题 2：备注去掉弹框，改为行内填写**
-- 备注行直接内嵌 TextField（或点击行展开输入框），不弹 AlertDialog
-- 支持多行输入 + 高频备注历史（现有 NoteHistoryService 可复用）
-
-**问题 3：分类之上加「金额」行**
-- 表单顺序改为：金额-分类-账户-时间-标签-备注
-- 金额行显示币种 + 金额（如 ¥ 0.00），点击调出数字小键盘（AmountEditorSheet 剥离非金额功能后）
-
-**问题 4：数字小键盘的「标签」上提到界面**
-- 表单加「标签」行（时间之后、备注之前），点击弹 TagSelector
-- 顺序：金额-分类-账户-时间-标签-备注
-
-**问题 5：所有字段独立填写**
-- 分类/账户/金额/时间/标签/备注完全独立，无先后依赖
-- 现状已接近（分类非必填），确认金额无需分类前置
-
-**问题 6：数字小键盘删掉时间/备注/标签功能**
-- 文件：lib/widgets/biz/amount_editor_sheet.dart
-- 小键盘只保留：币种、金额、数字键、快捷操作（若有）、确定
-- 移除备注输入区、标签选择区、时间选择区（这些已在主表单）
-
-**问题 7：账户选择显示优化**
-- 二级账户一户一行，纵向排列
-- 每行显示账户余额小字：
-  - 银行卡/储蓄卡 → 显示余额（如「工商银行  ¥12,345.67」）
-  - 信用卡 → 显示已用额度（欠款/信用额度）
-  - 其它类型 → 显示当前余额
-- 文件：lib/widgets/transaction/tx_entry_form.dart _AccountDrawerSheet
-
-**问题 8：分类弹窗加「编辑」按钮**
-- 分类抽屉顶部「分类」标题旁加编辑图标按钮
-- 点击进入分类管理页（CategoryManagePage）
-
-**问题 9：账户弹窗加「管理」按钮**
-- 账户抽屉顶部「账户」标题旁加管理图标按钮
-- 点击进入账户管理页（AccountsPage 或账户设置）
-
-**约束**：flutter analyze 零 error；新增/更新 widget 测试；金额/备注/标签历史功能不回归
 
 ## 2026-08-02
 

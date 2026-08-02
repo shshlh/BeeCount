@@ -20,6 +20,7 @@ import '../../utils/account_type_utils.dart';
 import '../../utils/category_utils.dart';
 import '../../utils/currencies.dart';
 import '../../utils/shared_ledger_picker_filter.dart';
+import '../../utils/tx_date_format.dart';
 import 'account_drawer_sheet.dart';
 import '../biz/amount_editor_sheet.dart';
 import '../biz/format_money.dart';
@@ -146,51 +147,92 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
     ref.watch(showTransactionTimeProvider);
     final currency = ref.watch(currentLedgerCurrencyProvider);
 
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return Column(
       children: [
-        _buildFieldRow(
-          icon: Icons.keyboard_alt_outlined,
-          label: l10n.txFormAmount,
-          value: _amount == 0
-              ? '${getCurrencySymbol(currency)} 0.00'
-              : '${getCurrencySymbol(currency)} ${formatMoneyCompact(_amount)}',
-          selected: _amount > 0,
-          onTap: _openAmountSheet,
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _buildFieldRow(
+                icon: Icons.keyboard_alt_outlined,
+                label: l10n.txFormAmount,
+                value: _amount == 0
+                    ? '${getCurrencySymbol(currency)} 0.00'
+                    : '${getCurrencySymbol(currency)} ${formatMoneyCompact(_amount)}',
+                selected: _amount > 0,
+                onTap: _openAmountSheet,
+              ),
+              const SizedBox(height: 12),
+              _buildFieldRow(
+                icon: Icons.category_outlined,
+                label: l10n.txFormCategory,
+                value: _category == null
+                    ? l10n.txFormCategoryHint
+                    : _categoryLabel(context),
+                selected: _category != null,
+                onTap: _pickCategory,
+              ),
+              const SizedBox(height: 12),
+              _buildFieldRow(
+                icon: Icons.account_balance_wallet_outlined,
+                label: l10n.txFormAccount,
+                value: _account == null
+                    ? l10n.txFormAccountHint
+                    : _accountLabel(context),
+                selected: _account != null,
+                onTap: _pickAccount,
+              ),
+              const SizedBox(height: 12),
+              _buildFieldRow(
+                icon: Icons.schedule_outlined,
+                label: l10n.txFormTime,
+                value: _formatDateTime(context),
+                selected: true,
+                onTap: _pickDateTime,
+              ),
+              const SizedBox(height: 12),
+              _buildTagRow(context),
+              const SizedBox(height: 12),
+              _buildNoteField(context),
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
-        _buildFieldRow(
-          icon: Icons.category_outlined,
-          label: l10n.txFormCategory,
-          value: _category == null
-              ? l10n.txFormCategoryHint
-              : _categoryLabel(context),
-          selected: _category != null,
-          onTap: _pickCategory,
-        ),
-        const SizedBox(height: 12),
-        _buildFieldRow(
-          icon: Icons.account_balance_wallet_outlined,
-          label: l10n.txFormAccount,
-          value: _account == null
-              ? l10n.txFormAccountHint
-              : _accountLabel(context),
-          selected: _account != null,
-          onTap: _pickAccount,
-        ),
-        const SizedBox(height: 12),
-        _buildFieldRow(
-          icon: Icons.schedule_outlined,
-          label: l10n.txFormTime,
-          value: _formatDateTime(context),
-          selected: true,
-          onTap: _pickDateTime,
-        ),
-        const SizedBox(height: 12),
-        _buildTagRow(context),
-        const SizedBox(height: 12),
-        _buildNoteField(context),
+        _buildBottomBar(context, l10n),
       ],
+    );
+  }
+
+  Widget _buildBottomBar(BuildContext context, AppLocalizations l10n) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+        decoration: BoxDecoration(
+          color: BeeTokens.surfaceSheet(context),
+          border: Border(
+            top: BorderSide(color: BeeTokens.divider(context)),
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => _save(exitAfterSave: false),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: Text(l10n.txSaveAndContinue),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: () => _save(exitAfterSave: true),
+                icon: const Icon(Icons.check, size: 18),
+                label: Text(l10n.commonSave),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -359,12 +401,11 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
   }
 
   String _formatDateTime(BuildContext context) {
-    final showTime = ref.read(showTransactionTimeProvider);
-    final date = '${_date.year}/${_date.month}/${_date.day}';
-    if (!showTime) return date;
-    final hh = _date.hour.toString().padLeft(2, '0');
-    final mm = _date.minute.toString().padLeft(2, '0');
-    return '$date $hh:$mm';
+    return formatEntryDateTime(
+      context,
+      _date,
+      showTime: ref.read(showTransactionTimeProvider),
+    );
   }
 
   Future<void> _loadFrequentNotes() async {
@@ -531,10 +572,11 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
   }
 
   Future<void> _submitTransaction(
-    BuildContext sheetContext,
+    BuildContext? sheetContext,
     AmountEditorResult res,
-    int ledgerId,
-  ) async {
+    int ledgerId, {
+    bool exitAfterSave = true,
+  }) async {
     final repo = ref.read(repositoryProvider);
     final attachmentService = ref.read(attachmentServiceProvider);
     final category = _category;
@@ -655,14 +697,57 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
       updateAppWidget(ref, context);
     }
 
-    if (sheetContext.mounted && Navigator.of(sheetContext).canPop()) {
-      Navigator.of(sheetContext).pop();
-    }
-    if (context.mounted && Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
+    if (exitAfterSave) {
+      if (sheetContext != null &&
+          sheetContext.mounted &&
+          Navigator.of(sheetContext).canPop()) {
+        Navigator.of(sheetContext).pop();
+      }
+      if (context.mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+      // 保存后跳到首页「明细」流水列表
+      ref.read(bottomTabIndexProvider.notifier).state = 0;
+    } else {
+      // 再记一笔：保留分类/账户/时间，清空金额/标签/备注
+      setState(() {
+        _amount = 0;
+        _tagIds = [];
+        _noteCtrl.clear();
+      });
     }
     HapticFeedback.lightImpact();
     SystemSound.play(SystemSoundType.click);
+  }
+
+  /// 底部「再记一笔 / 保存」直接提交，不经过金额小键盘。
+  Future<void> _save({required bool exitAfterSave}) async {
+    final ledgerId = ref.read(currentLedgerIdProvider);
+    await _submitTransaction(
+      null,
+      _buildDirectResult(ledgerId),
+      ledgerId,
+      exitAfterSave: exitAfterSave,
+    );
+  }
+
+  AmountEditorResult _buildDirectResult(int ledgerId) {
+    final ledgerBase = ref.read(currentLedgerCurrencyProvider);
+    final txCurrency = widget.initialCurrencyCode ?? ledgerBase;
+    return (
+      amount: _amount,
+      note: _noteCtrl.text.isEmpty ? null : _noteCtrl.text,
+      date: _date,
+      accountId: _account?.id,
+      tagIds: _tagIds,
+      pendingAttachments: const [],
+      excludeFromStats: widget.initialExcludeFromStats,
+      excludeFromBudget: widget.initialExcludeFromBudget,
+      currencyCode: txCurrency,
+      nativeAmount: txCurrency == ledgerBase
+          ? _amount
+          : (widget.initialNativeAmount ?? _amount),
+    );
   }
 
   /// §7 v25:account picker 返 synthetic Account(id<0)时,把 id 反查
@@ -1058,4 +1143,3 @@ class _CategoryGridItem extends StatelessWidget {
     );
   }
 }
-

@@ -551,6 +551,66 @@ abstract class AppLocalizations {
   /// **'Tag'**
   String get txFormTag;
 
+  /// No description provided for @txDateToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get txDateToday;
+
+  /// No description provided for @txDateSunday.
+  ///
+  /// In en, this message translates to:
+  /// **'Sun'**
+  String get txDateSunday;
+
+  /// No description provided for @txDateMonday.
+  ///
+  /// In en, this message translates to:
+  /// **'Mon'**
+  String get txDateMonday;
+
+  /// No description provided for @txDateTuesday.
+  ///
+  /// In en, this message translates to:
+  /// **'Tue'**
+  String get txDateTuesday;
+
+  /// No description provided for @txDateWednesday.
+  ///
+  /// In en, this message translates to:
+  /// **'Wed'**
+  String get txDateWednesday;
+
+  /// No description provided for @txDateThursday.
+  ///
+  /// In en, this message translates to:
+  /// **'Thu'**
+  String get txDateThursday;
+
+  /// No description provided for @txDateFriday.
+  ///
+  /// In en, this message translates to:
+  /// **'Fri'**
+  String get txDateFriday;
+
+  /// No description provided for @txDateSaturday.
+  ///
+  /// In en, this message translates to:
+  /// **'Sat'**
+  String get txDateSaturday;
+
+  /// No description provided for @txSaveAndContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Save & add another'**
+  String get txSaveAndContinue;
+
+  /// No description provided for @txSwapAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Swap accounts'**
+  String get txSwapAccounts;
+
   /// No description provided for @txFormNote.
   ///
   /// In en, this message translates to:
