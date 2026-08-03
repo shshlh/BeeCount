@@ -1699,6 +1699,9 @@ class LocalRepository extends BaseRepository {
     String? cardLastFour,
     String? note,
     String? syncId,
+    bool excludeFromAssets = false,
+    String? iconType,
+    String? customIconPath,
   }) async {
     final id = await _accountRepo.createAccount(
       ledgerId: ledgerId,
@@ -1714,6 +1717,9 @@ class LocalRepository extends BaseRepository {
       cardLastFour: cardLastFour,
       note: note,
       syncId: syncId,
+      excludeFromAssets: excludeFromAssets,
+      iconType: iconType,
+      customIconPath: customIconPath,
     );
     if (changeTracker != null) {
       final account = await _accountRepo.getAccount(id);
@@ -1768,6 +1774,9 @@ class LocalRepository extends BaseRepository {
     String? note,
     bool clearMetadataFields = false,
     bool? hidden,
+    bool? excludeFromAssets,
+    String? iconType,
+    String? customIconPath,
   }) async {
     final account = changeTracker != null ? await _accountRepo.getAccount(id) : null;
     await _accountRepo.updateAccount(
@@ -1786,6 +1795,9 @@ class LocalRepository extends BaseRepository {
       note: note,
       clearMetadataFields: clearMetadataFields,
       hidden: hidden,
+      excludeFromAssets: excludeFromAssets,
+      iconType: iconType,
+      customIconPath: customIconPath,
     );
     if (account?.syncId != null) {
       await changeTracker!.recordUserGlobalChange(

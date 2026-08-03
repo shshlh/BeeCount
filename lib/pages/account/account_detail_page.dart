@@ -210,6 +210,27 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
           PrimaryHeader(
             title: account.name,
             subtitle: getAccountTypeLabel(context, account.type),
+            // v5.6: 不计入资产标记（仅提醒作用）
+            titleTrailing: account.excludeFromAssets
+                ? Container(
+                    margin: const EdgeInsets.only(left: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      l10n.accountExcludeFromAssets,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: BeeTokens.textOnHeader(context),
+                      ),
+                    ),
+                  )
+                : null,
             showBack: true,
             compact: true,
             actions: [
@@ -376,6 +397,8 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
               AccountTypeIcon(
                 type: account.type,
                 size: 48.0.scaled(context, ref),
+                iconType: account.iconType,
+                customIconPath: account.customIconPath,
               ),
               SizedBox(height: 12.0.scaled(context, ref)),
               // 标签

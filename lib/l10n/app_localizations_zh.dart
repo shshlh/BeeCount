@@ -287,6 +287,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get txFormPleaseSelect => '请选择';
 
   @override
+  String get txAmountRequired => '请输入金额';
+
+  @override
   String get txFormNote => '备注';
 
   @override
@@ -3890,6 +3893,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get accountBalance => '余额';
+
+  @override
+  String get accountExcludeFromAssets => '不计入资产';
+
+  @override
+  String get accountExcludeFromAssetsHint => '不参与净资产/资产构成/净值趋势统计，仅提醒作用';
+
+  @override
+  String get accountLogoChoose => '选择图片';
+
+  @override
+  String get accountLogoReset => '恢复默认';
 
   @override
   String get accountEditTitle => '编辑账户';

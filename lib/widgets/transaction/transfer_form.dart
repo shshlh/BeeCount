@@ -74,6 +74,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
   int? _toAccountId;
   late DateTime _date;
   double _amount = 0;
+  String? _pickedCurrency;
   List<int> _tagIds = [];
   late final TextEditingController _noteCtrl;
   final FocusNode _noteFocusNode = FocusNode();
@@ -284,11 +285,12 @@ class _TransferFormState extends ConsumerState<TransferForm> {
 
     if (!mounted) return;
 
-    await showModalBottomSheet(
+    final result = await showModalBottomSheet<
+        ({double amount, String currencyCode})>(
       context: context,
       isScrollControlled: true,
       backgroundColor: BeeTokens.surfaceSheet(context),
-      builder: (sheetContext) => AmountEditorSheet(
+      builder: (_) => AmountEditorSheet(
         categoryName: l10n.transferTitle,
         initialDate: _date,
         initialAmount: _amount,
@@ -298,14 +300,15 @@ class _TransferFormState extends ConsumerState<TransferForm> {
         ledgerId: ledgerId,
         editingTransactionId: widget.editingTransactionId,
         transactionKind: 'transfer',
-        onSubmit: (result) => _performTransferSave(
-          sheetContext,
-          result,
-          ledgerId,
-          exitAfterSave: true,
-        ),
+        confirmOnly: true,
       ),
     );
+    if (result != null && mounted) {
+      setState(() {
+        _amount = result.amount;
+        _pickedCurrency = result.currencyCode;
+      });
+    }
   }
 
   Future<void> _performTransferSave(
@@ -463,6 +466,15 @@ class _TransferFormState extends ConsumerState<TransferForm> {
 
   /// 底部「再记一笔 / 保存」直接提交，不经过金额小键盘。
   Future<void> _save({required bool exitAfterSave}) async {
+    final l10n = AppLocalizations.of(context);
+    if (_amount <= 0) {
+      showToast(context, l10n.txAmountRequired);
+      return;
+    }
+    if (_fromAccountId == null || _toAccountId == null) {
+      showToast(context, l10n.transferSelectAccount);
+      return;
+    }
     final ledgerId = ref.read(currentLedgerIdProvider);
     final ledgerBase = ref.read(currentLedgerCurrencyProvider);
     final result = (
@@ -474,8 +486,10 @@ class _TransferFormState extends ConsumerState<TransferForm> {
       pendingAttachments: const <File>[],
       excludeFromStats: false,
       excludeFromBudget: false,
-      currencyCode: ledgerBase,
-      nativeAmount: _amount,
+      currencyCode: _pickedCurrency ?? ledgerBase,
+      nativeAmount: _pickedCurrency == null || _pickedCurrency == ledgerBase
+          ? _amount
+          : _amount,
     );
     await _performTransferSave(
       null,

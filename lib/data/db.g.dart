@@ -660,6 +660,16 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('CHECK ("hidden" IN (0, 1))'),
       defaultValue: const Constant(false));
+  static const VerificationMeta _excludeFromAssetsMeta =
+      const VerificationMeta('excludeFromAssets');
+  @override
+  late final GeneratedColumn<bool> excludeFromAssets = GeneratedColumn<bool>(
+      'exclude_from_assets', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("exclude_from_assets" IN (0, 1))'),
+      defaultValue: const Constant(false));
   static const VerificationMeta _iconTypeMeta =
       const VerificationMeta('iconType');
   @override
@@ -692,6 +702,7 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         note,
         syncId,
         hidden,
+        excludeFromAssets,
         iconType,
         customIconPath
       ];
@@ -792,6 +803,12 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
       context.handle(_hiddenMeta,
           hidden.isAcceptableOrUnknown(data['hidden']!, _hiddenMeta));
     }
+    if (data.containsKey('exclude_from_assets')) {
+      context.handle(
+          _excludeFromAssetsMeta,
+          excludeFromAssets.isAcceptableOrUnknown(
+              data['exclude_from_assets']!, _excludeFromAssetsMeta));
+    }
     if (data.containsKey('icon_type')) {
       context.handle(_iconTypeMeta,
           iconType.isAcceptableOrUnknown(data['icon_type']!, _iconTypeMeta));
@@ -847,6 +864,8 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
           .read(DriftSqlType.string, data['${effectivePrefix}sync_id']),
       hidden: attachedDatabase.typeMapping
           .read(DriftSqlType.bool, data['${effectivePrefix}hidden'])!,
+      excludeFromAssets: attachedDatabase.typeMapping.read(
+          DriftSqlType.bool, data['${effectivePrefix}exclude_from_assets'])!,
       iconType: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}icon_type']),
       customIconPath: attachedDatabase.typeMapping.read(
@@ -885,6 +904,9 @@ class Account extends DataClass implements Insertable<Account> {
   /// 仍计入账户余额、净资产、资产构成、净值趋势(.docs/account-archive/01 §二 D1)。
   final bool hidden;
 
+  /// v5.6: 不计入资产 — 不参与净资产/资产构成/净值趋势统计（仅提醒作用）
+  final bool excludeFromAssets;
+
   /// 图标类型: null=默认（按账户type自动匹配SVG） / 'custom'=用户自定义图片
   final String? iconType;
 
@@ -909,6 +931,7 @@ class Account extends DataClass implements Insertable<Account> {
       this.note,
       this.syncId,
       required this.hidden,
+      required this.excludeFromAssets,
       this.iconType,
       this.customIconPath});
   @override
@@ -952,6 +975,7 @@ class Account extends DataClass implements Insertable<Account> {
       map['sync_id'] = Variable<String>(syncId);
     }
     map['hidden'] = Variable<bool>(hidden);
+    map['exclude_from_assets'] = Variable<bool>(excludeFromAssets);
     if (!nullToAbsent || iconType != null) {
       map['icon_type'] = Variable<String>(iconType);
     }
@@ -998,6 +1022,7 @@ class Account extends DataClass implements Insertable<Account> {
       syncId:
           syncId == null && nullToAbsent ? const Value.absent() : Value(syncId),
       hidden: Value(hidden),
+      excludeFromAssets: Value(excludeFromAssets),
       iconType: iconType == null && nullToAbsent
           ? const Value.absent()
           : Value(iconType),
@@ -1029,6 +1054,7 @@ class Account extends DataClass implements Insertable<Account> {
       note: serializer.fromJson<String?>(json['note']),
       syncId: serializer.fromJson<String?>(json['syncId']),
       hidden: serializer.fromJson<bool>(json['hidden']),
+      excludeFromAssets: serializer.fromJson<bool>(json['excludeFromAssets']),
       iconType: serializer.fromJson<String?>(json['iconType']),
       customIconPath: serializer.fromJson<String?>(json['customIconPath']),
     );
@@ -1055,6 +1081,7 @@ class Account extends DataClass implements Insertable<Account> {
       'note': serializer.toJson<String?>(note),
       'syncId': serializer.toJson<String?>(syncId),
       'hidden': serializer.toJson<bool>(hidden),
+      'excludeFromAssets': serializer.toJson<bool>(excludeFromAssets),
       'iconType': serializer.toJson<String?>(iconType),
       'customIconPath': serializer.toJson<String?>(customIconPath),
     };
@@ -1079,6 +1106,7 @@ class Account extends DataClass implements Insertable<Account> {
           Value<String?> note = const Value.absent(),
           Value<String?> syncId = const Value.absent(),
           bool? hidden,
+          bool? excludeFromAssets,
           Value<String?> iconType = const Value.absent(),
           Value<String?> customIconPath = const Value.absent()}) =>
       Account(
@@ -1102,6 +1130,7 @@ class Account extends DataClass implements Insertable<Account> {
         note: note.present ? note.value : this.note,
         syncId: syncId.present ? syncId.value : this.syncId,
         hidden: hidden ?? this.hidden,
+        excludeFromAssets: excludeFromAssets ?? this.excludeFromAssets,
         iconType: iconType.present ? iconType.value : this.iconType,
         customIconPath:
             customIconPath.present ? customIconPath.value : this.customIconPath,
@@ -1135,6 +1164,9 @@ class Account extends DataClass implements Insertable<Account> {
       note: data.note.present ? data.note.value : this.note,
       syncId: data.syncId.present ? data.syncId.value : this.syncId,
       hidden: data.hidden.present ? data.hidden.value : this.hidden,
+      excludeFromAssets: data.excludeFromAssets.present
+          ? data.excludeFromAssets.value
+          : this.excludeFromAssets,
       iconType: data.iconType.present ? data.iconType.value : this.iconType,
       customIconPath: data.customIconPath.present
           ? data.customIconPath.value
@@ -1163,6 +1195,7 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('note: $note, ')
           ..write('syncId: $syncId, ')
           ..write('hidden: $hidden, ')
+          ..write('excludeFromAssets: $excludeFromAssets, ')
           ..write('iconType: $iconType, ')
           ..write('customIconPath: $customIconPath')
           ..write(')'))
@@ -1170,27 +1203,29 @@ class Account extends DataClass implements Insertable<Account> {
   }
 
   @override
-  int get hashCode => Object.hash(
-      id,
-      ledgerId,
-      name,
-      type,
-      currency,
-      initialBalance,
-      initialDate,
-      createdAt,
-      updatedAt,
-      sortOrder,
-      creditLimit,
-      billingDay,
-      paymentDueDay,
-      bankName,
-      cardLastFour,
-      note,
-      syncId,
-      hidden,
-      iconType,
-      customIconPath);
+  int get hashCode => Object.hashAll([
+        id,
+        ledgerId,
+        name,
+        type,
+        currency,
+        initialBalance,
+        initialDate,
+        createdAt,
+        updatedAt,
+        sortOrder,
+        creditLimit,
+        billingDay,
+        paymentDueDay,
+        bankName,
+        cardLastFour,
+        note,
+        syncId,
+        hidden,
+        excludeFromAssets,
+        iconType,
+        customIconPath
+      ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1213,6 +1248,7 @@ class Account extends DataClass implements Insertable<Account> {
           other.note == this.note &&
           other.syncId == this.syncId &&
           other.hidden == this.hidden &&
+          other.excludeFromAssets == this.excludeFromAssets &&
           other.iconType == this.iconType &&
           other.customIconPath == this.customIconPath);
 }
@@ -1236,6 +1272,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<String?> note;
   final Value<String?> syncId;
   final Value<bool> hidden;
+  final Value<bool> excludeFromAssets;
   final Value<String?> iconType;
   final Value<String?> customIconPath;
   const AccountsCompanion({
@@ -1257,6 +1294,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.note = const Value.absent(),
     this.syncId = const Value.absent(),
     this.hidden = const Value.absent(),
+    this.excludeFromAssets = const Value.absent(),
     this.iconType = const Value.absent(),
     this.customIconPath = const Value.absent(),
   });
@@ -1279,6 +1317,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.note = const Value.absent(),
     this.syncId = const Value.absent(),
     this.hidden = const Value.absent(),
+    this.excludeFromAssets = const Value.absent(),
     this.iconType = const Value.absent(),
     this.customIconPath = const Value.absent(),
   })  : ledgerId = Value(ledgerId),
@@ -1302,6 +1341,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<String>? note,
     Expression<String>? syncId,
     Expression<bool>? hidden,
+    Expression<bool>? excludeFromAssets,
     Expression<String>? iconType,
     Expression<String>? customIconPath,
   }) {
@@ -1324,6 +1364,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (note != null) 'note': note,
       if (syncId != null) 'sync_id': syncId,
       if (hidden != null) 'hidden': hidden,
+      if (excludeFromAssets != null) 'exclude_from_assets': excludeFromAssets,
       if (iconType != null) 'icon_type': iconType,
       if (customIconPath != null) 'custom_icon_path': customIconPath,
     });
@@ -1348,6 +1389,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       Value<String?>? note,
       Value<String?>? syncId,
       Value<bool>? hidden,
+      Value<bool>? excludeFromAssets,
       Value<String?>? iconType,
       Value<String?>? customIconPath}) {
     return AccountsCompanion(
@@ -1369,6 +1411,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       note: note ?? this.note,
       syncId: syncId ?? this.syncId,
       hidden: hidden ?? this.hidden,
+      excludeFromAssets: excludeFromAssets ?? this.excludeFromAssets,
       iconType: iconType ?? this.iconType,
       customIconPath: customIconPath ?? this.customIconPath,
     );
@@ -1431,6 +1474,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (hidden.present) {
       map['hidden'] = Variable<bool>(hidden.value);
     }
+    if (excludeFromAssets.present) {
+      map['exclude_from_assets'] = Variable<bool>(excludeFromAssets.value);
+    }
     if (iconType.present) {
       map['icon_type'] = Variable<String>(iconType.value);
     }
@@ -1461,6 +1507,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('note: $note, ')
           ..write('syncId: $syncId, ')
           ..write('hidden: $hidden, ')
+          ..write('excludeFromAssets: $excludeFromAssets, ')
           ..write('iconType: $iconType, ')
           ..write('customIconPath: $customIconPath')
           ..write(')'))
@@ -12176,6 +12223,7 @@ typedef $$AccountsTableCreateCompanionBuilder = AccountsCompanion Function({
   Value<String?> note,
   Value<String?> syncId,
   Value<bool> hidden,
+  Value<bool> excludeFromAssets,
   Value<String?> iconType,
   Value<String?> customIconPath,
 });
@@ -12198,6 +12246,7 @@ typedef $$AccountsTableUpdateCompanionBuilder = AccountsCompanion Function({
   Value<String?> note,
   Value<String?> syncId,
   Value<bool> hidden,
+  Value<bool> excludeFromAssets,
   Value<String?> iconType,
   Value<String?> customIconPath,
 });
@@ -12265,6 +12314,10 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<bool> get hidden => $composableBuilder(
       column: $table.hidden, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get excludeFromAssets => $composableBuilder(
+      column: $table.excludeFromAssets,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get iconType => $composableBuilder(
       column: $table.iconType, builder: (column) => ColumnFilters(column));
@@ -12340,6 +12393,10 @@ class $$AccountsTableOrderingComposer
   ColumnOrderings<bool> get hidden => $composableBuilder(
       column: $table.hidden, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<bool> get excludeFromAssets => $composableBuilder(
+      column: $table.excludeFromAssets,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get iconType => $composableBuilder(
       column: $table.iconType, builder: (column) => ColumnOrderings(column));
 
@@ -12411,6 +12468,9 @@ class $$AccountsTableAnnotationComposer
   GeneratedColumn<bool> get hidden =>
       $composableBuilder(column: $table.hidden, builder: (column) => column);
 
+  GeneratedColumn<bool> get excludeFromAssets => $composableBuilder(
+      column: $table.excludeFromAssets, builder: (column) => column);
+
   GeneratedColumn<String> get iconType =>
       $composableBuilder(column: $table.iconType, builder: (column) => column);
 
@@ -12459,6 +12519,7 @@ class $$AccountsTableTableManager extends RootTableManager<
             Value<String?> note = const Value.absent(),
             Value<String?> syncId = const Value.absent(),
             Value<bool> hidden = const Value.absent(),
+            Value<bool> excludeFromAssets = const Value.absent(),
             Value<String?> iconType = const Value.absent(),
             Value<String?> customIconPath = const Value.absent(),
           }) =>
@@ -12481,6 +12542,7 @@ class $$AccountsTableTableManager extends RootTableManager<
             note: note,
             syncId: syncId,
             hidden: hidden,
+            excludeFromAssets: excludeFromAssets,
             iconType: iconType,
             customIconPath: customIconPath,
           ),
@@ -12503,6 +12565,7 @@ class $$AccountsTableTableManager extends RootTableManager<
             Value<String?> note = const Value.absent(),
             Value<String?> syncId = const Value.absent(),
             Value<bool> hidden = const Value.absent(),
+            Value<bool> excludeFromAssets = const Value.absent(),
             Value<String?> iconType = const Value.absent(),
             Value<String?> customIconPath = const Value.absent(),
           }) =>
@@ -12525,6 +12588,7 @@ class $$AccountsTableTableManager extends RootTableManager<
             note: note,
             syncId: syncId,
             hidden: hidden,
+            excludeFromAssets: excludeFromAssets,
             iconType: iconType,
             customIconPath: customIconPath,
           ),

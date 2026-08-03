@@ -200,7 +200,11 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
   final int? initialAccountId;
   final List<int>? initialTagIds; // 初始标签ID列表
   final bool showAccountPicker; // 是否显示账户选择
-  final ValueChanged<AmountEditorResult> onSubmit;
+  /// v5.6: 传 null 或配合 [confirmOnly] 时，小键盘「完成」只把金额写回表单，
+  /// 不保存流水；保存由外部表单（再记一笔/保存）负责。
+  final ValueChanged<AmountEditorResult>? onSubmit;
+  /// true = 仅确认金额（pop 返回金额+币种），不触发 onSubmit
+  final bool confirmOnly;
   final int ledgerId;
   final int? editingTransactionId; // 编辑模式时的交易ID，用于显示已有附件
   final String transactionKind; // 'expense' / 'income' / 'transfer'，决定标记开关可见性
@@ -222,7 +226,8 @@ class AmountEditorSheet extends ConsumerStatefulWidget {
     this.initialAccountId,
     this.initialTagIds,
     this.showAccountPicker = false,
-    required this.onSubmit,
+    this.onSubmit,
+    this.confirmOnly = false,
     required this.ledgerId,
     this.editingTransactionId,
     this.transactionKind = 'expense',
@@ -819,7 +824,7 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
               ],
             ),
             const SizedBox(height: 8),
-            _buildTagAndAttachmentRow(),
+            if (!widget.confirmOnly) _buildTagAndAttachmentRow(),
             const SizedBox(height: 10),
             // 数字键盘
             LayoutBuilder(builder: (ctx, c) {
@@ -888,6 +893,17 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
                                 return;
                               }
 
+                              // v5.6: 仅确认金额模式 — 关闭小键盘并把金额写回表单
+                              if (widget.confirmOnly) {
+                                HapticFeedback.lightImpact();
+                                SystemSound.play(SystemSoundType.click);
+                                Navigator.pop(context, (
+                                  amount: total.abs(),
+                                  currencyCode: _txCurrency(),
+                                ));
+                                return;
+                              }
+
                               // 正常模式：提交
                               // 防重复点击
                               if (_isSubmitting) return;
@@ -915,20 +931,23 @@ class _AmountEditorSheetState extends ConsumerState<AmountEditorSheet> {
 
                               HapticFeedback.lightImpact();
                               SystemSound.play(SystemSoundType.click);
-                              widget.onSubmit((
-                                amount: total.abs(), // 始终正数
-                                note: _noteCtrl.text.isEmpty
-                                    ? null
-                                    : _noteCtrl.text,
-                                date: _date,
-                                accountId: _selectedAccountId,
-                                tagIds: _selectedTagIds,
-                                pendingAttachments: _pendingAttachments,
-                                excludeFromStats: _excludeFromStats,
-                                excludeFromBudget: _excludeFromBudget,
-                                currencyCode: txCurrency,
-                                nativeAmount: nativeAmount,
-                              ));
+                              final submit = widget.onSubmit;
+                              if (submit != null) {
+                                submit((
+                                  amount: total.abs(), // 始终正数
+                                  note: _noteCtrl.text.isEmpty
+                                      ? null
+                                      : _noteCtrl.text,
+                                  date: _date,
+                                  accountId: _selectedAccountId,
+                                  tagIds: _selectedTagIds,
+                                  pendingAttachments: _pendingAttachments,
+                                  excludeFromStats: _excludeFromStats,
+                                  excludeFromBudget: _excludeFromBudget,
+                                  currencyCode: txCurrency,
+                                  nativeAmount: nativeAmount,
+                                ));
+                              }
 
                               // 注意：不需要在这里重置 _isSubmitting
                               // 因为提交后整个 Sheet 会被关闭，State 会被销毁

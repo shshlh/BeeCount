@@ -43,6 +43,9 @@ abstract class AccountRepository {
     String? cardLastFour,
     String? note,
     String? syncId,
+    bool excludeFromAssets = false,
+    String? iconType,
+    String? customIconPath,
   });
 
   /// 按 name 取账户(name 全局唯一,账户跨账本可用);不存在则建一条。
@@ -78,6 +81,9 @@ abstract class AccountRepository {
     String? note,
     bool clearMetadataFields = false,
     bool? hidden,
+    bool? excludeFromAssets,
+    String? iconType,
+    String? customIconPath,
   });
 
   /// 隐藏 / 恢复账户(账户隐藏 #240)。内部走 [updateAccount] → 记

@@ -342,6 +342,8 @@ class _AccountDrawerSheetState extends ConsumerState<_AccountDrawerSheet> {
                                         AccountTypeIcon(
                                           type: account.type,
                                           size: 30,
+                                          iconType: account.iconType,
+                                          customIconPath: account.customIconPath,
                                         ),
                                         const SizedBox(width: 12),
                                         Expanded(

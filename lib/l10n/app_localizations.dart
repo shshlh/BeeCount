@@ -629,6 +629,12 @@ abstract class AppLocalizations {
   /// **'Please select'**
   String get txFormPleaseSelect;
 
+  /// No description provided for @txAmountRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an amount'**
+  String get txAmountRequired;
+
   /// No description provided for @txFormNote.
   ///
   /// In en, this message translates to:
@@ -7383,6 +7389,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Balance'**
   String get accountBalance;
+
+  /// No description provided for @accountExcludeFromAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'Exclude from assets'**
+  String get accountExcludeFromAssets;
+
+  /// No description provided for @accountExcludeFromAssetsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Excluded from net worth and asset composition stats'**
+  String get accountExcludeFromAssetsHint;
+
+  /// No description provided for @accountLogoChoose.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose image'**
+  String get accountLogoChoose;
+
+  /// No description provided for @accountLogoReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get accountLogoReset;
 
   /// No description provided for @accountEditTitle.
   ///

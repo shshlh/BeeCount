@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../l10n/app_localizations.dart';
+import '../services/custom_icon_service.dart';
 
 /// v4.5 账户体系改造：7 个一级类型，取消资产/负债二分法
 ///
@@ -216,6 +219,9 @@ class AccountTypeIcon extends StatelessWidget {
   final Color? color;
   /// 是否以单色模式渲染（忽略 SVG 原始颜色，统一用 [color] 着色）
   final bool monochrome;
+  /// v5.6: 自定义 logo（iconType='custom' 时使用 customIconPath 渲染图片）
+  final String? iconType;
+  final String? customIconPath;
 
   const AccountTypeIcon({
     super.key,
@@ -223,10 +229,37 @@ class AccountTypeIcon extends StatelessWidget {
     this.size = 20,
     this.color,
     this.monochrome = false,
+    this.iconType,
+    this.customIconPath,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (iconType == 'custom' && customIconPath != null) {
+      return FutureBuilder<String>(
+        future: CustomIconService().resolveIconPath(customIconPath!),
+        builder: (context, snapshot) {
+          final path = snapshot.data;
+          if (snapshot.hasData && path != null && File(path).existsSync()) {
+            return ClipRRect(
+              borderRadius: BorderRadius.circular(size * 0.25),
+              child: Image.file(
+                File(path),
+                width: size,
+                height: size,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _defaultIcon(context),
+              ),
+            );
+          }
+          return _defaultIcon(context);
+        },
+      );
+    }
+    return _defaultIcon(context);
+  }
+
+  Widget _defaultIcon(BuildContext context) {
     return SvgPicture.asset(
       _getSvgPath(type),
       width: size,

@@ -291,6 +291,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get txFormPleaseSelect => 'Please select';
 
   @override
+  String get txAmountRequired => 'Enter an amount';
+
+  @override
   String get txFormNote => 'Note';
 
   @override
@@ -4032,6 +4035,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountBalance => 'Balance';
+
+  @override
+  String get accountExcludeFromAssets => 'Exclude from assets';
+
+  @override
+  String get accountExcludeFromAssetsHint =>
+      'Excluded from net worth and asset composition stats';
+
+  @override
+  String get accountLogoChoose => 'Choose image';
+
+  @override
+  String get accountLogoReset => 'Reset';
 
   @override
   String get accountEditTitle => 'Edit Account';

@@ -34,6 +34,97 @@
 
 ## 2026-08-03
 
+**移交角色**：invest-ui + invest-logic
+**接收角色**：项目经理（PM）
+
+**完成工作**：阶段 5.6 记账/账户/资产体验改进（5 项全部完成）
+
+1. **5.6.1 小键盘完成仅确认金额** — [amount_editor_sheet.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\biz\amount_editor_sheet.dart) + tx_entry_form/transfer_form
+   - AmountEditorSheet 新增 confirmOnly：完成只 pop 返回（金额+币种）写回表单，不再 onSubmit 保存流水
+   - 记账/转账表单 await 结果更新 _amount/_pickedCurrency；其它调用方 onSubmit 行为保持（当前无其它调用方）
+   - confirmOnly 模式隐藏附件/旗标区（保存由底部按钮负责）
+
+2. **5.6.2 再记一笔先保存** — [tx_entry_form.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\transaction\tx_entry_form.dart) + transfer_form.dart
+   - _save 先校验：金额 0 提示「请输入金额」、转账缺账户提示「选择账户」，不进入下一笔
+   - 校验通过后先提交当前内容（编辑态保存 A 的修改），成功再清空金额/标签/备注
+
+3. **5.6.3 账户「不计入资产」开关** — [db.dart](/D:\codexproject\pj_004_beecount_fork\lib\data\db.dart) + 账户仓储 + 编辑/详情页
+   - Accounts 新增 exclude_from_assets，schema v34→v35（幂等 _addColumnIfMissing）
+   - createAccount/updateAccount 全链路支持该字段
+   - 净资产/资产构成/净值趋势（getNetWorthBreakdown* / getNetWorthDailyBalances / getNetWorthTrendSeries / getAssetCompositionByType*）排除 excludeFromAssets=true
+   - 编辑页加「不计入资产」开关，详情页 header 显示标记
+
+4. **5.6.4 资产管理界面布局** — [accounts_page.dart](/D:\codexproject\pj_004_beecount_fork\lib\pages\account\accounts_page.dart)
+   - 净资产汇总 + 资产构成模块移出 ListView 固定（账户列表独立滚动）
+   - 每个一级账户类型标题右侧显示类型合计（单币种组）
+   - 列表底部余量保留（隐藏账户区可点击）
+
+5. **5.6.5 账户自定义 logo** — [account_type_utils.dart](/D:\codexproject\pj_004_beecount_fork\lib\utils\account_type_utils.dart) + 账户编辑/列表/抽屉/详情
+   - AccountTypeIcon 支持 iconType/customIconPath，渲染自定义图片（CustomIconService）
+   - 编辑页相册上传 + 恢复默认，create/update 持久化
+   - 账户卡片/抽屉/详情/默认账户选择器均显示自定义 logo
+
+**测试**：
+- 新增 migration_v35_test、account_exclude_from_assets_test
+- 新增 editor 测试：小键盘完成仅写回金额、再记一笔金额 0 提示
+- 更新 sync_pull_errors_schema_test schemaVersion 34→35；账户编辑页测试回归通过
+- 全量 flutter analyze 零 error（873 个预存 info/warning）
+- 全量 flutter test：581 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**下一个任务需要知道的**：
+- Account 数据类新增必填 excludeFromAssets，手工构造 Account 的位置需同步补字段
+- schema 已升到 v35；同步层（云端）账户字段默认 false，未做服务端迁移
+- 自定义 logo 文件存 custom_icons/，账户场景用 id=0 前缀文件名（与分类共用目录）
+- 视觉布局未做 Windows 实机截图验证（widget 测试覆盖结构与回归）
+
+**git 状态**：当前分支 main，未提交（等待 PM 审查）
+
+---
+## 2026-08-03
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-ui + invest-logic
+
+**任务**：5.6 记账/账户/资产体验改进（5 项）
+
+**1. 小键盘「完成」仅确认金额，不保存流水**
+- 文件：lib/widgets/biz/amount_editor_sheet.dart 约 867-940 行 doneKey()
+- 现状：点完成直接 widget.onSubmit(...) → 保存流水并跳明细
+- 要求：完成仅把金额写回表单（关闭小键盘），保存由底部「再记一笔/保存」负责；小键盘不再 onSubmit
+- 注意：AmountEditorSheet 的 onSubmit 仍用于其他调用方（如投资买入？）——需评估：仅记账表单（tx_entry_form/transfer_form）传 null 或加参数，投资买入保持原行为
+
+**2. 「再记一笔」先保存当前编辑再记新账**
+- 文件：lib/widgets/transaction/tx_entry_form.dart _save(exitAfterSave:false) + transfer_form.dart 同
+- 现状：编辑模式 A 改后点再记一笔，当前 A 改未保存就清空，新流水 B 导致 A 改丢失
+- 要求：exitAfterSave=false 时先提交当前内容（保存 A 改），成功后再清空金额/标签/备注进入下一笔
+- 校验：当前内容无效（如金额 0 / 缺账户）时提示，不进入下一笔
+
+**3. 账户「不计入资产」开关**
+- 文件：lib/data/db.dart Accounts 表 + lib/pages/account/account_edit_page.dart + 净资产/资产构成计算
+- 需求：贷款/帮别人借的账户不计入自己资产（仅提醒作用）
+- 实现：
+  a) Accounts 表加 excludeFromAssets bool（默认 false）→ schema v35 迁移
+  b) account_edit_page 新建/编辑界面加「不计入资产」Switch（隐藏账户旁）
+  c) 净资产/资产构成/净值趋势计算排除 excludeFromAssets=true 的账户（getAccountBalance 聚合、netWorth 相关查询）
+  d) 账户详情显示「不计入资产」标记
+
+**4. 资产管理界面布局**
+- 文件：lib/pages/account/accounts_page.dart
+- 要求：
+  a) 净资产图表固定高度 + 整个模块固定不滚动（类似投资组合摘要固定）
+  b) 每个一级账户类型（现金/储蓄/虚拟/应收款/投资/信用/贷款）标题右侧显示该类型资产/负债合计金额
+  c) 账户列表滚动到底留足底部余量（隐藏账户区可正常点击，不被导航栏遮挡）
+
+**5. 账户自定义 logo**
+- 文件：参考分类自定义图标（CustomIconService / Category iconType/customIconPath）
+- Accounts 表 4.5 已加 iconType/customIconPath，需确认 UI 是否接通
+- 要求：新建/编辑账户时可选相册/文件上传图片作账户 logo；账户列表/抽屉/卡片显示自定义 logo
+- 复用分类的自定义图标实现模式
+
+**约束**：flutter analyze 零 error；相关测试更新（小键盘不保存、再记一笔先保存、不计入资产、账户 logo）
+
+## 2026-08-03
+
 **移交角色**：invest-ui
 **接收角色**：项目经理（PM）
 
@@ -71,6 +162,7 @@
 **git 状态**：当前分支 main，未提交（等待 PM 审查）
 
 ---
+
 ## 2026-08-03
 
 **移交角色**：项目经理（PM）

@@ -126,6 +126,41 @@ void main() {
     await tester.pumpAndSettle();
   });
 
+  testWidgets('小键盘「完成」仅写回金额,不保存流水', (tester) async {
+    await tester.pumpWidget(wrap());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('金额'));
+    await tester.pumpAndSettle();
+    expect(find.text('完成'), findsOneWidget);
+
+    await tester.tap(find.text('1'));
+    await tester.tap(find.text('2'));
+    await tester.pump();
+    await tester.tap(find.text('完成'));
+    await tester.pumpAndSettle();
+
+    // 小键盘关闭,金额写回表单;页面仍在（未保存退出）
+    expect(find.text('完成'), findsNothing);
+    expect(find.text('¥ 12'), findsOneWidget);
+  });
+
+  testWidgets('再记一笔金额为 0 时提示且不进入下一笔', (tester) async {
+    await tester.pumpWidget(wrap());
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('再记一笔'));
+    await tester.pump();
+
+    expect(find.text('请输入金额'), findsOneWidget);
+    // 表单仍在
+    expect(find.text('金额'), findsOneWidget);
+
+    // toast 自动关闭计时器
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+  });
+
   testWidgets('转账抽屉两段选择:先转出后转入,回显 A ⇄ B', (tester) async {
     await tester.pumpWidget(wrap());
     await tester.pumpAndSettle();

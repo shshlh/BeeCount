@@ -133,120 +133,137 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
               data: (accounts) {
                 final groups = _reorderingGroups ?? _groupAccounts(accounts);
 
-                return ListView(
-                  padding: EdgeInsets.only(
-                    left: 12.0.scaled(context, ref),
-                    right: 12.0.scaled(context, ref),
-                    top: 8.0.scaled(context, ref),
-                    bottom: widget.asTab
-                        ? 8.0.scaled(context, ref) + 56 + MediaQuery.of(context).padding.bottom + 24
-                        : 8.0.scaled(context, ref),
-                  ),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (accounts.isEmpty)
-                      SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.4,
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.account_balance_wallet_outlined,
-                                size: 64.0.scaled(context, ref),
-                                color: primaryColor.withValues(alpha: 0.4),
-                              ),
-                              SizedBox(height: 16.0.scaled(context, ref)),
-                              Text(
-                                l10n.accountsEmptyMessage,
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: BeeTokens.textSecondary(context),
-                                ),
-                              ),
-                              SizedBox(height: 24.0.scaled(context, ref)),
-                              ElevatedButton.icon(
-                                onPressed: () => _addAccount(context, ref, ledgerId),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: primaryColor,
-                                  foregroundColor: Colors.white,
-                                ),
-                                icon: const Icon(Icons.add),
-                                label: Text(l10n.accountAddButton),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    else ...[
-                      // 0. 净资产汇总 + 资产构成（合并卡片）
-                      _buildNetWorthAndCompositionCard(
+                    // v5.6: 净资产汇总 + 资产构成模块固定，不随账户列表滚动
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        12.0.scaled(context, ref),
+                        8.0.scaled(context, ref),
+                        12.0.scaled(context, ref),
+                        4.0.scaled(context, ref),
+                      ),
+                      child: _buildNetWorthAndCompositionCard(
                         context, ref, netWorthByCurrencyAsync, compositionAsync, primaryColor,
                       ),
+                    ),
+                    Expanded(
+                      child: accounts.isEmpty
+                          ? SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.4,
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.account_balance_wallet_outlined,
+                                      size: 64.0.scaled(context, ref),
+                                      color: primaryColor.withValues(alpha: 0.4),
+                                    ),
+                                    SizedBox(height: 16.0.scaled(context, ref)),
+                                    Text(
+                                      l10n.accountsEmptyMessage,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: BeeTokens.textSecondary(context),
+                                      ),
+                                    ),
+                                    SizedBox(height: 24.0.scaled(context, ref)),
+                                    ElevatedButton.icon(
+                                      onPressed: () =>
+                                          _addAccount(context, ref, ledgerId),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: primaryColor,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      icon: const Icon(Icons.add),
+                                      label: Text(l10n.accountAddButton),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          : ListView(
+                              padding: EdgeInsets.only(
+                                left: 12.0.scaled(context, ref),
+                                right: 12.0.scaled(context, ref),
+                                top: 4.0.scaled(context, ref),
+                                // v5.6: 底部留足余量，隐藏账户区不被导航遮挡
+                                bottom: widget.asTab
+                                    ? 8.0.scaled(context, ref) +
+                                        56 +
+                                        MediaQuery.of(context).padding.bottom +
+                                        24
+                                    : 8.0.scaled(context, ref),
+                              ),
+                              children: [
+                                // 2. 资产账户分组
+                                ..._buildClassificationSection(
+                                  context: context,
+                                  l10n: l10n,
+                                  title: l10n.assetAccounts,
+                                  icon: Icons.trending_up,
+                                  iconColor: BeeTokens.incomeColor(context, ref),
+                                  typeOrder: assetTypeOrder,
+                                  groups: groups,
+                                  allStats: allStatsAsync.valueOrNull,
+                                  primaryColor: primaryColor,
+                                  ledgerId: ledgerId,
+                                ),
 
-                      // 2. 资产账户分组
-                      ..._buildClassificationSection(
-                        context: context,
-                        l10n: l10n,
-                        title: l10n.assetAccounts,
-                        icon: Icons.trending_up,
-                      iconColor: BeeTokens.incomeColor(context, ref),
-                        typeOrder: assetTypeOrder,
-                       groups: groups,
-                        allStats: allStatsAsync.valueOrNull,
-                        primaryColor: primaryColor,
-                        ledgerId: ledgerId,
-                      ),
+                                // 3. 负债账户分组
+                                ..._buildClassificationSection(
+                                  context: context,
+                                  l10n: l10n,
+                                  title: l10n.liabilityAccounts,
+                                  icon: Icons.trending_down,
+                                  iconColor: BeeTokens.expenseColor(context, ref),
+                                  typeOrder: liabilityTypeOrder,
+                                  groups: groups,
+                                  allStats: allStatsAsync.valueOrNull,
+                                  primaryColor: primaryColor,
+                                  ledgerId: ledgerId,
+                                ),
 
-                      // 3. 负债账户分组
-                      ..._buildClassificationSection(
-                        context: context,
-                        l10n: l10n,
-                        title: l10n.liabilityAccounts,
-                        icon: Icons.trending_down,
-                      iconColor: BeeTokens.expenseColor(context, ref),
-                        typeOrder: liabilityTypeOrder,
-                       groups: groups,
-                        allStats: allStatsAsync.valueOrNull,
-                        primaryColor: primaryColor,
-                        ledgerId: ledgerId,
-                      ),
+                                // 4. 其他未知类型(排除隐藏账户,账户隐藏 #240)
+                                ...groups.keys
+                                    .where((type) =>
+                                        !allAccountTypes.contains(type) &&
+                                        groups[type]!.any((a) => !a.hidden))
+                                    .map((type) {
+                                  final groupList =
+                                      groups[type]!.where((a) => !a.hidden).toList();
+                                  return _AccountTypeGroup(
+                                    type: type,
+                                    accounts: groupList,
+                                    primaryColor: primaryColor,
+                                    allStats: allStatsAsync.valueOrNull,
+                                    onReorder: (oldIndex, newIndex) =>
+                                        _onReorder(type, groupList, oldIndex, newIndex),
+                                    onTap: (account) =>
+                                        _viewAccountDetail(context, ref, account),
+                                    onEdit: (account) =>
+                                        _editAccount(context, ref, account, ledgerId),
+                                  );
+                                }),
 
-                      // 4. 其他未知类型(排除隐藏账户,账户隐藏 #240)
-                      ...groups.keys
-                          .where((type) =>
-                              !allAccountTypes.contains(type) &&
-                              groups[type]!.any((a) => !a.hidden))
-                          .map((type) {
-                        final groupList =
-                            groups[type]!.where((a) => !a.hidden).toList();
-                        return _AccountTypeGroup(
-                          type: type,
-                          accounts: groupList,
-                          primaryColor: primaryColor,
-                          allStats: allStatsAsync.valueOrNull,
-                          onReorder: (oldIndex, newIndex) =>
-                              _onReorder(type, groupList, oldIndex, newIndex),
-                          onTap: (account) =>
-                              _viewAccountDetail(context, ref, account),
-                          onEdit: (account) =>
-                              _editAccount(context, ref, account, ledgerId),
-                        );
-                      }),
-
-                      // 5. 已隐藏账户分区(账户隐藏 #240,D2:主列表退场,
-                      // 分区头小计与净资产卡差额对账)
-                      _HiddenAccountsSection(
-                        accounts: accounts.where((a) => a.hidden).toList(),
-                        allStats: allStatsAsync.valueOrNull,
-                        primaryColor: primaryColor,
-                        onTap: (account) =>
-                            _viewAccountDetail(context, ref, account),
-                        onEdit: (account) =>
-                            _editAccount(context, ref, account, ledgerId),
-                        onRestore: (account) =>
-                            _restoreAccount(context, ref, account),
-                      ),
-                    ],
+                                // 5. 已隐藏账户分区(账户隐藏 #240,D2:主列表退场,
+                                // 分区头小计与净资产卡差额对账)
+                                _HiddenAccountsSection(
+                                  accounts: accounts.where((a) => a.hidden).toList(),
+                                  allStats: allStatsAsync.valueOrNull,
+                                  primaryColor: primaryColor,
+                                  onTap: (account) =>
+                                      _viewAccountDetail(context, ref, account),
+                                  onEdit: (account) =>
+                                      _editAccount(context, ref, account, ledgerId),
+                                  onRestore: (account) =>
+                                      _restoreAccount(context, ref, account),
+                                ),
+                              ],
+                            ),
+                    ),
                   ],
                 );
               },
@@ -1698,6 +1715,30 @@ class _AccountTypeGroupState extends ConsumerState<_AccountTypeGroup> {
                     ),
                   ),
                 ),
+                // v5.6: 类型合计（仅单币种组显示，避免混币相加）
+                if (widget.accounts.isNotEmpty &&
+                    widget.accounts
+                        .every((a) => a.currency == widget.accounts.first.currency)) ...[
+                  const SizedBox(width: 8),
+                  Flexible(
+                    child: AmountText(
+                      value: widget.accounts.fold<double>(
+                        0,
+                        (sum, a) =>
+                            sum +
+                            (widget.allStats?[a.id]?.balance ?? a.initialBalance),
+                      ),
+                      signed: false,
+                      showCurrency: false,
+                      useCompactFormat: false,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: typeColor,
+                      ),
+                    ),
+                  ),
+                ],
                 const Spacer(),
                 AnimatedRotation(
                   turns: _expanded ? 0.25 : 0,
@@ -1967,6 +2008,8 @@ class _AccountCard extends ConsumerWidget {
                             child: AccountTypeIcon(
                               type: account.type,
                               size: 18.0.scaled(context, ref),
+                              iconType: account.iconType,
+                              customIconPath: account.customIconPath,
                             ),
                           ),
                         ),
@@ -2482,6 +2525,8 @@ class _CompactDefaultAccount extends ConsumerWidget {
                   leading: AccountTypeIcon(
                     type: account.type,
                     size: 24,
+                    iconType: account.iconType,
+                    customIconPath: account.customIconPath,
                   ),
                   title: Text(
                     account.name,

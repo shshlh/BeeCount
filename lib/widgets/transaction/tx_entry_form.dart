@@ -26,6 +26,7 @@ import '../biz/amount_editor_sheet.dart';
 import '../biz/format_money.dart';
 import '../biz/note_picker_dialog.dart';
 import '../category_icon.dart';
+import '../ui/toast.dart';
 import '../ui/wheel_date_picker.dart';
 
 /// 记账页表单体（v5.1 记账界面体验优化）
@@ -73,6 +74,7 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
   late DateTime _date;
   double _amount = 0;
   List<int> _tagIds = [];
+  String? _pickedCurrency;
   late final TextEditingController _noteCtrl;
   final FocusNode _noteFocusNode = FocusNode();
   List<NoteHistoryEntry> _frequentNotes = [];
@@ -559,14 +561,15 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
     if (!mounted) return;
 
     final category = _category;
-    await showModalBottomSheet<void>(
+    final result = await showModalBottomSheet<
+        ({double amount, String currencyCode})>(
       context: context,
       isScrollControlled: true,
       backgroundColor: BeeTokens.surfaceSheet(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (sheetContext) => AmountEditorSheet(
+      builder: (_) => AmountEditorSheet(
         categoryName: category?.name ?? '',
         categoryId: category != null && category.id >= 0 ? category.id : null,
         categorySyncId: category != null && category.id < 0
@@ -585,9 +588,15 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
         initialExcludeFromBudget: widget.initialExcludeFromBudget,
         initialCurrencyCode: widget.initialCurrencyCode,
         initialNativeAmount: widget.initialNativeAmount,
-        onSubmit: (res) => _submitTransaction(sheetContext, res, ledgerId),
+        confirmOnly: true,
       ),
     );
+    if (result != null && mounted) {
+      setState(() {
+        _amount = result.amount;
+        _pickedCurrency = result.currencyCode;
+      });
+    }
   }
 
   Future<void> _submitTransaction(
@@ -741,6 +750,10 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
 
   /// 底部「再记一笔 / 保存」直接提交，不经过金额小键盘。
   Future<void> _save({required bool exitAfterSave}) async {
+    if (_amount <= 0) {
+      showToast(context, AppLocalizations.of(context).txAmountRequired);
+      return;
+    }
     final ledgerId = ref.read(currentLedgerIdProvider);
     await _submitTransaction(
       null,
@@ -752,7 +765,7 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
 
   AmountEditorResult _buildDirectResult(int ledgerId) {
     final ledgerBase = ref.read(currentLedgerCurrencyProvider);
-    final txCurrency = widget.initialCurrencyCode ?? ledgerBase;
+    final txCurrency = _pickedCurrency ?? widget.initialCurrencyCode ?? ledgerBase;
     return (
       amount: _amount,
       note: _noteCtrl.text.isEmpty ? null : _noteCtrl.text,

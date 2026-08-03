@@ -60,8 +60,11 @@ class Accounts extends Table {
   TextColumn get note => text().nullable()(); // 备注
   TextColumn get syncId => text().nullable()(); // 跨设备同步唯一标识 (UUID)
   /// 隐藏:true 时该账户不再出现在记账/转账/周期选择器,账户管理页移入「已隐藏」分区。
-  /// 仍计入账户余额、净资产、资产构成、净值趋势(.docs/account-archive/01 §二 D1)。
+ /// 仍计入账户余额、净资产、资产构成、净值趋势(.docs/account-archive/01 §二 D1)。
  BoolColumn get hidden => boolean().withDefault(const Constant(false))();
+  /// v5.6: 不计入资产 — 不参与净资产/资产构成/净值趋势统计（仅提醒作用）
+  BoolColumn get excludeFromAssets =>
+      boolean().withDefault(const Constant(false))();
   /// 图标类型: null=默认（按账户type自动匹配SVG） / 'custom'=用户自定义图片
   TextColumn get iconType => text().nullable()();
   /// 自定义图标路径（iconType='custom' 时有效）
@@ -508,7 +511,7 @@ class BeeDatabase extends _$BeeDatabase {
 
  @override
   int get schemaVersion =>
-      34; // v31: 账户隐藏 / v32: 投资数据层 / v33: 账户体系改造 / v34: 账户初始资金日期
+      35; // v31: 账户隐藏 / v32: 投资数据层 / v33: 账户体系改造 / v34: 账户初始资金日期 / v35: 账户不计入资产
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1293,6 +1296,17 @@ class BeeDatabase extends _$BeeDatabase {
                 "CAST(strftime('%s','now') AS INTEGER)) "
                 'WHERE initial_date IS NULL;');
             logger.info('DBMigration', 'v34 迁移完成');
+          }
+          if (from < 35) {
+            logger.info(
+                'DBMigration', '开始迁移到 v35: 账户不计入资产(exclude_from_assets)');
+            await _addColumnIfMissing(
+              'accounts',
+              'exclude_from_assets',
+              'ALTER TABLE accounts ADD COLUMN exclude_from_assets '
+              'INTEGER NOT NULL DEFAULT 0;',
+            );
+            logger.info('DBMigration', 'v35 迁移完成');
           }
        },
        onCreate: (m) async {

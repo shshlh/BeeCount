@@ -280,6 +280,7 @@ class LocalTransactionRepository implements TransactionRepository {
       cardLastFour: s.cardLastFour,
       note: s.note,
       syncId: s.syncId,
+      excludeFromAssets: false,
       // SharedLedgerAccounts 镜像表没有 hidden 概念(隐藏是 Owner 侧个人状态,
       // 不随共享账本镜像同步),synthetic 账户固定按「未隐藏」处理。
       hidden: false,
@@ -1255,6 +1256,7 @@ class LocalTransactionRepository implements TransactionRepository {
               createdAt: DateTime.now(),
               updatedAt: DateTime.now(),
               syncId: s.syncId,
+              excludeFromAssets: false,
               // SharedLedgerAccounts 镜像表没有 hidden 概念(隐藏是 Owner 侧
               // 个人状态,不随共享账本镜像同步),synthetic 账户固定按「未隐藏」处理。
               hidden: false,

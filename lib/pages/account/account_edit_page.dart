@@ -7,6 +7,7 @@ import '../../widgets/biz/section_card.dart';
 import '../../data/db.dart' as db;
 import '../../l10n/app_localizations.dart';
 import '../../services/billing/post_processor.dart';
+import '../../services/custom_icon_service.dart';
 import '../../utils/currencies.dart';
 import '../../styles/tokens.dart';
 import '../../utils/ui_scale_extensions.dart';
@@ -38,10 +39,13 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
   late String _selectedType;
   late String _selectedCurrency;
   late DateTime _initialDate;
+  String? _iconType; // null/material 或 'custom'
+  String? _customIconPath;
   int? _billingDay;
   int? _paymentDueDay;
   bool _reminderEnabled = false;
   int _reminderDaysBefore = 3;
+  bool _excludeFromAssets = false;
   bool _saving = false;
   bool _isNameDuplicate = false;
   String? _nameErrorText;
@@ -70,8 +74,11 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
     _selectedType = widget.account?.type ?? 'cash';
     _selectedCurrency = widget.account?.currency ?? 'CNY';
     _initialDate = widget.account?.initialDate ?? DateTime.now();
+    _iconType = widget.account?.iconType;
+    _customIconPath = widget.account?.customIconPath;
     _billingDay = widget.account?.billingDay;
     _paymentDueDay = widget.account?.paymentDueDay;
+    _excludeFromAssets = widget.account?.excludeFromAssets ?? false;
     _loadReminderSettings();
   }
 
@@ -407,6 +414,92 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                               ),
                             ),
                           ),
+                          const SizedBox(height: 8),
+                          // v5.6: 账户自定义 logo（相册上传 / 恢复默认）
+                          Row(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: SizedBox(
+                                  width: 48,
+                                  height: 48,
+                                  child: Center(
+                                    child: AccountTypeIcon(
+                                      type: _selectedType,
+                                      size: 40,
+                                      iconType: _iconType,
+                                      customIconPath: _customIconPath,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton.icon(
+                                        onPressed: _pickCustomLogo,
+                                        icon: const Icon(
+                                          Icons.photo_library_outlined,
+                                          size: 18,
+                                        ),
+                                        label: Text(l10n.accountLogoChoose),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: TextButton(
+                                        onPressed: _iconType == 'custom'
+                                            ? () => setState(() {
+                                                  _iconType = null;
+                                                  _customIconPath = null;
+                                                })
+                                            : null,
+                                        child: Text(l10n.accountLogoReset),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          // v5.6: 不计入资产开关（贷款/代管账户仅提醒用）
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      l10n.accountExcludeFromAssets,
+                                      style: TextStyle(
+                                        fontSize: 14.0.scaled(context, ref),
+                                        color: BeeTokens.textPrimary(context),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      l10n.accountExcludeFromAssetsHint,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color:
+                                            BeeTokens.textTertiary(context),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Switch(
+                                value: _excludeFromAssets,
+                                activeThumbColor:
+                                    Theme.of(context).colorScheme.primary,
+                                onChanged: (v) =>
+                                    setState(() => _excludeFromAssets = v),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -717,6 +810,26 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
     );
   }
 
+  /// v5.6: 从相册选择账户 logo（复用 CustomIconService）
+  Future<void> _pickCustomLogo() async {
+    final l10n = AppLocalizations.of(context);
+    final service = CustomIconService();
+    final file = await service.pickFromGallery();
+    if (file == null || !mounted) return;
+    try {
+      final saved = await service.saveCustomIcon(file, 0);
+      if (!mounted) return;
+      setState(() {
+        _iconType = 'custom';
+        _customIconPath = saved;
+      });
+    } catch (e) {
+      if (mounted) {
+        showToast(context, '${l10n.commonError}: $e');
+      }
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -796,6 +909,10 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
           cardLastFour: cardLastFour != null && cardLastFour.isNotEmpty ? cardLastFour : null,
           note: noteText.isNotEmpty ? noteText : null,
           clearMetadataFields: clearMetadataFields,
+          excludeFromAssets: _excludeFromAssets,
+          iconType: _iconType == 'custom' ? 'custom' : null,
+          customIconPath:
+              _iconType == 'custom' ? _customIconPath : null,
         );
 
         // 保存还款提醒设置
@@ -821,6 +938,10 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
           bankName: bankNameText != null && bankNameText.isNotEmpty ? bankNameText : null,
           cardLastFour: cardLastFourText != null && cardLastFourText.isNotEmpty ? cardLastFourText : null,
           note: noteText.isNotEmpty ? noteText : null,
+          excludeFromAssets: _excludeFromAssets,
+          iconType: _iconType == 'custom' ? 'custom' : null,
+          customIconPath:
+              _iconType == 'custom' ? _customIconPath : null,
         );
 
         // 保存还款提醒设置
