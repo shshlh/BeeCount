@@ -86,7 +86,8 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          height: 180,
+          // v5.7: 与净值走势图统一，降低图表高度
+          height: 70,
           child: Stack(
             alignment: Alignment.center,
             children: [

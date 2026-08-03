@@ -4044,6 +4044,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Excluded from net worth and asset composition stats';
 
   @override
+  String get accountAssetShort => 'Assets';
+
+  @override
+  String get accountLiabilityShort => 'Liabilities';
+
+  @override
   String get accountLogoChoose => 'Choose image';
 
   @override

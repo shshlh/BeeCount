@@ -32,6 +32,63 @@
 ---
 
 
+## 2026-08-04
+
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**完成工作**：阶段 5.7 资产页布局细节（3 项全部完成）
+
+1. **5.7.1 图表高度 + 金额标注** — [accounts_page.dart](/D:\codexproject\pj_004_beecount_fork\lib\pages\account\accounts_page.dart) + [asset_composition_chart.dart](/D:\codexproject\pj_004_beecount_fork\lib\widgets\charts\asset_composition_chart.dart)
+   - 净值走势图高度 180 → 70（1/3）；LineChart annotate 改 false，不再逐点标金额
+   - 资产构成图容器与 loading 高度同步 180 → 70
+
+2. **5.7.2 类型小计右对齐** — accounts_page.dart _AccountTypeGroup
+   - 标题行改为右→左：chevron → 小计，移除 Flexible/Spacer 位置漂移
+   - 小计带前缀：「资产 XXXX」/「负债 XXXX」（按 isLiabilityType 判定），单币种组显示
+
+3. **5.7.3 列表底部留白** — accounts_page.dart
+   - asTab 底部 padding 再 +48（合计 56+48+安全区），确保最后一个账户/已隐藏模块不被导航遮挡
+
+**测试**：
+- 全量 flutter analyze 零 error（873 个预存 info/warning）
+- 全量 flutter test：581 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**下一个任务需要知道的**：
+- 净值/构成图表统一 70 高度，趋势页全屏不受影响
+- 类型小计文案走 accountAssetShort/accountLiabilityShort l10n
+- 视觉布局未做 Windows 实机截图验证（widget 测试覆盖结构与回归）
+
+**git 状态**：当前分支 main，未提交（等待 PM 审查）
+
+---
+## 2026-08-04
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-ui
+
+**任务**：5.7 资产页布局细节（3 个问题）
+
+**问题 1：净资产图表高度 + 金额标注**
+- 文件：lib/pages/account/accounts_page.dart _buildNetWorthChartInline / _inlineChartBox（当前 SizedBox height: 180）
+- 要求：
+  a) 图表高度降低到约 1/3（建议 60~80，可 70.0.scaled）
+  b) 折线图 annotate 不再每个点标注金额（避免与净资产金额交叉），只显示当月净资产数值（顶部大数字已体现）——LineChart annotate 改为 false 或仅最后一个点
+  c) 确认切换「资产构成」视图的 AssetCompositionChart 高度同步降低（loading 180 也降）
+
+**问题 2：类型小计 + 收起按键右对齐**
+- 文件：lib/pages/account/accounts_page.dart _AccountTypeGroup 标题行（约 1690-1745）
+- 现状：数量徽标 → 小计（Flexible）→ Spacer → 收起箭头
+- 要求：
+  a) 小计与收起箭头统一靠右对齐，从右到左顺序：收起箭头（chevron）→ 小计金额
+  b) 小计格式「资产 XXXX」或「负债 XXXX」（按该组是否为负债类型：isLiabilityType(widget.type) ? 负债 : 资产）
+  c) 移除 Flexible/Spacer 造成的位置漂移，固定右对齐
+
+**问题 3：资产列表底部空间不足**
+- 文件：lib/pages/account/accounts_page.dart ListView padding bottom（当前 asTab 时 8 + 56 + padding.bottom + 24）
+- 要求：加大底部留白（建议 asTab 时再加 48，合计约 56+48+安全区），确保最后一个账户/已隐藏账户模块不被导航遮挡且易点击
+- 注意：确认 asTab 分支确实生效（accounts_page 作为 Tab 嵌入底部导航）
+
 ## 2026-08-03
 
 **移交角色**：invest-ui + invest-logic
@@ -80,6 +137,7 @@
 **git 状态**：当前分支 main，未提交（等待 PM 审查）
 
 ---
+
 ## 2026-08-03
 
 **移交角色**：项目经理（PM）
@@ -215,6 +273,7 @@
 - 补充测试：净资产 4 位断言
 
 **其余全部通过**：转账反转 / 日期周几 / 再记一笔+保存 / 蜜蜂家当删除 / 市值成本2位无万 / extendBody false / 组合摘要固定 / 导入按钮顶部。
+
 
 ## 2026-08-03
 

@@ -190,9 +190,11 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                                 right: 12.0.scaled(context, ref),
                                 top: 4.0.scaled(context, ref),
                                 // v5.6: 底部留足余量，隐藏账户区不被导航遮挡
+                                // v5.7: asTab 再加大 48，确保最后模块易点击
                                 bottom: widget.asTab
                                     ? 8.0.scaled(context, ref) +
                                         56 +
+                                        48 +
                                         MediaQuery.of(context).padding.bottom +
                                         24
                                     : 8.0.scaled(context, ref),
@@ -338,7 +340,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                           data: (data) =>
                               AssetCompositionChart(data: data, embedded: true),
                           loading: () => SizedBox(
-                            height: 180.0.scaled(context, ref),
+                            // v5.7: 构成图与净值走势图同步降低到 1/3 高度
+                            height: 70.0.scaled(context, ref),
                             child: const Center(
                                 child:
                                     CircularProgressIndicator(strokeWidth: 2)),
@@ -548,7 +551,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
           ),
           borderRadius: BorderRadius.circular(8),
           child: SizedBox(
-            height: 180.0.scaled(context, ref),
+            // v5.7: 图表高度降到约 1/3（避免与净资产金额挤压）
+            height: 70.0.scaled(context, ref),
             child: LineChart(
               values: monthly.map((e) => e.net).toList(),
               xLabels: monthly
@@ -564,7 +568,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
               isDark: BeeTokens.isDark(context),
               showGrid: true,
               showDots: false,
-              annotate: true,
+              // v5.7: 不再逐点标注金额（顶部大数字已体现当月净值）
+              annotate: false,
               interactive: false, // 点击交给外层 InkWell 进全屏页
               minimal: true, // 去背景/Y轴/均线，避免嵌在 SectionCard 内暗黑模式「卡中卡」
             ),
@@ -585,7 +590,7 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
 
   Widget _inlineChartBox(BuildContext context, WidgetRef ref, Widget child) =>
       SizedBox(
-        height: 180.0.scaled(context, ref),
+        height: 70.0.scaled(context, ref),
         child: Center(child: child),
       );
 
@@ -1656,6 +1661,15 @@ class _AccountTypeGroupState extends ConsumerState<_AccountTypeGroup> {
   @override
   Widget build(BuildContext context) {
     final typeColor = getColorForAccountType(widget.type, widget.primaryColor);
+    final l10n = AppLocalizations.of(context);
+    final isSingleCurrency = widget.accounts.isNotEmpty &&
+        widget.accounts
+            .every((a) => a.currency == widget.accounts.first.currency);
+    final subtotal = widget.accounts.fold<double>(
+      0,
+      (sum, a) =>
+          sum + (widget.allStats?[a.id]?.balance ?? a.initialBalance),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1715,31 +1729,20 @@ class _AccountTypeGroupState extends ConsumerState<_AccountTypeGroup> {
                     ),
                   ),
                 ),
-                // v5.6: 类型合计（仅单币种组显示，避免混币相加）
-                if (widget.accounts.isNotEmpty &&
-                    widget.accounts
-                        .every((a) => a.currency == widget.accounts.first.currency)) ...[
-                  const SizedBox(width: 8),
-                  Flexible(
-                    child: AmountText(
-                      value: widget.accounts.fold<double>(
-                        0,
-                        (sum, a) =>
-                            sum +
-                            (widget.allStats?[a.id]?.balance ?? a.initialBalance),
-                      ),
-                      signed: false,
-                      showCurrency: false,
-                      useCompactFormat: false,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: typeColor,
-                      ),
+                const Spacer(),
+                // v5.7: 小计与收起箭头统一靠右（右→左：chevron → 小计）
+                if (isSingleCurrency) ...[
+                  Text(
+                    '${isLiabilityType(widget.type) ? l10n.accountLiabilityShort : l10n.accountAssetShort} '
+                    '${formatFullAmount(subtotal)}',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: typeColor,
                     ),
                   ),
+                  const SizedBox(width: 8),
                 ],
-                const Spacer(),
                 AnimatedRotation(
                   turns: _expanded ? 0.25 : 0,
                   duration: const Duration(milliseconds: 200),

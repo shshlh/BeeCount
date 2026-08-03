@@ -1652,6 +1652,8 @@
   "accountBalance": "Balance",
   "accountExcludeFromAssets": "Exclude from assets",
   "accountExcludeFromAssetsHint": "Excluded from net worth and asset composition stats",
+  "accountAssetShort": "Assets",
+  "accountLiabilityShort": "Liabilities",
   "accountLogoChoose": "Choose image",
   "accountLogoReset": "Reset",
   "accountEditTitle": "Edit Account",

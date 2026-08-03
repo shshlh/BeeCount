@@ -1501,6 +1501,8 @@
   "accountBalance": "余额",
   "accountExcludeFromAssets": "不计入资产",
   "accountExcludeFromAssetsHint": "不参与净资产/资产构成/净值趋势统计，仅提醒作用",
+  "accountAssetShort": "资产",
+  "accountLiabilityShort": "负债",
   "accountLogoChoose": "选择图片",
   "accountLogoReset": "恢复默认",
   "accountEditTitle": "编辑账户",

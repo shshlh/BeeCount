@@ -7402,6 +7402,18 @@ abstract class AppLocalizations {
   /// **'Excluded from net worth and asset composition stats'**
   String get accountExcludeFromAssetsHint;
 
+  /// No description provided for @accountAssetShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Assets'**
+  String get accountAssetShort;
+
+  /// No description provided for @accountLiabilityShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Liabilities'**
+  String get accountLiabilityShort;
+
   /// No description provided for @accountLogoChoose.
   ///
   /// In en, this message translates to:

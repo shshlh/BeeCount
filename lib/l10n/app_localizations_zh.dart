@@ -3901,6 +3901,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountExcludeFromAssetsHint => '不参与净资产/资产构成/净值趋势统计，仅提醒作用';
 
   @override
+  String get accountAssetShort => '资产';
+
+  @override
+  String get accountLiabilityShort => '负债';
+
+  @override
   String get accountLogoChoose => '选择图片';
 
   @override
