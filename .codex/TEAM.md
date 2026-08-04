@@ -45,10 +45,12 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
 |---|---|---|---|---|
-| 6.0.1 明细入口回归底部导航 | ⏳ | invest-ui | app.dart 导航 + 首页删明细卡 + 列表返回 | — |
-| 6.0.2 首页排版 + 资产概览改造 | ⏳ | invest-ui | home_page 净资产主视觉 + 可点击 | — |
-| 6.0.3 资产页占比文字下移 | ⏳ | invest-ui | asset_composition_chart 布局修正 | — |
-| 6.0.4 账户卡片加边框 | ⏳ | invest-ui | _AccountCard 边框 | — |
+| 6.0.1 明细入口回归底部导航 | ✅ | invest-ui | app.dart 导航 + 首页删明细卡 + 列表返回 | 2026-08-05 |
+| 6.0.2 首页排版 + 资产概览改造 | ✅ | invest-ui | home_page 净资产主视觉 + 可点击 | 2026-08-05 |
+| 6.0.3 资产页占比文字下移 | ✅ | invest-ui | asset_composition_chart 布局修正 | 2026-08-05 |
+| 6.0.4 账户卡片加边框 | ✅ | invest-ui | _AccountCard 边框 | 2026-08-05 |
+| 6.0.5 返回链路补全 + 明细防重复 | ⏳ | invest-ui | app.dart PopScope + 防抖 | — |
+| 6.0.6 账户卡边框加深 | ⏳ | invest-ui | _AccountCard 边框加深 | — |
 
 ### 阶段 5.9：首页导航回归 + 明细头迁移 + Bento
 

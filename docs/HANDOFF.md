@@ -38,6 +38,64 @@
 **移交角色**：项目经理（PM）
 **接收角色**：invest-ui
 
+**任务**：6.0 返工（PM 审查结论）
+
+**问题 1：返回链路补全（对齐总则“所有界面最终都能回到首页”）**
+- 文件：lib/app.dart PopScope（约 805-818 行）
+- 现状：从洞察/资产/我的 tab 按返回仍是「再按一次退出」，不会先回首页；总则目前只对 push 子页面成立
+- 要求：onPopInvokedWithResult 中，若 bottomTabIndexProvider != 0，按返回时先切回 tab0 首页；仅当已在首页时才触发「再按一次退出」提示；不得影响 push 页面的正常逐级返回
+
+**问题 2：明细按钮防重复**
+- 文件：lib/app.dart onTabTap index==0（约 838-850 行）
+- 现状：每次点击都直接 push TransactionListPage，快速连点会叠加多个流水列表页
+- 要求：加 300-500ms 防抖（复用 _lastTapTime 机制或独立记录上次 push 时间），一次点击只 push 一页
+
+**问题 3：账户卡边框加深**
+- 文件：lib/pages/account/accounts_page.dart _AccountCard（约 1359-1361 行）
+- 现状：使用 BeeTokens.divider（亮色 6% 黑），边框偏浅，未达到「颜色加深」的视觉效果
+- 要求：改用 BeeTokens.borderStrong（亮色 12% 黑）或更深一档的语义色，暗黑模式保持可见；有条件可截图确认
+
+**顺手清理（P3）**：
+- homeScrollToTopProvider 已无写入方（原 tab0 双击滚动置顶逻辑已被 6.0.1 替换），可删除 provider 定义与 transaction_list_page 的 listen；如保留需说明用途
+
+**约束**：
+- flutter analyze 新增代码零 error/warning
+- 相关 widget 测试补充/更新
+- 完成后更新 TEAM.md 任务板 + HANDOFF.md 追加完成记录，git 状态待提交交 PM 复审
+
+---
+
+## 2026-08-05
+
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.0 首页/明细导航修正 + 资产页视觉修正
+
+**完成工作**：
+- lib/app.dart — 底部「明细」点击先切回 tab0 再全屏 push TransactionListPage；首页删除明细宽卡
+- lib/pages/main/transaction_list_page.dart — PrimaryHeader 增加 showBack: true
+- lib/pages/main/home_page.dart — 资产概览改为净资产大数字主视觉，总资产/总负债小字在下方，整卡可点击进 AccountsPage；Bento 仅保留 4 功能入口
+- lib/widgets/charts/asset_composition_chart.dart — 饼图半径/中心孔缩小，去掉切片 pct 标题，legend 间距加大，70px 内不重叠
+- lib/pages/account/accounts_page.dart — _AccountCard 加 BeeTokens.divider 边框，暗黑适配
+- test/widgets/home_page_test.dart — 首页不再断言「明细」入口；断言净资产/总负债与资产卡点击回调已接线（Key 断言，避免 widget 测试实际 push AccountsPage 触发汇率刷新不 settle）
+
+**下一个任务需要知道的**：
+- 明细页现在只能经底部导航进入，返回后回到首页 tab0
+- 资产概览卡片点击进 AccountsPage，与「账户总览」入口行为一致
+- 全量 analyze 854 个既有问题（与基线持平）；全量测试 582 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交
+
+---
+
+---
+
+## 2026-08-05
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-ui
+
 **任务**：6.0 首页/明细导航修正 + 资产页视觉修正（4 个问题）
 
 **总则**：首页是 app 第一屏（根界面），本 app 内所有界面经过一次或多次回退后，最终都能回到首页；所有 push 的子页面必须能逐级返回，不能出现无返回的死页面。
