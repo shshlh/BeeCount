@@ -28,3 +28,4 @@
 - 完成工作后更新 TEAM.md 的任务状态
 - 如果需要交接给下一个人，在 docs/HANDOFF.md 写交接记录
 - **HANDOFF 编辑铁律**（详见 TEAM.md）：只增不减、禁止整文件重写、禁止模糊正则范围替换；改完跑 git diff -- docs/HANDOFF.md 自检，不允许出现 - 开头的内容行
+- **看图必用 skill**：任务涉及图片/截图/本地图片文件/UI 参考图时，先读 C:/Users/wanji/.codex/skills/deepseek-vision-skill/SKILL.md 并用其脚本读图，再继续工作（详见 TEAM.md「图像识别规范」）

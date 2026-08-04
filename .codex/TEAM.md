@@ -41,6 +41,14 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 
 ## 任务板
 
+### 阶段 5.8：首页 + 资产页视觉简化
+
+| 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
+|---|---|---|---|---|
+| 5.8.1 账户卡面改白色 | 🔄 | invest-ui | _AccountCard 简化 | — |
+| 5.8.2 资产顶部只留饼图 | 🔄 | invest-ui | 顶部模块简化 | — |
+| 5.8.3 首页 4 入口 | 🔄 | invest-ui | 新首页 + 我的减入口 | — |
+
 ### 阶段 5.7：资产页布局细节
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
@@ -252,6 +260,26 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 3. 确认修复后合入主分支
 4. 更新任务板 → 进入下一任务
 
+---
+
+## 图像识别规范（读图/截图/参考图）
+
+当任务涉及图片（用户发图、截图、本地图片文件、URL、图表/UI 参考图）且当前模型不支持图像输入时，**必须使用 deepseek-vision-skill** 获取图片描述，再基于描述继续工作。
+
+**触发场景**：
+- 用户引用本地图片（如 D:/Users/wanji/Downloads/首页.jpg）
+- 需要 OCR / 截图内容 / UI 视觉检查
+- 消息中出现「image content omitted because you do not support image input」
+
+**用法**（脚本在 C:/Users/wanji/.codex/skills/deepseek-vision-skill/scripts/describe-image.js）：
+- 本地图片：node "C:/Users/wanji/.codex/skills/deepseek-vision-skill/scripts/describe-image.js" "图片路径"
+- 用户刚发的图：node "...describe-image.js" --latest
+- 带问题：node "...describe-image.js" --prompt "具体问题" "图片路径"
+
+**要求**：
+- 用脚本输出的事实描述，OCR 文本必须原样引用，不得臆测
+- 脚本依赖网络与 API key（config.json）；失败时告知用户并提供替代方案
+- 图片描述仅用于理解需求，不写入最终交付物（除非用户要求）
 ---
 
 ## 跨会话交接协议
