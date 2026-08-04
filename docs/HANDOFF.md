@@ -35,6 +35,38 @@
 
 ## 2026-08-04
 
+**移交角色**：项目经理（PM）
+**接收角色**：invest-ui
+
+**任务**：5.9 首页导航回归 + 明细头迁移 + Bento 美化（3 个问题）
+
+**问题 1：底部导航恢复 5 项，去掉「首页」字样**
+- 文件：lib/app.dart _BeeBottomBar（tab0 当前用 Icons.home + l10n.homeTitle）
+- 要求：
+  a) tab0 改回「明细」标签 + receipt 图标（原 Icons.receipt_long_outlined/receipt_long + l10n.tabHome）
+  b) 底部 5 项固定为：明细/洞察/记账/资产/我的
+  c) tab0 页面内容仍为首页仪表盘 HomePage（打开 App 第一眼看到首页；首页顶部已有「明细」入口进入流水列表）
+
+**问题 2：明细页顶部内容迁移到首页顶部**
+- 来源：lib/pages/main/transaction_list_page.dart PrimaryHeader 内容（BeeIcon + 账本选择胶囊 + AI 助手 + 日历 + 搜索按钮，约 670 行起）
+- 目标：lib/pages/main/home_page.dart PrimaryHeader
+- 要求：
+  a) 把明细页顶部整块（BeeIcon、账本切换、AI 助手、日历、搜索）迁移到首页顶部
+  b) 明细页（TransactionListPage）不再保留这些内容，仅保留流水列表主体（可保留简洁标题）
+  c) 这些按钮依赖的 provider / 导航逻辑一并迁移，确保功能不变
+
+**问题 3：首页 Bento 便当格美化**
+- 文件：lib/pages/main/home_page.dart
+- 要求：
+  a) Bento grid：不同尺寸卡片组合（2x2 大卡资产概览、1x1 入口、跨列收支统计、饼图卡等）
+  b) 顶部入口区保留 4 入口（账户总览/智能记账/数据管理/自动化）+「明细」入口，用 Bento 格子呈现
+  c) 视觉简洁统一，遵循 BeeTokens（圆角 ≤8、表面色、无彩色渐变），暗黑模式适配
+  d) 数据逻辑不变（复用现有 provider）
+
+**约束**：flutter analyze 零 error/warning（新增代码）；home_page_test / 相关测试更新
+
+## 2026-08-04
+
 **移交角色**：invest-ui
 **接收角色**：项目经理（PM）
 
