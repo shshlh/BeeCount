@@ -33,6 +33,56 @@
 
 
 
+## 2026-08-05
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-ui
+
+**任务**：6.0 首页/明细导航修正 + 资产页视觉修正（4 个问题）
+
+**总则**：首页是 app 第一屏（根界面），本 app 内所有界面经过一次或多次回退后，最终都能回到首页；所有 push 的子页面必须能逐级返回，不能出现无返回的死页面。
+
+**问题 1：明细入口回归底部导航**
+- 文件：lib/app.dart（onTabTap / bottom nav）、lib/pages/main/home_page.dart、lib/pages/main/transaction_list_page.dart
+- 现状：tab0 内容 = 首页仪表盘 HomePage（底部标签为「明细」），首页里有一张「明细」宽卡 push TransactionListPage
+- 要求：
+  a) 删除首页的「明细」入口卡（_buildTransactionEntry 及调用），首页只保留 4 个功能入口 + 资产概览 + 收支统计 + 分类占比
+  b) 点击底部导航「明细」时直接进入流水列表页 TransactionListPage：从任意 tab 点击都进入，而不是只在首页有效
+  c) 推荐实现：onTabTap(0) 时先切到 tab0（首页仪表盘），再 push TransactionListPage 全屏进入（可带返回）
+  d) TransactionListPage 作为 push 页面时 PrimaryHeader 加 showBack: true，保证有可见返回按钮
+  e) 底部 5 项保持不变：明细/洞察/记账/资产/我的；首页仪表盘仍是打开 App 的第一屏（tab0 根内容），不单独占用导航按钮
+  f) 返回链路验证：从任意 tab 点「明细」进入流水列表，返回后回到首页；从首页各入口进入的子页面，返回后同样回到首页
+
+**问题 2：首页排版 + 资产概览改造**
+- 文件：lib/pages/main/home_page.dart _buildAssetOverview / _overviewStat
+- 要求：
+  a) 资产概览突出「净资产」：净资产作为主数字，大字号展示
+  b) 总资产/总负债改为小字，位于净资产之下（层级参考 D:/Users/wanji/Downloads/首页.jpg）
+  c) 整个资产概览卡片可点击 → 进入账户总览（AccountsPage）
+  d) 首页整体文字排版/布局轻量美化：保持 Bento 风格、BeeTokens、暗黑适配，不改数据逻辑
+
+**问题 3：资产页头部占比文字下移**
+- 文件：lib/widgets/charts/asset_composition_chart.dart、lib/pages/account/accounts_page.dart（固定模块）
+- 现状：各一级账户占比文字与饼图重叠/横穿（5.7 把图高降到 70 后，饼图半径/中心孔未同步调小，切片 pct 标题和下方 legend 视觉上压到饼图）
+- 要求：
+  a) 百分比文字移到饼图下方，不与饼图重叠
+  b) 合理缩小饼图半径/中心孔，或去掉切片上的 pct 标题，保证 70px 高度内不裁切不重叠
+  c) legend（类型名 + 百分比）与饼图之间留出明确间距
+  d) 该模块仍固定不滚动
+
+**问题 4：资产页账户卡片加边框**
+- 文件：lib/pages/account/accounts_page.dart _AccountCard
+- 现状：卡片纯表面色、无边框，整页过白
+- 要求：账户卡加清晰可见边框（颜色比页面背景深一档，暗黑模式同样适配），卡片与背景层次分明；保留圆角
+
+**约束**：
+- flutter analyze 新增代码零 error/warning
+- 更新 test/widgets/home_page_test.dart：首页不再断言「明细」入口文字；资产概览可点击；其余断言保留
+- 完成后更新 TEAM.md 任务板（5.10 标 ✅ + 日期）+ HANDOFF.md 追加完成记录，git 状态保持待提交交 PM 审查
+- HANDOFF 铁律：只 prepend 追加，不整文件重写、不用模糊正则范围替换
+
+---
+
 ## 2026-08-04
 
 **移交角色**：invest-ui
