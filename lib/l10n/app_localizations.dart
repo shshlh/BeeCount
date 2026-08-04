@@ -167,6 +167,72 @@ abstract class AppLocalizations {
   /// **'Mine'**
   String get tabMine;
 
+  /// No description provided for @homeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get homeTitle;
+
+  /// No description provided for @accountOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Overview'**
+  String get accountOverview;
+
+  /// No description provided for @homeDetailHint.
+  ///
+  /// In en, this message translates to:
+  /// **'View transaction details'**
+  String get homeDetailHint;
+
+  /// No description provided for @assetOverviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Asset Overview'**
+  String get assetOverviewTitle;
+
+  /// No description provided for @accountsTotalAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Assets'**
+  String get accountsTotalAssets;
+
+  /// No description provided for @accountsTotalLiabilities.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Liabilities'**
+  String get accountsTotalLiabilities;
+
+  /// No description provided for @periodToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get periodToday;
+
+  /// No description provided for @periodWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'This Week'**
+  String get periodWeek;
+
+  /// No description provided for @periodMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This Month'**
+  String get periodMonth;
+
+  /// No description provided for @periodYear.
+  ///
+  /// In en, this message translates to:
+  /// **'This Year'**
+  String get periodYear;
+
+  /// No description provided for @monthlyCategoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly Category Breakdown'**
+  String get monthlyCategoryTitle;
+
   /// No description provided for @commonCancel.
   ///
   /// In en, this message translates to:

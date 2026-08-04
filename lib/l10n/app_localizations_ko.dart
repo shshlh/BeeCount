@@ -43,6 +43,39 @@ class AppLocalizationsKo extends AppLocalizations {
   String get tabMine => '내 정보';
 
   @override
+  String get homeTitle => 'Home';
+
+  @override
+  String get accountOverview => 'Account Overview';
+
+  @override
+  String get homeDetailHint => 'View transaction details';
+
+  @override
+  String get assetOverviewTitle => 'Asset Overview';
+
+  @override
+  String get accountsTotalAssets => 'Total Assets';
+
+  @override
+  String get accountsTotalLiabilities => 'Total Liabilities';
+
+  @override
+  String get periodToday => 'Today';
+
+  @override
+  String get periodWeek => 'This Week';
+
+  @override
+  String get periodMonth => 'This Month';
+
+  @override
+  String get periodYear => 'This Year';
+
+  @override
+  String get monthlyCategoryTitle => 'Monthly Category Breakdown';
+
+  @override
   String get commonCancel => '취소';
 
   @override

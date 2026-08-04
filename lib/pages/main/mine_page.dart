@@ -4,12 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:beecount/widgets/biz/bee_icon.dart';
 
-import '../data/import_page.dart';
-import '../data/export_page.dart';
-import '../settings/personalize_page.dart';
-import '../account/accounts_page.dart';
 import '../../providers.dart';
-import '../../providers/theme_providers.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/biz.dart';
 import '../../styles/tokens.dart';
@@ -23,27 +18,14 @@ import '../settings/help_center_page.dart';
 import '../../providers/sync_providers.dart' as sp;
 import '../../services/export/share_poster_service.dart';
 import '../../l10n/app_localizations.dart';
-import '../category/category_manage_page.dart';
-import '../category/category_migration_page.dart';
-import '../transaction/recurring_transaction_page.dart';
-import '../settings/reminder_settings_page.dart';
-import '../settings/language_settings_page.dart';
-import '../settings/widget_management_page.dart';
-import '../automation/auto_billing_settings_page.dart';
-import '../ai/ai_settings_page.dart';
 import '../cloud/cloud_sync_page.dart';
 import '../cloud/beecount_cloud_sync_page.dart';
 import '../../utils/website_urls.dart';
-import '../settings/data_management_page.dart';
 import '../settings/appearance_settings_page.dart';
-import '../settings/smart_billing_page.dart';
-import '../settings/automation_page.dart';
 import '../settings/about_page.dart';
 import '../report/annual_report_page.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:in_app_review/in_app_review.dart';
-import '../../services/system/update_service.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../donation/donation_page.dart';
 
@@ -297,70 +279,6 @@ class MinePage extends ConsumerWidget {
                       12.0.scaled(context, ref), 0),
                   child: Column(
                     children: [
-                      // 智能记账(共享账本入口已移到"账本管理"页 PrimaryHeader)
-                      AppListTile(
-                        leading: Icons.auto_awesome_outlined,
-                        title: AppLocalizations.of(context).smartBilling,
-                        subtitle: AppLocalizations.of(context).smartBillingDesc,
-                        trailing: Icon(Icons.chevron_right,
-                            color: BeeTokens.iconTertiary(context),
-                            size: 20), // ⭐ 使用 Token
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const SmartBillingPage()),
-                          );
-                        },
-                      ),
-                      BeeTokens.cardDivider(context),
-                      // 数据管理
-                      AppListTile(
-                        leading: Icons.storage_outlined,
-                        title: AppLocalizations.of(context).dataManagement,
-                        subtitle:
-                            AppLocalizations.of(context).dataManagementDesc,
-                        trailing: Icon(Icons.chevron_right,
-                            color: BeeTokens.iconTertiary(context),
-                            size: 20), // ⭐ 使用 Token
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const DataManagementPage()),
-                          );
-                        },
-                      ),
-                      BeeTokens.cardDivider(context),
-					  // 账户总览（总资产/总负债/净资产）
-					  AppListTile(
-						leading: Icons.account_balance_wallet_outlined,
-						title: '账户总览',
-						subtitle: '总资产 / 总负债 / 净资产',
-						trailing: Icon(Icons.chevron_right,
-							color: BeeTokens.iconTertiary(context), size: 20),
-						onTap: () async {
-							await Navigator.of(context).push(MaterialPageRoute(
-								builder: (_) => const AccountsPage()));
-						},
-					  ),
-					  BeeTokens.cardDivider(context),
-                      // 预算管理 已挪到「账本管理 → 长按某账本 → 预算管理」
-                      // (每个账本独立预算,放在账本菜单内语义更匹配)。
-                      // 自动化功能
-                      AppListTile(
-                        leading: Icons.schedule_outlined,
-                        title: AppLocalizations.of(context).automation,
-                        subtitle: AppLocalizations.of(context).automationDesc,
-                        trailing: Icon(Icons.chevron_right,
-                            color: BeeTokens.iconTertiary(context),
-                            size: 20), // ⭐ 使用 Token
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (_) => const AutomationPage()),
-                          );
-                        },
-                      ),
-                      BeeTokens.cardDivider(context),
                       // 外观设置
                       AppListTile(
                         leading: Icons.palette_outlined,
@@ -589,33 +507,6 @@ class _StatCell extends ConsumerWidget {
 }
 
 // 导入完成后的短暂动画提示：线性进度条从 0 -> 100%
-class _ImportSuccessTile extends StatelessWidget {
-  const _ImportSuccessTile();
-
-  @override
-  Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: 1),
-      duration: const Duration(milliseconds: 900),
-      curve: Curves.easeOutCubic,
-      builder: (ctx, v, child) {
-        return AppListTile(
-          leading: Icons.check_circle_outline,
-          title: AppLocalizations.of(ctx).mineImportCompleteTitle,
-          subtitle: AppLocalizations.of(ctx).mineImportCompleteAllSuccess,
-          trailing: SizedBox(
-            width: 72,
-            child: LinearProgressIndicator(
-              value: v,
-              valueColor: AlwaysStoppedAnimation(primary),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
 
 /// 尝试使用多种方式打开URL，提供更好的兼容性
 Future<bool> _tryOpenUrl(Uri url) async {
@@ -993,7 +884,7 @@ class _MinePageHeaderState extends ConsumerState<_MinePageHeader> {
             children: [
               // 头像/Logo
               GestureDetector(
-                onTap: canEditAvatar ? _showProfileOptions : null,
+                onTap: _showProfileOptions,
                 child: Stack(
                   children: [
                     Container(

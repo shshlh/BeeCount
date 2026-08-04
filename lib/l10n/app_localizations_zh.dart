@@ -43,6 +43,39 @@ class AppLocalizationsZh extends AppLocalizations {
   String get tabMine => '我的';
 
   @override
+  String get homeTitle => '首页';
+
+  @override
+  String get accountOverview => '账户总览';
+
+  @override
+  String get homeDetailHint => '查看流水明细';
+
+  @override
+  String get assetOverviewTitle => '资产概览';
+
+  @override
+  String get accountsTotalAssets => '总资产';
+
+  @override
+  String get accountsTotalLiabilities => '总负债';
+
+  @override
+  String get periodToday => '今天';
+
+  @override
+  String get periodWeek => '本周';
+
+  @override
+  String get periodMonth => '本月';
+
+  @override
+  String get periodYear => '今年';
+
+  @override
+  String get monthlyCategoryTitle => '月度分类占比';
+
+  @override
   String get commonCancel => '取消';
 
   @override

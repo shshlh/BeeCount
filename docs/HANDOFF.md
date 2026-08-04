@@ -32,6 +32,43 @@
 ---
 
 
+
+## 2026-08-04
+
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**完成工作**：阶段 5.8 首页 + 资产页视觉简化（3 项全部完成）
+
+1. **5.8.1 账户卡面改白色** — [accounts_page.dart](/D:\codexproject\pj_004_beecount_fork\lib\pages\account\accounts_page.dart)
+   - _AccountCard 去掉 LinearGradient 类型色渐变与彩色阴影，改白色/表面色（暗色模式深色表面），保留圆角
+   - 卡片内文字/图标改为常规 Token 配色，删除装饰圆与白色系文案
+
+2. **5.8.2 资产顶部只留饼图** — accounts_page.dart
+   - 顶部模块删除净值走势折线图、净值趋势按钮、净资产数值、总资产/总负债行与切换按钮
+   - 只保留「资产构成」居中标题 + AssetCompositionChart 饼图，模块固定不滚动
+   - 清理因此孤立的私有方法/组件与导入（仅 UI，不动数据层）
+
+3. **5.8.3 制作 app 首页** — 新增 [home_page.dart](/D:\codexproject\pj_004_beecount_fork\lib\pages\main\home_page.dart)，原首页改为 [transaction_list_page.dart](/D:\codexproject\pj_004_beecount_fork\lib\pages\main\transaction_list_page.dart)
+   - 首页：首行 4 入口（账户总览/智能记账/数据管理/自动化）+「明细」入口 + 资产概览卡 + 今天/本周/本月/今年收支 + 月度分类占比列表与饼图
+   - 复用 totalsInRange / totalsByCategory / netWorthBreakdownProvider，未新增仓储接口
+   - 「我的」删除同名 4 个入口（外观设置等保留）
+   - 底部导航不变；流水列表经首页「明细」入口进入（tab0 标签仍为「明细」，内容为首页，待 PM 确认是否改标签）
+
+**测试**：
+- 新增 home_page_test（4 入口 + 资产概览 + 收支统计 + 分类占比）
+- 全量 flutter analyze 零 error（857 个预存 info/warning，较基线减少 16；PM 审查返工：修复 mine_page 遗留 dead_code 与 transaction_list_page 未用变量 hide）
+- 全量 flutter test：582 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**下一个任务需要知道的**：
+- 原 HomePage（流水列表）已更名 TransactionListPage，路径 lib/pages/main/transaction_list_page.dart；app.dart tab0 引用新的 HomePage
+- 落地页 = 首页仪表盘：底部导航 tab0 标签已改为「首页」（home 图标），明细经首页「明细」入口进入；洞察/记账/资产/我的仍走底部导航按钮
+- 资产顶部模块只展示饼图后，趋势页（NetWorthTrendPage）仍可单独进入查看净值走势
+- 视觉布局未做 Windows 实机截图验证（widget 测试覆盖结构与回归）
+
+**git 状态**：当前分支 main，未提交（等待 PM 审查）
+
+---
 ## 2026-08-04
 
 **移交角色**：项目经理（PM）
