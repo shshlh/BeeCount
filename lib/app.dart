@@ -948,7 +948,7 @@ class _BeeBottomBar extends StatelessWidget {
             child: Row(
               children: [
                 _buildTabItem(
-                    0, Icons.home_outlined, Icons.home_rounded, l10n.homeTitle, inactiveColor),
+                    0, Icons.receipt_long_outlined, Icons.receipt_long, l10n.tabHome, inactiveColor),
                 _buildTabItem(1, Icons.pie_chart_outline_rounded,
                     Icons.pie_chart_rounded, l10n.tabInsights, inactiveColor),
                 // 中间记账按钮（作为 Tab 样式）

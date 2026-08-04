@@ -45,9 +45,9 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
 |---|---|---|---|---|
-| 5.9.1 底部导航恢复 5 项 | 🔄 | invest-ui | app.dart tab0 改明细 | — |
-| 5.9.2 明细头迁移首页 | 🔄 | invest-ui | home/transaction_list 头部 | — |
-| 5.9.3 首页 Bento 美化 | 🔄 | invest-ui | home_page bento 布局 | — |
+| 5.9.1 底部导航恢复 5 项 | ✅ | invest-ui | app.dart tab0 改明细 | 2026-08-04 |
+| 5.9.2 明细头迁移首页 | ✅ | invest-ui | home/transaction_list 头部 | 2026-08-04 |
+| 5.9.3 首页 Bento 美化 | ✅ | invest-ui | home_page bento 布局 | 2026-08-04 |
 
 ### 阶段 5.8：首页 + 资产页视觉简化
 

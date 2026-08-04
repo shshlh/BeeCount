@@ -35,6 +35,29 @@
 
 ## 2026-08-04
 
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：5.9 首页导航回归 + 明细头迁移 + Bento 美化
+
+**完成工作**：
+- lib/app.dart — 底部 tab0 恢复「明细」+ receipt_long 图标，页面内容仍为首页仪表盘（5.9.1）
+- 新增 lib/widgets/biz/home_header_bar.dart — 从明细页迁出 BeeIcon + 账本切换胶囊 + AI 助手/日历/搜索，首页 PrimaryHeader 使用（5.9.2）
+- lib/pages/main/transaction_list_page.dart — 移除顶部整块，仅保留「明细」简洁标题 + 月份/收支汇总行 + 预算摘要 + 流水列表（5.9.2）
+- lib/pages/main/home_page.dart — Bento 便当格：5 个入口格（4 功能入口 + 明细宽格）、2x2 资产概览、跨列收支统计、月度分类占比卡，统一 8px 圆角/表面色/暗黑适配（5.9.3）
+- test/widgets/home_page_test.dart — 覆盖迁移头部 + 5 入口 + 各概览模块
+
+**下一个任务需要知道的**：
+- 明细页保留月份跳转与收支汇总，账本切换/AI/日历/搜索只在首页顶部
+- 首页 Bento 使用 BeeTokens + BeeShadows，未改 Provider/数据逻辑
+- 全量 analyze 854 个既有问题（较基线 857 少 3）；全量测试 582 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交
+
+---
+
+## 2026-08-04
+
 **移交角色**：项目经理（PM）
 **接收角色**：invest-ui
 

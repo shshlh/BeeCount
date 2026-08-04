@@ -10,12 +10,12 @@ import '../../pages/settings/smart_billing_page.dart';
 import '../../providers.dart';
 import '../../styles/tokens.dart';
 import '../../utils/format_utils.dart';
-import '../../widgets/biz/section_card.dart';
+import '../../widgets/biz/home_header_bar.dart';
 import '../../widgets/charts/category_pie_chart.dart';
 import '../../widgets/ui/ui.dart';
 import 'transaction_list_page.dart';
 
-/// 首页仪表盘（v5.8）：4 个功能入口 + 资产概览 + 今日/本周/本月/今年收支 + 月度分类占比
+/// 首页仪表盘（v5.9）：Bento 便当格 + 顶部明细头（账本切换/AI/日历/搜索）
 final homePeriodStatsProvider = FutureProvider.autoDispose<
     Map<String, (double income, double expense)>>((ref) async {
   final repo = ref.watch(repositoryProvider);
@@ -62,14 +62,17 @@ class HomePage extends ConsumerWidget {
       backgroundColor: BeeTokens.scaffoldBackground(context),
       body: Column(
         children: [
-          PrimaryHeader(title: l10n.homeTitle, compact: true),
+          PrimaryHeader(
+            title: '',
+            showTitleSection: false,
+            compact: true,
+            content: const HomeHeaderBar(),
+          ),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(12),
               children: [
-                _buildEntries(context, ref, l10n),
-                const SizedBox(height: 12),
-                _buildTransactionEntry(context, ref, l10n),
+                _buildBentoEntries(context, l10n),
                 const SizedBox(height: 12),
                 _buildAssetOverview(context, ref, l10n),
                 const SizedBox(height: 12),
@@ -84,7 +87,7 @@ class HomePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildEntries(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
+  Widget _buildBentoEntries(BuildContext context, AppLocalizations l10n) {
     final entries = [
       (
         icon: Icons.account_balance_wallet_outlined,
@@ -108,48 +111,69 @@ class HomePage extends ConsumerWidget {
       ),
     ];
 
-    return SectionCard(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Row(
+    return Column(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (final e in entries) ...[
-              Expanded(
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => e.page),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        e.icon,
-                        size: 26,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        e.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: BeeTokens.textPrimary(context),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            Expanded(
+              child: _buildEntryTile(context, entries[0]),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _buildEntryTile(context, entries[1]),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _buildEntryTile(context, entries[2]),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _buildEntryTile(context, entries[3]),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        _buildTransactionEntry(context, l10n),
+      ],
+    );
+  }
+
+  Widget _buildEntryTile(
+    BuildContext context,
+    ({IconData icon, String label, Widget page}) entry,
+  ) {
+    return _BentoCard(
+      height: 86,
+      padding: EdgeInsets.zero,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => entry.page),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              entry.icon,
+              size: 24,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              entry.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: BeeTokens.textPrimary(context),
               ),
-              if (e != entries.last)
-                Container(
-                  width: 1,
-                  height: 32,
-                  color: BeeTokens.divider(context),
-                ),
-            ],
+            ),
           ],
         ),
       ),
@@ -158,11 +182,11 @@ class HomePage extends ConsumerWidget {
 
   Widget _buildTransactionEntry(
     BuildContext context,
-    WidgetRef ref,
     AppLocalizations l10n,
   ) {
-    return SectionCard(
-      margin: EdgeInsets.zero,
+    return _BentoCard(
+      height: 68,
+      padding: EdgeInsets.zero,
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
         onTap: () => Navigator.of(context).push(
@@ -213,11 +237,9 @@ class HomePage extends ConsumerWidget {
 
   Widget _buildAssetOverview(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final netWorthAsync = ref.watch(netWorthBreakdownProvider);
-    return SectionCard(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: netWorthAsync.when(
+    return _BentoCard(
+      height: 170,
+      child: netWorthAsync.when(
           data: (nw) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -258,7 +280,6 @@ class HomePage extends ConsumerWidget {
           ),
           error: (_, __) => const SizedBox.shrink(),
         ),
-      ),
     );
   }
 
@@ -299,11 +320,9 @@ class HomePage extends ConsumerWidget {
 
   Widget _buildPeriodStats(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final statsAsync = ref.watch(homePeriodStatsProvider);
-    return SectionCard(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: statsAsync.when(
+    return _BentoCard(
+      height: 178,
+      child: statsAsync.when(
           data: (stats) {
             final rows = [
               (label: l10n.periodToday, v: stats['today']!),
@@ -350,7 +369,6 @@ class HomePage extends ConsumerWidget {
           ),
           error: (_, __) => const SizedBox.shrink(),
         ),
-      ),
     );
   }
 
@@ -360,11 +378,8 @@ class HomePage extends ConsumerWidget {
     AppLocalizations l10n,
   ) {
     final catAsync = ref.watch(homeCategoryExpensesProvider);
-    return SectionCard(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: catAsync.when(
+    return _BentoCard(
+      child: catAsync.when(
           data: (items) {
             final sum =
                 items.fold<double>(0, (s, e) => s + e.total);
@@ -459,7 +474,39 @@ class HomePage extends ConsumerWidget {
           ),
           error: (_, __) => const SizedBox.shrink(),
         ),
+    );
+  }
+}
+
+/// Bento 便当格卡片：统一 8px 圆角、表面色、无彩色渐变。
+class _BentoCard extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final double? height;
+
+  const _BentoCard({
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+    this.height,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = BeeTokens.isDark(context);
+    final borderWidth = BeeTokens.cardOuterBorderWidth(context);
+    final borderColor = BeeTokens.cardOuterBorderColor(context);
+
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: BeeTokens.surface(context),
+        borderRadius: BorderRadius.circular(8),
+        border: borderWidth > 0
+            ? Border.all(color: borderColor, width: borderWidth)
+            : null,
+        boxShadow: isDark ? null : BeeShadows.card,
       ),
+      child: Padding(padding: padding, child: child),
     );
   }
 }
