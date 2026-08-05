@@ -35,6 +35,49 @@
 
 ## 2026-08-05
 
+**移交角色**：项目经理（PM）
+**接收角色**：invest-logic + invest-ui
+
+**任务**：6.2 持仓排序 + 基金分组（2 个问题，设计与用户已确认）
+
+**角色分工**：
+- invest-logic：schema v36 + 分组 repository/service + 排序/过滤 provider + 测试
+- invest-ui：排序控件 + 分组 chips/弹窗/编辑 + 列表接线
+
+**问题 1：持仓排序**
+- 目标：资产页持仓列表可按「持有收益率 / 持有收益 / 持有金额」排序；默认「持有金额」降序，不做升降序切换
+- 语义：持有金额 = 当前市值；持有收益 = 市值 - 成本；持有收益率 = 收益 / 成本
+- 数据/逻辑层（invest-logic）：
+  - 新增 holdingsSortProvider（StateProvider，默认 marketValue），选项 enum：marketValue / pnl / returnRate
+  - 新增 sortedHoldingsProvider：watch currentHoldingsProvider + 排序状态，内存排序（先分组过滤后排序）
+- UI 层（invest-ui）：
+  - lib/pages/investment/holdings_list_page.dart：投资组合摘要卡与列表之间加固定排序行（三选一，建议 SegmentedButton 或紧凑下拉），不随列表滚动
+  - 无持仓时不显示排序行或显示禁用态，不破坏布局
+
+**问题 2：基金分组**
+- 目标：默认虚拟分组「全部」（含所有基金、永远第一位、不可改删）+ 用户自定义分组；一只基金可属于多个分组；分组标签固定在投资组合摘要下方，横向滚动、不可上下滚动；「新建分组」按钮在标签末尾；支持分组改名/删除/编辑成员；分组数据仅本地，不做云同步
+- 数据层（invest-logic）：
+  - Drift schema v35 → v36：新增 investment_groups（id、ledger_id、name、sort_order、created_at）与 investment_group_holdings（group_id、holding_id 复合主键），外键级联删除（删持仓自动清理关联）；同步补充 migration v36 测试
+  - LocalInvestmentRepository：createGroup / renameGroup / deleteGroup / addHoldingsToGroup（或 setGroupMembers）/ removeHoldingFromGroup / watchGroups / watchGroupHoldingIds
+  - InvestmentService 包装以上方法
+  - Provider：groupsProvider（Stream）、selectedGroupProvider（StateProvider<int?>，null=全部）、filteredHoldingsProvider（先按选中分组过滤，再按排序）
+  - 测试：分组 CRUD、成员多对多、删持仓级联、过滤+排序组合
+- UI 层（invest-ui）：
+  - holdings_list_page：摘要卡下方固定一行横向滚动分组 chips（全部 + 自定义分组 + 「新建分组」在最后）；选中分组过滤下方列表；分组内无基金时显示空态
+  - 新建分组弹窗：填名称 + 多选基金
+  - 分组管理：长按分组 chip → 改名/删除/编辑成员；「全部」不可改删
+  - 排序行与分组 chips 都位于固定区，列表只滚动持仓
+
+**约束**：
+- flutter analyze 新增代码零 error/warning
+- 全量测试保持 586 passed / 1 skipped / 1 failed（既存 bill_creation_service_test 除外）
+- 完成后更新 TEAM.md 任务板 + HANDOFF.md 追加完成记录，git 状态待提交交 PM 审查
+- HANDOFF 铁律：只 prepend 追加，不整文件重写、不用模糊正则范围替换
+
+---
+
+## 2026-08-05
+
 **移交角色**：invest-ui
 **接收角色**：项目经理（PM）
 
