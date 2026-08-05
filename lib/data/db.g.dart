@@ -11890,6 +11890,506 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
   }
 }
 
+class $InvestmentGroupsTable extends InvestmentGroups
+    with TableInfo<$InvestmentGroupsTable, InvestmentGroup> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $InvestmentGroupsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+      'id', aliasedName, false,
+      hasAutoIncrement: true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('PRIMARY KEY AUTOINCREMENT'));
+  static const VerificationMeta _ledgerIdMeta =
+      const VerificationMeta('ledgerId');
+  @override
+  late final GeneratedColumn<int> ledgerId = GeneratedColumn<int>(
+      'ledger_id', aliasedName, false,
+      type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+      'name', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _sortOrderMeta =
+      const VerificationMeta('sortOrder');
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+      'sort_order', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
+  static const VerificationMeta _createdAtMeta =
+      const VerificationMeta('createdAt');
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+      'created_at', aliasedName, false,
+      type: DriftSqlType.dateTime,
+      requiredDuringInsert: false,
+      defaultValue: currentDateAndTime);
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, ledgerId, name, sortOrder, createdAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'investment_groups';
+  @override
+  VerificationContext validateIntegrity(Insertable<InvestmentGroup> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('ledger_id')) {
+      context.handle(_ledgerIdMeta,
+          ledgerId.isAcceptableOrUnknown(data['ledger_id']!, _ledgerIdMeta));
+    } else if (isInserting) {
+      context.missing(_ledgerIdMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+          _nameMeta, name.isAcceptableOrUnknown(data['name']!, _nameMeta));
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(_sortOrderMeta,
+          sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(_createdAtMeta,
+          createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  InvestmentGroup map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return InvestmentGroup(
+      id: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}id'])!,
+      ledgerId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}ledger_id'])!,
+      name: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
+      sortOrder: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}sort_order'])!,
+      createdAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
+    );
+  }
+
+  @override
+  $InvestmentGroupsTable createAlias(String alias) {
+    return $InvestmentGroupsTable(attachedDatabase, alias);
+  }
+}
+
+class InvestmentGroup extends DataClass implements Insertable<InvestmentGroup> {
+  final int id;
+  final int ledgerId;
+  final String name;
+  final int sortOrder;
+  final DateTime createdAt;
+  const InvestmentGroup(
+      {required this.id,
+      required this.ledgerId,
+      required this.name,
+      required this.sortOrder,
+      required this.createdAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['ledger_id'] = Variable<int>(ledgerId);
+    map['name'] = Variable<String>(name);
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  InvestmentGroupsCompanion toCompanion(bool nullToAbsent) {
+    return InvestmentGroupsCompanion(
+      id: Value(id),
+      ledgerId: Value(ledgerId),
+      name: Value(name),
+      sortOrder: Value(sortOrder),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory InvestmentGroup.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return InvestmentGroup(
+      id: serializer.fromJson<int>(json['id']),
+      ledgerId: serializer.fromJson<int>(json['ledgerId']),
+      name: serializer.fromJson<String>(json['name']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'ledgerId': serializer.toJson<int>(ledgerId),
+      'name': serializer.toJson<String>(name),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  InvestmentGroup copyWith(
+          {int? id,
+          int? ledgerId,
+          String? name,
+          int? sortOrder,
+          DateTime? createdAt}) =>
+      InvestmentGroup(
+        id: id ?? this.id,
+        ledgerId: ledgerId ?? this.ledgerId,
+        name: name ?? this.name,
+        sortOrder: sortOrder ?? this.sortOrder,
+        createdAt: createdAt ?? this.createdAt,
+      );
+  InvestmentGroup copyWithCompanion(InvestmentGroupsCompanion data) {
+    return InvestmentGroup(
+      id: data.id.present ? data.id.value : this.id,
+      ledgerId: data.ledgerId.present ? data.ledgerId.value : this.ledgerId,
+      name: data.name.present ? data.name.value : this.name,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InvestmentGroup(')
+          ..write('id: $id, ')
+          ..write('ledgerId: $ledgerId, ')
+          ..write('name: $name, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(id, ledgerId, name, sortOrder, createdAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is InvestmentGroup &&
+          other.id == this.id &&
+          other.ledgerId == this.ledgerId &&
+          other.name == this.name &&
+          other.sortOrder == this.sortOrder &&
+          other.createdAt == this.createdAt);
+}
+
+class InvestmentGroupsCompanion extends UpdateCompanion<InvestmentGroup> {
+  final Value<int> id;
+  final Value<int> ledgerId;
+  final Value<String> name;
+  final Value<int> sortOrder;
+  final Value<DateTime> createdAt;
+  const InvestmentGroupsCompanion({
+    this.id = const Value.absent(),
+    this.ledgerId = const Value.absent(),
+    this.name = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  InvestmentGroupsCompanion.insert({
+    this.id = const Value.absent(),
+    required int ledgerId,
+    required String name,
+    this.sortOrder = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  })  : ledgerId = Value(ledgerId),
+        name = Value(name);
+  static Insertable<InvestmentGroup> custom({
+    Expression<int>? id,
+    Expression<int>? ledgerId,
+    Expression<String>? name,
+    Expression<int>? sortOrder,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (ledgerId != null) 'ledger_id': ledgerId,
+      if (name != null) 'name': name,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  InvestmentGroupsCompanion copyWith(
+      {Value<int>? id,
+      Value<int>? ledgerId,
+      Value<String>? name,
+      Value<int>? sortOrder,
+      Value<DateTime>? createdAt}) {
+    return InvestmentGroupsCompanion(
+      id: id ?? this.id,
+      ledgerId: ledgerId ?? this.ledgerId,
+      name: name ?? this.name,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (ledgerId.present) {
+      map['ledger_id'] = Variable<int>(ledgerId.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InvestmentGroupsCompanion(')
+          ..write('id: $id, ')
+          ..write('ledgerId: $ledgerId, ')
+          ..write('name: $name, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $InvestmentGroupHoldingsTable extends InvestmentGroupHoldings
+    with TableInfo<$InvestmentGroupHoldingsTable, InvestmentGroupHolding> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $InvestmentGroupHoldingsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _groupIdMeta =
+      const VerificationMeta('groupId');
+  @override
+  late final GeneratedColumn<int> groupId = GeneratedColumn<int>(
+      'group_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES investment_groups (id) ON DELETE CASCADE'));
+  static const VerificationMeta _holdingIdMeta =
+      const VerificationMeta('holdingId');
+  @override
+  late final GeneratedColumn<int> holdingId = GeneratedColumn<int>(
+      'holding_id', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: true,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES investment_holdings (id) ON DELETE CASCADE'));
+  @override
+  List<GeneratedColumn> get $columns => [groupId, holdingId];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'investment_group_holdings';
+  @override
+  VerificationContext validateIntegrity(
+      Insertable<InvestmentGroupHolding> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('group_id')) {
+      context.handle(_groupIdMeta,
+          groupId.isAcceptableOrUnknown(data['group_id']!, _groupIdMeta));
+    } else if (isInserting) {
+      context.missing(_groupIdMeta);
+    }
+    if (data.containsKey('holding_id')) {
+      context.handle(_holdingIdMeta,
+          holdingId.isAcceptableOrUnknown(data['holding_id']!, _holdingIdMeta));
+    } else if (isInserting) {
+      context.missing(_holdingIdMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {groupId, holdingId};
+  @override
+  InvestmentGroupHolding map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return InvestmentGroupHolding(
+      groupId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}group_id'])!,
+      holdingId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}holding_id'])!,
+    );
+  }
+
+  @override
+  $InvestmentGroupHoldingsTable createAlias(String alias) {
+    return $InvestmentGroupHoldingsTable(attachedDatabase, alias);
+  }
+}
+
+class InvestmentGroupHolding extends DataClass
+    implements Insertable<InvestmentGroupHolding> {
+  final int groupId;
+  final int holdingId;
+  const InvestmentGroupHolding(
+      {required this.groupId, required this.holdingId});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['group_id'] = Variable<int>(groupId);
+    map['holding_id'] = Variable<int>(holdingId);
+    return map;
+  }
+
+  InvestmentGroupHoldingsCompanion toCompanion(bool nullToAbsent) {
+    return InvestmentGroupHoldingsCompanion(
+      groupId: Value(groupId),
+      holdingId: Value(holdingId),
+    );
+  }
+
+  factory InvestmentGroupHolding.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return InvestmentGroupHolding(
+      groupId: serializer.fromJson<int>(json['groupId']),
+      holdingId: serializer.fromJson<int>(json['holdingId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'groupId': serializer.toJson<int>(groupId),
+      'holdingId': serializer.toJson<int>(holdingId),
+    };
+  }
+
+  InvestmentGroupHolding copyWith({int? groupId, int? holdingId}) =>
+      InvestmentGroupHolding(
+        groupId: groupId ?? this.groupId,
+        holdingId: holdingId ?? this.holdingId,
+      );
+  InvestmentGroupHolding copyWithCompanion(
+      InvestmentGroupHoldingsCompanion data) {
+    return InvestmentGroupHolding(
+      groupId: data.groupId.present ? data.groupId.value : this.groupId,
+      holdingId: data.holdingId.present ? data.holdingId.value : this.holdingId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InvestmentGroupHolding(')
+          ..write('groupId: $groupId, ')
+          ..write('holdingId: $holdingId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(groupId, holdingId);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is InvestmentGroupHolding &&
+          other.groupId == this.groupId &&
+          other.holdingId == this.holdingId);
+}
+
+class InvestmentGroupHoldingsCompanion
+    extends UpdateCompanion<InvestmentGroupHolding> {
+  final Value<int> groupId;
+  final Value<int> holdingId;
+  final Value<int> rowid;
+  const InvestmentGroupHoldingsCompanion({
+    this.groupId = const Value.absent(),
+    this.holdingId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  InvestmentGroupHoldingsCompanion.insert({
+    required int groupId,
+    required int holdingId,
+    this.rowid = const Value.absent(),
+  })  : groupId = Value(groupId),
+        holdingId = Value(holdingId);
+  static Insertable<InvestmentGroupHolding> custom({
+    Expression<int>? groupId,
+    Expression<int>? holdingId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (groupId != null) 'group_id': groupId,
+      if (holdingId != null) 'holding_id': holdingId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  InvestmentGroupHoldingsCompanion copyWith(
+      {Value<int>? groupId, Value<int>? holdingId, Value<int>? rowid}) {
+    return InvestmentGroupHoldingsCompanion(
+      groupId: groupId ?? this.groupId,
+      holdingId: holdingId ?? this.holdingId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (groupId.present) {
+      map['group_id'] = Variable<int>(groupId.value);
+    }
+    if (holdingId.present) {
+      map['holding_id'] = Variable<int>(holdingId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('InvestmentGroupHoldingsCompanion(')
+          ..write('groupId: $groupId, ')
+          ..write('holdingId: $holdingId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$BeeDatabase extends GeneratedDatabase {
   _$BeeDatabase(QueryExecutor e) : super(e);
   $BeeDatabaseManager get managers => $BeeDatabaseManager(this);
@@ -11924,6 +12424,10 @@ abstract class _$BeeDatabase extends GeneratedDatabase {
       $ExchangeRateOverridesTable(this);
   late final $InvestmentHoldingsTable investmentHoldings =
       $InvestmentHoldingsTable(this);
+  late final $InvestmentGroupsTable investmentGroups =
+      $InvestmentGroupsTable(this);
+  late final $InvestmentGroupHoldingsTable investmentGroupHoldings =
+      $InvestmentGroupHoldingsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -11950,8 +12454,29 @@ abstract class _$BeeDatabase extends GeneratedDatabase {
         syncPullErrors,
         exchangeRates,
         exchangeRateOverrides,
-        investmentHoldings
+        investmentHoldings,
+        investmentGroups,
+        investmentGroupHoldings
       ];
+  @override
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules(
+        [
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('investment_groups',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('investment_group_holdings', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('investment_holdings',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
+              TableUpdate('investment_group_holdings', kind: UpdateKind.delete),
+            ],
+          ),
+        ],
+      );
 }
 
 typedef $$LedgersTableCreateCompanionBuilder = LedgersCompanion Function({
@@ -17286,6 +17811,31 @@ typedef $$InvestmentHoldingsTableUpdateCompanionBuilder
   Value<DateTime?> updatedAt,
 });
 
+final class $$InvestmentHoldingsTableReferences extends BaseReferences<
+    _$BeeDatabase, $InvestmentHoldingsTable, InvestmentHolding> {
+  $$InvestmentHoldingsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$InvestmentGroupHoldingsTable,
+      List<InvestmentGroupHolding>> _investmentGroupHoldingsRefsTable(
+          _$BeeDatabase db) =>
+      MultiTypedResultKey.fromTable(db.investmentGroupHoldings,
+          aliasName:
+              'investment_holdings__id__investment_group_holdings__holding_id');
+
+  $$InvestmentGroupHoldingsTableProcessedTableManager
+      get investmentGroupHoldingsRefs {
+    final manager = $$InvestmentGroupHoldingsTableTableManager(
+            $_db, $_db.investmentGroupHoldings)
+        .filter((f) => f.holdingId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_investmentGroupHoldingsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+}
+
 class $$InvestmentHoldingsTableFilterComposer
     extends Composer<_$BeeDatabase, $InvestmentHoldingsTable> {
   $$InvestmentHoldingsTableFilterComposer({
@@ -17333,6 +17883,29 @@ class $$InvestmentHoldingsTableFilterComposer
 
   ColumnFilters<DateTime> get updatedAt => $composableBuilder(
       column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+
+  Expression<bool> investmentGroupHoldingsRefs(
+      Expression<bool> Function($$InvestmentGroupHoldingsTableFilterComposer f)
+          f) {
+    final $$InvestmentGroupHoldingsTableFilterComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $db.investmentGroupHoldings,
+            getReferencedColumn: (t) => t.holdingId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$InvestmentGroupHoldingsTableFilterComposer(
+                  $db: $db,
+                  $table: $db.investmentGroupHoldings,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
 }
 
 class $$InvestmentHoldingsTableOrderingComposer
@@ -17431,6 +18004,29 @@ class $$InvestmentHoldingsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  Expression<T> investmentGroupHoldingsRefs<T extends Object>(
+      Expression<T> Function($$InvestmentGroupHoldingsTableAnnotationComposer a)
+          f) {
+    final $$InvestmentGroupHoldingsTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $db.investmentGroupHoldings,
+            getReferencedColumn: (t) => t.holdingId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$InvestmentGroupHoldingsTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.investmentGroupHoldings,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
 }
 
 class $$InvestmentHoldingsTableTableManager extends RootTableManager<
@@ -17442,12 +18038,9 @@ class $$InvestmentHoldingsTableTableManager extends RootTableManager<
     $$InvestmentHoldingsTableAnnotationComposer,
     $$InvestmentHoldingsTableCreateCompanionBuilder,
     $$InvestmentHoldingsTableUpdateCompanionBuilder,
-    (
-      InvestmentHolding,
-      BaseReferences<_$BeeDatabase, $InvestmentHoldingsTable, InvestmentHolding>
-    ),
+    (InvestmentHolding, $$InvestmentHoldingsTableReferences),
     InvestmentHolding,
-    PrefetchHooks Function()> {
+    PrefetchHooks Function({bool investmentGroupHoldingsRefs})> {
   $$InvestmentHoldingsTableTableManager(
       _$BeeDatabase db, $InvestmentHoldingsTable table)
       : super(TableManagerState(
@@ -17521,9 +18114,37 @@ class $$InvestmentHoldingsTableTableManager extends RootTableManager<
             updatedAt: updatedAt,
           ),
           withReferenceMapper: (p0) => p0
-              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .map((e) => (
+                    e.readTable(table),
+                    $$InvestmentHoldingsTableReferences(db, table, e)
+                  ))
               .toList(),
-          prefetchHooksCallback: null,
+          prefetchHooksCallback: ({investmentGroupHoldingsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (investmentGroupHoldingsRefs) db.investmentGroupHoldings
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (investmentGroupHoldingsRefs)
+                    await $_getPrefetchedData<InvestmentHolding,
+                            $InvestmentHoldingsTable, InvestmentGroupHolding>(
+                        currentTable: table,
+                        referencedTable: $$InvestmentHoldingsTableReferences
+                            ._investmentGroupHoldingsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$InvestmentHoldingsTableReferences(db, table, p0)
+                                .investmentGroupHoldingsRefs,
+                        referencedItemsForCurrentItem:
+                            (item, referencedItems) => referencedItems
+                                .where((e) => e.holdingId == item.id),
+                        typedResults: items)
+                ];
+              },
+            );
+          },
         ));
 }
 
@@ -17536,12 +18157,587 @@ typedef $$InvestmentHoldingsTableProcessedTableManager = ProcessedTableManager<
     $$InvestmentHoldingsTableAnnotationComposer,
     $$InvestmentHoldingsTableCreateCompanionBuilder,
     $$InvestmentHoldingsTableUpdateCompanionBuilder,
-    (
-      InvestmentHolding,
-      BaseReferences<_$BeeDatabase, $InvestmentHoldingsTable, InvestmentHolding>
-    ),
+    (InvestmentHolding, $$InvestmentHoldingsTableReferences),
     InvestmentHolding,
-    PrefetchHooks Function()>;
+    PrefetchHooks Function({bool investmentGroupHoldingsRefs})>;
+typedef $$InvestmentGroupsTableCreateCompanionBuilder
+    = InvestmentGroupsCompanion Function({
+  Value<int> id,
+  required int ledgerId,
+  required String name,
+  Value<int> sortOrder,
+  Value<DateTime> createdAt,
+});
+typedef $$InvestmentGroupsTableUpdateCompanionBuilder
+    = InvestmentGroupsCompanion Function({
+  Value<int> id,
+  Value<int> ledgerId,
+  Value<String> name,
+  Value<int> sortOrder,
+  Value<DateTime> createdAt,
+});
+
+final class $$InvestmentGroupsTableReferences extends BaseReferences<
+    _$BeeDatabase, $InvestmentGroupsTable, InvestmentGroup> {
+  $$InvestmentGroupsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$InvestmentGroupHoldingsTable,
+      List<InvestmentGroupHolding>> _investmentGroupHoldingsRefsTable(
+          _$BeeDatabase db) =>
+      MultiTypedResultKey.fromTable(db.investmentGroupHoldings,
+          aliasName:
+              'investment_groups__id__investment_group_holdings__group_id');
+
+  $$InvestmentGroupHoldingsTableProcessedTableManager
+      get investmentGroupHoldingsRefs {
+    final manager = $$InvestmentGroupHoldingsTableTableManager(
+            $_db, $_db.investmentGroupHoldings)
+        .filter((f) => f.groupId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache =
+        $_typedResult.readTableOrNull(_investmentGroupHoldingsRefsTable($_db));
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: cache));
+  }
+}
+
+class $$InvestmentGroupsTableFilterComposer
+    extends Composer<_$BeeDatabase, $InvestmentGroupsTable> {
+  $$InvestmentGroupsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get ledgerId => $composableBuilder(
+      column: $table.ledgerId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+      column: $table.sortOrder, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnFilters(column));
+
+  Expression<bool> investmentGroupHoldingsRefs(
+      Expression<bool> Function($$InvestmentGroupHoldingsTableFilterComposer f)
+          f) {
+    final $$InvestmentGroupHoldingsTableFilterComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $db.investmentGroupHoldings,
+            getReferencedColumn: (t) => t.groupId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$InvestmentGroupHoldingsTableFilterComposer(
+                  $db: $db,
+                  $table: $db.investmentGroupHoldings,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
+}
+
+class $$InvestmentGroupsTableOrderingComposer
+    extends Composer<_$BeeDatabase, $InvestmentGroupsTable> {
+  $$InvestmentGroupsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+      column: $table.id, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get ledgerId => $composableBuilder(
+      column: $table.ledgerId, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get name => $composableBuilder(
+      column: $table.name, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+      column: $table.sortOrder, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+      column: $table.createdAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$InvestmentGroupsTableAnnotationComposer
+    extends Composer<_$BeeDatabase, $InvestmentGroupsTable> {
+  $$InvestmentGroupsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<int> get ledgerId =>
+      $composableBuilder(column: $table.ledgerId, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  Expression<T> investmentGroupHoldingsRefs<T extends Object>(
+      Expression<T> Function($$InvestmentGroupHoldingsTableAnnotationComposer a)
+          f) {
+    final $$InvestmentGroupHoldingsTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.id,
+            referencedTable: $db.investmentGroupHoldings,
+            getReferencedColumn: (t) => t.groupId,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$InvestmentGroupHoldingsTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.investmentGroupHoldings,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return f(composer);
+  }
+}
+
+class $$InvestmentGroupsTableTableManager extends RootTableManager<
+    _$BeeDatabase,
+    $InvestmentGroupsTable,
+    InvestmentGroup,
+    $$InvestmentGroupsTableFilterComposer,
+    $$InvestmentGroupsTableOrderingComposer,
+    $$InvestmentGroupsTableAnnotationComposer,
+    $$InvestmentGroupsTableCreateCompanionBuilder,
+    $$InvestmentGroupsTableUpdateCompanionBuilder,
+    (InvestmentGroup, $$InvestmentGroupsTableReferences),
+    InvestmentGroup,
+    PrefetchHooks Function({bool investmentGroupHoldingsRefs})> {
+  $$InvestmentGroupsTableTableManager(
+      _$BeeDatabase db, $InvestmentGroupsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$InvestmentGroupsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$InvestmentGroupsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$InvestmentGroupsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            Value<int> ledgerId = const Value.absent(),
+            Value<String> name = const Value.absent(),
+            Value<int> sortOrder = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+          }) =>
+              InvestmentGroupsCompanion(
+            id: id,
+            ledgerId: ledgerId,
+            name: name,
+            sortOrder: sortOrder,
+            createdAt: createdAt,
+          ),
+          createCompanionCallback: ({
+            Value<int> id = const Value.absent(),
+            required int ledgerId,
+            required String name,
+            Value<int> sortOrder = const Value.absent(),
+            Value<DateTime> createdAt = const Value.absent(),
+          }) =>
+              InvestmentGroupsCompanion.insert(
+            id: id,
+            ledgerId: ledgerId,
+            name: name,
+            sortOrder: sortOrder,
+            createdAt: createdAt,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$InvestmentGroupsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({investmentGroupHoldingsRefs = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [
+                if (investmentGroupHoldingsRefs) db.investmentGroupHoldings
+              ],
+              addJoins: null,
+              getPrefetchedDataCallback: (items) async {
+                return [
+                  if (investmentGroupHoldingsRefs)
+                    await $_getPrefetchedData<InvestmentGroup,
+                            $InvestmentGroupsTable, InvestmentGroupHolding>(
+                        currentTable: table,
+                        referencedTable: $$InvestmentGroupsTableReferences
+                            ._investmentGroupHoldingsRefsTable(db),
+                        managerFromTypedResult: (p0) =>
+                            $$InvestmentGroupsTableReferences(db, table, p0)
+                                .investmentGroupHoldingsRefs,
+                        referencedItemsForCurrentItem: (item,
+                                referencedItems) =>
+                            referencedItems.where((e) => e.groupId == item.id),
+                        typedResults: items)
+                ];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$InvestmentGroupsTableProcessedTableManager = ProcessedTableManager<
+    _$BeeDatabase,
+    $InvestmentGroupsTable,
+    InvestmentGroup,
+    $$InvestmentGroupsTableFilterComposer,
+    $$InvestmentGroupsTableOrderingComposer,
+    $$InvestmentGroupsTableAnnotationComposer,
+    $$InvestmentGroupsTableCreateCompanionBuilder,
+    $$InvestmentGroupsTableUpdateCompanionBuilder,
+    (InvestmentGroup, $$InvestmentGroupsTableReferences),
+    InvestmentGroup,
+    PrefetchHooks Function({bool investmentGroupHoldingsRefs})>;
+typedef $$InvestmentGroupHoldingsTableCreateCompanionBuilder
+    = InvestmentGroupHoldingsCompanion Function({
+  required int groupId,
+  required int holdingId,
+  Value<int> rowid,
+});
+typedef $$InvestmentGroupHoldingsTableUpdateCompanionBuilder
+    = InvestmentGroupHoldingsCompanion Function({
+  Value<int> groupId,
+  Value<int> holdingId,
+  Value<int> rowid,
+});
+
+final class $$InvestmentGroupHoldingsTableReferences extends BaseReferences<
+    _$BeeDatabase, $InvestmentGroupHoldingsTable, InvestmentGroupHolding> {
+  $$InvestmentGroupHoldingsTableReferences(
+      super.$_db, super.$_table, super.$_typedResult);
+
+  static $InvestmentGroupsTable _groupIdTable(_$BeeDatabase db) =>
+      db.investmentGroups.createAlias(
+          'investment_group_holdings__group_id__investment_groups__id');
+
+  $$InvestmentGroupsTableProcessedTableManager get groupId {
+    final $_column = $_itemColumn<int>('group_id')!;
+
+    final manager =
+        $$InvestmentGroupsTableTableManager($_db, $_db.investmentGroups)
+            .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_groupIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $InvestmentHoldingsTable _holdingIdTable(_$BeeDatabase db) =>
+      db.investmentHoldings.createAlias(
+          'investment_group_holdings__holding_id__investment_holdings__id');
+
+  $$InvestmentHoldingsTableProcessedTableManager get holdingId {
+    final $_column = $_itemColumn<int>('holding_id')!;
+
+    final manager =
+        $$InvestmentHoldingsTableTableManager($_db, $_db.investmentHoldings)
+            .filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_holdingIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+}
+
+class $$InvestmentGroupHoldingsTableFilterComposer
+    extends Composer<_$BeeDatabase, $InvestmentGroupHoldingsTable> {
+  $$InvestmentGroupHoldingsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  $$InvestmentGroupsTableFilterComposer get groupId {
+    final $$InvestmentGroupsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.groupId,
+        referencedTable: $db.investmentGroups,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$InvestmentGroupsTableFilterComposer(
+              $db: $db,
+              $table: $db.investmentGroups,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$InvestmentHoldingsTableFilterComposer get holdingId {
+    final $$InvestmentHoldingsTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.holdingId,
+        referencedTable: $db.investmentHoldings,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$InvestmentHoldingsTableFilterComposer(
+              $db: $db,
+              $table: $db.investmentHoldings,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$InvestmentGroupHoldingsTableOrderingComposer
+    extends Composer<_$BeeDatabase, $InvestmentGroupHoldingsTable> {
+  $$InvestmentGroupHoldingsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  $$InvestmentGroupsTableOrderingComposer get groupId {
+    final $$InvestmentGroupsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.groupId,
+        referencedTable: $db.investmentGroups,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$InvestmentGroupsTableOrderingComposer(
+              $db: $db,
+              $table: $db.investmentGroups,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$InvestmentHoldingsTableOrderingComposer get holdingId {
+    final $$InvestmentHoldingsTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.holdingId,
+        referencedTable: $db.investmentHoldings,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$InvestmentHoldingsTableOrderingComposer(
+              $db: $db,
+              $table: $db.investmentHoldings,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+}
+
+class $$InvestmentGroupHoldingsTableAnnotationComposer
+    extends Composer<_$BeeDatabase, $InvestmentGroupHoldingsTable> {
+  $$InvestmentGroupHoldingsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  $$InvestmentGroupsTableAnnotationComposer get groupId {
+    final $$InvestmentGroupsTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.groupId,
+        referencedTable: $db.investmentGroups,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$InvestmentGroupsTableAnnotationComposer(
+              $db: $db,
+              $table: $db.investmentGroups,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$InvestmentHoldingsTableAnnotationComposer get holdingId {
+    final $$InvestmentHoldingsTableAnnotationComposer composer =
+        $composerBuilder(
+            composer: this,
+            getCurrentColumn: (t) => t.holdingId,
+            referencedTable: $db.investmentHoldings,
+            getReferencedColumn: (t) => t.id,
+            builder: (joinBuilder,
+                    {$addJoinBuilderToRootComposer,
+                    $removeJoinBuilderFromRootComposer}) =>
+                $$InvestmentHoldingsTableAnnotationComposer(
+                  $db: $db,
+                  $table: $db.investmentHoldings,
+                  $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                  joinBuilder: joinBuilder,
+                  $removeJoinBuilderFromRootComposer:
+                      $removeJoinBuilderFromRootComposer,
+                ));
+    return composer;
+  }
+}
+
+class $$InvestmentGroupHoldingsTableTableManager extends RootTableManager<
+    _$BeeDatabase,
+    $InvestmentGroupHoldingsTable,
+    InvestmentGroupHolding,
+    $$InvestmentGroupHoldingsTableFilterComposer,
+    $$InvestmentGroupHoldingsTableOrderingComposer,
+    $$InvestmentGroupHoldingsTableAnnotationComposer,
+    $$InvestmentGroupHoldingsTableCreateCompanionBuilder,
+    $$InvestmentGroupHoldingsTableUpdateCompanionBuilder,
+    (InvestmentGroupHolding, $$InvestmentGroupHoldingsTableReferences),
+    InvestmentGroupHolding,
+    PrefetchHooks Function({bool groupId, bool holdingId})> {
+  $$InvestmentGroupHoldingsTableTableManager(
+      _$BeeDatabase db, $InvestmentGroupHoldingsTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$InvestmentGroupHoldingsTableFilterComposer(
+                  $db: db, $table: table),
+          createOrderingComposer: () =>
+              $$InvestmentGroupHoldingsTableOrderingComposer(
+                  $db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$InvestmentGroupHoldingsTableAnnotationComposer(
+                  $db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<int> groupId = const Value.absent(),
+            Value<int> holdingId = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              InvestmentGroupHoldingsCompanion(
+            groupId: groupId,
+            holdingId: holdingId,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required int groupId,
+            required int holdingId,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              InvestmentGroupHoldingsCompanion.insert(
+            groupId: groupId,
+            holdingId: holdingId,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (
+                    e.readTable(table),
+                    $$InvestmentGroupHoldingsTableReferences(db, table, e)
+                  ))
+              .toList(),
+          prefetchHooksCallback: ({groupId = false, holdingId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins: <
+                  T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic>>(state) {
+                if (groupId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.groupId,
+                    referencedTable: $$InvestmentGroupHoldingsTableReferences
+                        ._groupIdTable(db),
+                    referencedColumn: $$InvestmentGroupHoldingsTableReferences
+                        ._groupIdTable(db)
+                        .id,
+                  ) as T;
+                }
+                if (holdingId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.holdingId,
+                    referencedTable: $$InvestmentGroupHoldingsTableReferences
+                        ._holdingIdTable(db),
+                    referencedColumn: $$InvestmentGroupHoldingsTableReferences
+                        ._holdingIdTable(db)
+                        .id,
+                  ) as T;
+                }
+
+                return state;
+              },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ));
+}
+
+typedef $$InvestmentGroupHoldingsTableProcessedTableManager
+    = ProcessedTableManager<
+        _$BeeDatabase,
+        $InvestmentGroupHoldingsTable,
+        InvestmentGroupHolding,
+        $$InvestmentGroupHoldingsTableFilterComposer,
+        $$InvestmentGroupHoldingsTableOrderingComposer,
+        $$InvestmentGroupHoldingsTableAnnotationComposer,
+        $$InvestmentGroupHoldingsTableCreateCompanionBuilder,
+        $$InvestmentGroupHoldingsTableUpdateCompanionBuilder,
+        (InvestmentGroupHolding, $$InvestmentGroupHoldingsTableReferences),
+        InvestmentGroupHolding,
+        PrefetchHooks Function({bool groupId, bool holdingId})>;
 
 class $BeeDatabaseManager {
   final _$BeeDatabase _db;
@@ -17592,4 +18788,9 @@ class $BeeDatabaseManager {
       $$ExchangeRateOverridesTableTableManager(_db, _db.exchangeRateOverrides);
   $$InvestmentHoldingsTableTableManager get investmentHoldings =>
       $$InvestmentHoldingsTableTableManager(_db, _db.investmentHoldings);
+  $$InvestmentGroupsTableTableManager get investmentGroups =>
+      $$InvestmentGroupsTableTableManager(_db, _db.investmentGroups);
+  $$InvestmentGroupHoldingsTableTableManager get investmentGroupHoldings =>
+      $$InvestmentGroupHoldingsTableTableManager(
+          _db, _db.investmentGroupHoldings);
 }

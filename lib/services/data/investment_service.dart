@@ -268,4 +268,46 @@ class InvestmentService {
       note: note,
     );
   }
+
+  // ---- 基金分组（v6.2）----
+
+  Future<int> createGroup({
+    required int ledgerId,
+    required String name,
+    int sortOrder = 0,
+  }) {
+    return _repo.createGroup(
+      ledgerId: ledgerId,
+      name: name,
+      sortOrder: sortOrder,
+    );
+  }
+
+  Future<void> renameGroup(int groupId, String name) {
+    return _repo.renameGroup(groupId, name);
+  }
+
+  Future<void> deleteGroup(int groupId) {
+    return _repo.deleteGroup(groupId);
+  }
+
+  Future<void> addHoldingsToGroup(int groupId, List<int> holdingIds) {
+    return _repo.addHoldingsToGroup(groupId, holdingIds);
+  }
+
+  Future<void> removeHoldingFromGroup(int groupId, int holdingId) {
+    return _repo.removeHoldingFromGroup(groupId, holdingId);
+  }
+
+  Future<void> setGroupMembers(int groupId, List<int> holdingIds) {
+    return _repo.setGroupMembers(groupId, holdingIds);
+  }
+
+  Stream<List<InvestmentGroup>> watchGroups({required int ledgerId}) {
+    return _repo.watchGroups(ledgerId: ledgerId);
+  }
+
+  Stream<List<int>> watchGroupHoldingIds(int groupId) {
+    return _repo.watchGroupHoldingIds(groupId);
+  }
 }

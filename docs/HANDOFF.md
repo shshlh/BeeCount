@@ -31,6 +31,26 @@
 
 ---
 
+## 2026-08-05
+
+**移交角色**：invest-logic + invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.2 返工 2 完成（Notifier state 暴露方式修正）
+
+**完成工作**：
+- lib/providers/investment_providers.dart — SelectedGroupNotifier 新增公开方法 select(int? groupId) / reset()，内部写 state；保留账本切换自动重置
+- lib/pages/investment/holdings_list_page.dart — 3 处 notifier.state 直接写入改为公开方法调用（「全部」chip reset()、分组 chip select(group.id)、删除分组后回全部 reset()）
+- test/providers/investment_providers_test.dart — 测试改用公开方法 select(groupA)，「切换账本后分组重置」覆盖保留
+
+**下一个任务需要知道的**：
+- UI/测试不再直接写 notifier.state，消除 invalid_use_of_protected_member / invalid_use_of_visible_for_testing_member 两类 warning
+- 全量 analyze 新增代码零 error/warning；全量测试 603 passed / 1 skipped / 1 failed（既存 bill_creation_service_test 除外）
+
+**git 状态**：当前分支 main，待提交（工作区含 6.2 原实现 + 两次返工，交 PM 审查合入）
+
+---
+
 
 
 ## 2026-08-05

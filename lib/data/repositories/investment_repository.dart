@@ -103,4 +103,34 @@ abstract class InvestmentRepository {
     DateTime? happenedAt,
     String? note,
   });
+
+  // ---- 基金分组（v6.2，本地数据，不同步）----
+
+  /// 创建自定义分组，返回分组 ID。
+  Future<int> createGroup({
+    required int ledgerId,
+    required String name,
+    int sortOrder = 0,
+  });
+
+  /// 分组改名。
+  Future<void> renameGroup(int groupId, String name);
+
+  /// 删除分组（关联成员行由外键级联清理）。
+  Future<void> deleteGroup(int groupId);
+
+  /// 向分组添加持仓（重复成员自动忽略）。
+  Future<void> addHoldingsToGroup(int groupId, List<int> holdingIds);
+
+  /// 从分组移除单个持仓。
+  Future<void> removeHoldingFromGroup(int groupId, int holdingId);
+
+  /// 整组替换成员（先清空再写入，供「编辑成员」使用）。
+  Future<void> setGroupMembers(int groupId, List<int> holdingIds);
+
+  /// 监听账本下所有分组（按 sortOrder 升序）。
+  Stream<List<InvestmentGroup>> watchGroups({required int ledgerId});
+
+  /// 监听某个分组包含的持仓 ID。
+  Stream<List<int>> watchGroupHoldingIds(int groupId);
 }

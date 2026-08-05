@@ -640,6 +640,108 @@ class LocalInvestmentRepository implements InvestmentRepository {
     });
   }
 
+  // ---- 基金分组（v6.2）----
+
+  @override
+  Future<int> createGroup({
+    required int ledgerId,
+    required String name,
+    int sortOrder = 0,
+  }) {
+    return db.into(db.investmentGroups).insert(InvestmentGroupsCompanion.insert(
+          ledgerId: ledgerId,
+          name: name,
+          sortOrder: d.Value(sortOrder),
+        ));
+  }
+
+  @override
+  Future<void> renameGroup(int groupId, String name) async {
+    final affected = await (db.update(db.investmentGroups)
+          ..where((g) => g.id.equals(groupId)))
+        .write(InvestmentGroupsCompanion(name: d.Value(name)));
+    if (affected == 0) throw StateError('分组 $groupId 不存在');
+  }
+
+  @override
+  Future<void> deleteGroup(int groupId) async {
+    final affected = await (db.delete(db.investmentGroups)
+          ..where((g) => g.id.equals(groupId)))
+        .go();
+    if (affected == 0) throw StateError('分组 $groupId 不存在');
+  }
+
+  @override
+  Future<void> addHoldingsToGroup(int groupId, List<int> holdingIds) async {
+    if (holdingIds.isEmpty) return;
+    await db.batch((batch) {
+      batch.insertAll(
+        db.investmentGroupHoldings,
+        [
+          for (final holdingId in holdingIds)
+            InvestmentGroupHoldingsCompanion.insert(
+              groupId: groupId,
+              holdingId: holdingId,
+            ),
+        ],
+        mode: d.InsertMode.insertOrIgnore,
+      );
+    });
+  }
+
+  @override
+  Future<void> removeHoldingFromGroup(int groupId, int holdingId) async {
+    await (db.delete(db.investmentGroupHoldings)
+          ..where(
+              (r) => r.groupId.equals(groupId) & r.holdingId.equals(holdingId)))
+        .go();
+  }
+
+  @override
+  Future<void> setGroupMembers(int groupId, List<int> holdingIds) async {
+    await db.transaction(() async {
+      await (db.delete(db.investmentGroupHoldings)
+            ..where((r) => r.groupId.equals(groupId)))
+          .go();
+      if (holdingIds.isNotEmpty) {
+        await db.batch((batch) {
+          batch.insertAll(
+            db.investmentGroupHoldings,
+            [
+              for (final holdingId in holdingIds)
+                InvestmentGroupHoldingsCompanion.insert(
+                  groupId: groupId,
+                  holdingId: holdingId,
+                ),
+            ],
+            mode: d.InsertMode.insertOrIgnore,
+          );
+        });
+      }
+    });
+  }
+
+  @override
+  Stream<List<InvestmentGroup>> watchGroups({required int ledgerId}) {
+    return (db.select(db.investmentGroups)
+          ..where((g) => g.ledgerId.equals(ledgerId))
+          ..orderBy([
+            (g) => d.OrderingTerm(
+                expression: g.sortOrder, mode: d.OrderingMode.asc),
+            (g) => d.OrderingTerm(expression: g.id, mode: d.OrderingMode.asc),
+          ]))
+        .watch();
+  }
+
+  @override
+  Stream<List<int>> watchGroupHoldingIds(int groupId) {
+    return (db.select(db.investmentGroupHoldings)
+          ..where((r) => r.groupId.equals(groupId))
+          ..orderBy([(r) => d.OrderingTerm(expression: r.holdingId)]))
+        .watch()
+        .map((rows) => rows.map((r) => r.holdingId).toList());
+  }
+
   @override
   Stream<List<Transaction>> watchTransactions(int holdingId) {
     return (db.select(db.transactions)
