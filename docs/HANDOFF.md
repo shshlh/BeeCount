@@ -35,6 +35,53 @@
 
 ## 2026-08-05
 
+**移交角色**：项目经理（PM）
+**接收角色**：invest-logic + invest-ui
+
+**任务**：6.1 投资买入输入调优 + 资产构成布局 + 我的页清理（3 个问题）
+
+**角色分工**：
+- invest-logic：6.1.1 数据层/服务层（repository/service/Decimal/测试）
+- invest-ui：6.1.1 UI（buy_dialog 三字段）+ 6.1.2 + 6.1.3
+
+**问题 1：基金买入计算逻辑调优（核心）**
+- 目标：与支付宝等平台显示对齐。买入时用户只需录入「投入本金」「确认份额」「确认净值」三个字段；市值 = 确认份额 × 最新净值；浮动盈亏 = 市值 - 投入本金；无需录入费率/手续费；直接使用基金公司确认的截位后份额，不反算份额。
+- 数据层/服务层（invest-logic）：
+  - 文件：lib/services/data/investment_service.dart、lib/data/repositories/local/local_investment_repository.dart、相关测试
+  - service.buy / repo.buy：移除 double fee 参数，新增 required double amount（投入本金）；交易 amount = amount（本金），investFee = 0；持仓 totalCost += amount；marketValue = (oldShares + shares) × nav
+  - validateBuy 增加 amount > 0 校验（签名同步为 shares/nav/amount）
+  - 所有投资算术改用 package:decimal（Decimal）：buy、_recomputeHolding（份额/成本/比例/市值）、updateNav（市值）、getPortfolioSummary / getHoldingReturn（盈亏/收益率）；double 仅在入库/出参时转换，避免浮点误差
+  - 兼容：_recomputeHolding 对旧 buy 记录（无 amount）的兜底「份额 × 净值 + 手续费」保留
+  - 更新 test/services/investment_service_test.dart、test/data/repositories/investment_repository_test.dart 的 buy 调用为 amount；新增用例：amount=1001.5 / shares=1000 / nav=1 → cost=1001.5、marketValue=1000、fee=0；Decimal 精度用例（如 shares=0.1、nav=0.1 → 市值=0.01，而非 0.010000000000000002）
+- UI 层（invest-ui）：
+  - 文件：lib/widgets/investment/buy_dialog.dart
+  - 删除「手续费」字段/控制器；新增「投入本金」（金额）字段；保留「份额」「净值」，label 改为「确认份额」「确认净值」
+  - 校验：本金 > 0、份额 > 0、净值 > 0；调用新 service.buy 签名传 amount
+  - 提交按钮文案保持「确认」
+- 约束：flutter analyze 新增代码零 error/warning；全量测试保持 582 passed / 1 skipped / 1 failed（既存 bill_creation_service_test 除外）
+
+**问题 2：资产构成饼图布局**
+- 文件：lib/pages/account/accounts_page.dart（_buildNetWorthAndCompositionCard）、lib/widgets/charts/asset_composition_chart.dart
+- 删除模块内大号「资产构成」标题文字
+- 饼图适当放大（图高 70 → 约 96~100，切片 radius / centerSpaceRadius 相应调大），不裁切不重叠
+- 各一级账户占比文字（legend）继续下移约一个文字行高（约 11px）：饼图与 legend 间距由 12 调大（约 22~24），保证不压饼图
+- 模块仍固定不滚动，暗黑适配
+
+**问题 3：我的页面清理排序**
+- 文件：lib/pages/main/mine_page.dart
+- 删除「分享应用」（分享海报）与「复制推广文案」两个 tile（及其 onTap/相关 l10n 调用，ARB 字符串可保留）
+- 剩余区块顺序调整为：第一块「云服务/同步」（现有云同步与备份 SectionCard 不动）、第二块「个性化设置/年度账单」（把年度账单 tile 移入外观设置所在 SectionCard，位于外观设置之后）、第三块「使用帮助/关于」（现有关于+使用帮助 SectionCard）
+- 「支持我们」SectionCard 移除（Android 下删除后为空；iOS 不需要适配）
+- 不改数据/Provider，纯 UI 重排
+
+**约束**：
+- 完成后更新 TEAM.md 任务板 + HANDOFF.md 追加完成记录，git 状态待提交交 PM 审查
+- HANDOFF 铁律：只 prepend 追加，不整文件重写、不用模糊正则范围替换
+
+---
+
+## 2026-08-05
+
 **移交角色**：invest-ui
 **接收角色**：项目经理（PM）
 
