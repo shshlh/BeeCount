@@ -31,6 +31,59 @@
 
 ---
 
+## 2026-08-06
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-ui
+
+**任务**：6.3 首页/资产/记账 6 项 UI 优化
+
+**问题 1：分组胶囊最小尺寸**
+- 文件：lib/pages/investment/holdings_list_page.dart _buildGroupChip
+- 现状：chip 只按内容撑开，短名（如「全部」）很小
+- 要求：给分组胶囊设置最小宽度，能容纳 4 个中文字符（当前 13px 字号约 52px + 左右 padding 14×2 ≈ 80px），视觉参考记账页面 4 字标签尺寸；「全部」与自定义分组统一最小宽度，chip 高度/内边距不变
+
+**问题 2：排序改为下拉菜单**
+- 文件：holdings_list_page.dart _buildSortRow
+- 现状：持有金额/持有收益/持有收益率三个 ChoiceChip
+- 要求：
+  a) 去掉独立胶囊，改为一个下拉式选择菜单，菜单靠右对齐界面；右侧显示当前排序值，点击弹出
+  b) 菜单三项：持有金额/持有收益/持有收益率，文字左对齐，项与项之间用黑色分割线（Divider）
+  c) 左侧保留「排序」文字，其后追加一个单边向下箭头（Icons.arrow_drop_down），代表排序方向从大到小（降序）
+  d) 行仍固定在摘要下方不随列表滚动；holdingsSortProvider 逻辑不变
+
+**问题 3：首页资产概览总资产/总负债分行红绿**
+- 文件：lib/pages/main/home_page.dart _buildAssetOverview
+- 现状：总资产/总负债同一行左右并排，数值黑字
+- 要求：改为上下两行（总资产一行、总负债一行），卡片总高度保持 200 不变；总资产数值红色、总负债数值绿色（沿用 income/expense 语义色），标签保持小灰字
+
+**问题 4：首页周期统计两行布局 + 时间范围**
+- 文件：home_page.dart _buildPeriodStats、homePeriodStatsProvider（如需补日期范围字段）
+- 现状：今天/本周/本月/今年每行单行，右侧「收入 X 支出 Y」一行
+- 要求：
+  a) 每一条两行：第一行黑字 今天/本周/本月/今年；第二行灰色小字显示时间范围：今天「2026.8.6」、本周「8.3-8.9」、本月「8.1-8.31」、今年「2026」（跨月按「7.28-8.3」格式）
+  b) 每一条右侧收入/支出分两行：灰色小字「收入」「支出」+ 数值，收入红、支出绿
+  c) 卡片高度随内容自适应（不再固定 178）
+- 注意：周范围按周一为一周开始（与 now.weekday 语义一致）
+
+**问题 5：删除首页月度分类占比**
+- 文件：home_page.dart（_buildCategoryBreakdown、homeCategoryExpensesProvider、CategoryPieChart 导入）、test/widgets/home_page_test.dart
+- 要求：删除组件、provider 与相关测试 override/断言；确认 homeCategoryExpensesProvider 无其他引用后再删；页面其余模块顺序自然衔接
+
+**问题 6：记账时间选择器去掉秒**
+- 文件：lib/widgets/ui/wheel_date_picker.dart（showWheelDateTimePicker / _TimeStepPicker）
+- 现状：时分秒三列
+- 要求：删除秒列，只保留时分；showWheelDateTimePicker 组合 DateTime 时 second 固定 0；确认 tx_entry_form / transfer_form 使用不受影响
+- 注意：不要改动 reminder 设置用的 WheelTimePicker（本就无秒）
+
+**约束**：
+- flutter analyze 新增代码零 error/warning
+- 更新相关 widget 测试
+- 完成后更新 TEAM.md 任务板 + HANDOFF.md 追加完成记录，git 状态待提交交 PM 审查
+- HANDOFF 铁律：只 prepend 追加，不整文件重写、不用模糊正则范围替换
+
+---
+
 ## 2026-08-05
 
 **移交角色**：invest-logic + invest-ui

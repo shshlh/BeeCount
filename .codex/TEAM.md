@@ -41,6 +41,17 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 
 ## 任务板
 
+### 阶段 6.3：首页/资产/记账 UI 优化
+
+| 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
+|---|---|---|---|---|
+| 6.3.1 分组胶囊最小尺寸 | ⏳ | invest-ui | holdings_list chip minWidth | — |
+| 6.3.2 排序下拉菜单 | ⏳ | invest-ui | sort dropdown + 黑色分隔 | — |
+| 6.3.3 资产概览红绿分行 | ⏳ | invest-ui | home asset two rows | — |
+| 6.3.4 周期统计两行 | ⏳ | invest-ui | period stats + 时间范围 | — |
+| 6.3.5 删除月度分类占比 | ⏳ | invest-ui | home cleanup | — |
+| 6.3.6 时间选择器去秒 | ⏳ | invest-ui | wheel time minute-only | — |
+
 ### 阶段 6.2：持仓排序 + 基金分组
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
