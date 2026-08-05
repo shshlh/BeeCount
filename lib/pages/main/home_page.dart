@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/db.dart' as db;
 import '../../l10n/app_localizations.dart';
 import '../../pages/account/accounts_page.dart';
 import '../../pages/settings/automation_page.dart';
@@ -11,12 +10,13 @@ import '../../providers.dart';
 import '../../styles/tokens.dart';
 import '../../utils/format_utils.dart';
 import '../../widgets/biz/home_header_bar.dart';
-import '../../widgets/charts/category_pie_chart.dart';
 import '../../widgets/ui/ui.dart';
 
 /// 首页仪表盘（v6.0）：Bento 便当格 + 顶部明细头（账本切换/AI/日历/搜索）
 final homePeriodStatsProvider = FutureProvider.autoDispose<
-    Map<String, (double income, double expense)>>((ref) async {
+    Map<String,
+        ({double income, double expense, DateTime start, DateTime end})>>(
+    (ref) async {
   final repo = ref.watch(repositoryProvider);
   final ledgerId = ref.watch(currentLedgerIdProvider);
   final now = DateTime.now();
@@ -25,8 +25,12 @@ final homePeriodStatsProvider = FutureProvider.autoDispose<
   final monthStart = DateTime(now.year, now.month, 1);
   final yearStart = DateTime(now.year, 1, 1);
 
-  Future<(double income, double expense)> range(DateTime s, DateTime e) =>
-      repo.totalsInRange(ledgerId: ledgerId, start: s, end: e);
+  Future<({double income, double expense, DateTime start, DateTime end})>
+      range(DateTime s, DateTime e) async {
+    final totals =
+        await repo.totalsInRange(ledgerId: ledgerId, start: s, end: e);
+    return (income: totals.$1, expense: totals.$2, start: s, end: e);
+  }
 
   final today = await range(todayStart, todayStart.add(const Duration(days: 1)));
   final week = await range(weekStart, weekStart.add(const Duration(days: 7)));
@@ -34,21 +38,6 @@ final homePeriodStatsProvider = FutureProvider.autoDispose<
       await range(monthStart, DateTime(monthStart.year, monthStart.month + 1, 1));
   final year = await range(yearStart, DateTime(yearStart.year + 1, 1, 1));
   return {'today': today, 'week': week, 'month': month, 'year': year};
-});
-
-/// 本月支出分类占比
-final homeCategoryExpensesProvider = FutureProvider.autoDispose<
-    List<({int? id, String name, String? icon, double total})>>((ref) async {
-  final repo = ref.watch(repositoryProvider);
-  final ledgerId = ref.watch(currentLedgerIdProvider);
-  final now = DateTime.now();
-  final start = DateTime(now.year, now.month, 1);
-  return repo.totalsByCategory(
-    ledgerId: ledgerId,
-    type: 'expense',
-    start: start,
-    end: DateTime(start.year, start.month + 1, 1),
-  );
 });
 
 class HomePage extends ConsumerWidget {
@@ -76,8 +65,6 @@ class HomePage extends ConsumerWidget {
                 _buildAssetOverview(context, ref, l10n),
                 const SizedBox(height: 12),
                 _buildPeriodStats(context, ref, l10n),
-                const SizedBox(height: 12),
-                _buildCategoryBreakdown(context, ref, l10n),
               ],
             ),
           ),
@@ -212,7 +199,7 @@ class HomePage extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Text(
                 l10n.accountTotalBalance,
                 style: TextStyle(
@@ -234,25 +221,19 @@ class HomePage extends ConsumerWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  _overviewStat(
-                    context,
-                    label: l10n.accountsTotalAssets,
-                    value: nw.totalAssets,
-                  ),
-                  Container(
-                    width: 1,
-                    height: 26,
-                    color: BeeTokens.divider(context),
-                  ),
-                  _overviewStat(
-                    context,
-                    label: l10n.accountsTotalLiabilities,
-                    value: nw.totalLiabilities.abs(),
-                  ),
-                ],
+              const SizedBox(height: 10),
+              _overviewStat(
+                context,
+                label: l10n.accountsTotalAssets,
+                value: nw.totalAssets,
+                valueColor: BeeTokens.incomeColor(context, ref),
+              ),
+              const SizedBox(height: 6),
+              _overviewStat(
+                context,
+                label: l10n.accountsTotalLiabilities,
+                value: nw.totalLiabilities.abs(),
+                valueColor: BeeTokens.expenseColor(context, ref),
               ),
             ],
           ),
@@ -271,9 +252,9 @@ class HomePage extends ConsumerWidget {
     BuildContext context, {
     required String label,
     required double value,
+    required Color valueColor,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
         Text(
           label,
@@ -282,17 +263,17 @@ class HomePage extends ConsumerWidget {
             color: BeeTokens.textTertiary(context),
           ),
         ),
-        const SizedBox(height: 2),
+        const Spacer(),
         FittedBox(
           fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
+          alignment: Alignment.centerRight,
           child: Text(
             formatFullAmount(value),
             maxLines: 1,
             style: TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: BeeTokens.textPrimary(context),
+              color: valueColor,
             ),
           ),
         ),
@@ -302,15 +283,16 @@ class HomePage extends ConsumerWidget {
 
   Widget _buildPeriodStats(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final statsAsync = ref.watch(homePeriodStatsProvider);
+    final incomeColor = BeeTokens.incomeColor(context, ref);
+    final expenseColor = BeeTokens.expenseColor(context, ref);
     return _BentoCard(
-      height: 178,
       child: statsAsync.when(
           data: (stats) {
             final rows = [
-              (label: l10n.periodToday, v: stats['today']!),
-              (label: l10n.periodWeek, v: stats['week']!),
-              (label: l10n.periodMonth, v: stats['month']!),
-              (label: l10n.periodYear, v: stats['year']!),
+              (key: 'today', label: l10n.periodToday, v: stats['today']!),
+              (key: 'week', label: l10n.periodWeek, v: stats['week']!),
+              (key: 'month', label: l10n.periodMonth, v: stats['month']!),
+              (key: 'year', label: l10n.periodYear, v: stats['year']!),
             ];
             return Column(
               children: [
@@ -318,23 +300,48 @@ class HomePage extends ConsumerWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 6),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          row.label,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: BeeTokens.textSecondary(context),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                row.label,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: BeeTokens.textPrimary(context),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                _formatPeriodRange(row.key, row.v.start, row.v.end),
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: BeeTokens.textTertiary(context),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const Spacer(),
-                        Text(
-                          '${l10n.homeIncome} ${formatFullAmount(row.v.$1)}'
-                          '    ${l10n.homeExpense} ${formatFullAmount(row.v.$2)}',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: BeeTokens.textPrimary(context),
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            _incomeExpenseLine(
+                              context,
+                              l10n.homeIncome,
+                              row.v.income,
+                              incomeColor,
+                            ),
+                            const SizedBox(height: 2),
+                            _incomeExpenseLine(
+                              context,
+                              l10n.homeExpense,
+                              row.v.expense,
+                              expenseColor,
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -354,108 +361,45 @@ class HomePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildCategoryBreakdown(
+  String _formatPeriodRange(String key, DateTime start, DateTime end) {
+    final endInclusive = end.subtract(const Duration(days: 1));
+    switch (key) {
+      case 'today':
+        return '${start.year}.${start.month}.${start.day}';
+      case 'year':
+        return '${start.year}';
+      default:
+        return '${start.month}.${start.day}-'
+            '${endInclusive.month}.${endInclusive.day}';
+    }
+  }
+
+  Widget _incomeExpenseLine(
     BuildContext context,
-    WidgetRef ref,
-    AppLocalizations l10n,
+    String label,
+    double value,
+    Color valueColor,
   ) {
-    final catAsync = ref.watch(homeCategoryExpensesProvider);
-    return _BentoCard(
-      child: catAsync.when(
-          data: (items) {
-            final sum =
-                items.fold<double>(0, (s, e) => s + e.total);
-            if (items.isEmpty || sum <= 0) {
-              return Text(
-                l10n.categoryEmpty,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: BeeTokens.textTertiary(context),
-                ),
-              );
-            }
-            final pieItems = [
-              for (final e in items)
-                (
-                  id: e.id,
-                  name: e.name,
-                  category: null,
-                  total: e.total,
-                  subCategories: const <
-                      ({
-                        int id,
-                        db.Category category,
-                        String name,
-                        double total,
-                      })>[],
-                ),
-            ];
-            return Column(
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    l10n.monthlyCategoryTitle,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: BeeTokens.textPrimary(context),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                for (final e in items.take(5))
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            e.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: BeeTokens.textPrimary(context),
-                            ),
-                          ),
-                        ),
-                        Text(
-                          '${(e.total / sum * 100).toStringAsFixed(1)}%',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: BeeTokens.textTertiary(context),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        SizedBox(
-                          width: 90,
-                          child: Text(
-                            formatFullAmount(e.total),
-                            textAlign: TextAlign.right,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: BeeTokens.textPrimary(context),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 8),
-                CategoryPieChart(data: pieItems, sum: sum),
-              ],
-            );
-          },
-          loading: () => const SizedBox(
-            height: 80,
-            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: BeeTokens.textTertiary(context),
           ),
-          error: (_, __) => const SizedBox.shrink(),
         ),
+        const SizedBox(width: 4),
+        Text(
+          formatFullAmount(value),
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: valueColor,
+          ),
+        ),
+      ],
     );
   }
 }

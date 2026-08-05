@@ -360,12 +360,13 @@ class HoldingsListPage extends ConsumerWidget {
 
   Widget _buildSortRow(
       BuildContext context, WidgetRef ref, HoldingsSort current) {
-    final primaryColor = ref.watch(primaryColorProvider);
     const options = <(HoldingsSort, String)>[
       (HoldingsSort.marketValue, '持有金额'),
       (HoldingsSort.pnl, '持有收益'),
       (HoldingsSort.returnRate, '持有收益率'),
     ];
+    final currentLabel =
+        options.firstWhere((o) => o.$1 == current).$2;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -383,40 +384,63 @@ class HoldingsListPage extends ConsumerWidget {
               color: BeeTokens.textTertiary(context),
             ),
           ),
-          const SizedBox(width: BeeDimens.p8),
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  for (final (value, label) in options)
-                    Padding(
-                      padding: const EdgeInsets.only(right: BeeDimens.p8),
-                      child: ChoiceChip(
-                        label: Text(label),
-                        selected: current == value,
-                        showCheckmark: false,
-                        backgroundColor: Colors.transparent,
-                        selectedColor: primaryColor.withValues(alpha: 0.15),
-                        labelStyle: TextStyle(
-                          fontSize: 12,
-                          color: current == value
-                              ? primaryColor
-                              : BeeTokens.textSecondary(context),
-                          fontWeight: current == value
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                        ),
-                        side: BorderSide(
-                          color: current == value
-                              ? primaryColor
-                              : BeeTokens.border(context),
-                        ),
-                        onSelected: (_) => ref
-                            .read(holdingsSortProvider.notifier)
-                            .state = value,
-                      ),
+          // 单边向下箭头：代表排序方向从大到小（降序）
+          Icon(
+            Icons.arrow_drop_down,
+            size: 18,
+            color: BeeTokens.iconTertiary(context),
+          ),
+          const Spacer(),
+          PopupMenuButton<HoldingsSort>(
+            initialValue: current,
+            position: PopupMenuPosition.under,
+            onSelected: (value) =>
+                ref.read(holdingsSortProvider.notifier).state = value,
+            itemBuilder: (ctx) => [
+              for (var i = 0; i < options.length; i++) ...[
+                if (i > 0)
+                  const PopupMenuItem<HoldingsSort>(
+                    enabled: false,
+                    height: 1,
+                    child: SizedBox(
+                      height: 1,
+                      child: ColoredBox(color: Colors.black),
                     ),
+                  ),
+                PopupMenuItem<HoldingsSort>(
+                  value: options[i].$1,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(options[i].$2),
+                  ),
+                ),
+              ],
+            ],
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 6,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: BeeTokens.border(context)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    currentLabel,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: BeeTokens.textPrimary(context),
+                    ),
+                  ),
+                  Icon(
+                    Icons.arrow_drop_down,
+                    size: 18,
+                    color: BeeTokens.iconTertiary(context),
+                  ),
                 ],
               ),
             ),
@@ -510,6 +534,7 @@ class HoldingsListPage extends ConsumerWidget {
         onLongPress: onLongPress,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          constraints: const BoxConstraints(minWidth: 80),
           decoration: BoxDecoration(
             color: selected
                 ? primaryColor.withValues(alpha: 0.15)

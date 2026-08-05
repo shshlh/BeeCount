@@ -268,7 +268,7 @@ class _WheelDatePickerState extends State<WheelDatePicker> {
 }
 
 /// 日期时间组合选择器（两步流程）
-/// 第一步选择日期，点击"下一步"后选择时间（时分秒）
+/// 第一步选择日期，点击"下一步"后选择时间（时分）
 Future<DateTime?> showWheelDateTimePicker(
   BuildContext context, {
   required DateTime initial,
@@ -290,8 +290,8 @@ Future<DateTime?> showWheelDateTimePicker(
 
   if (dateResult == null || !context.mounted) return null;
 
-  // 第二步：选择时间（时分秒）
-  final timeResult = await showModalBottomSheet<({int hour, int minute, int second})>(
+  // 第二步：选择时间（时分，秒固定 0）
+  final timeResult = await showModalBottomSheet<({int hour, int minute})>(
     context: context,
     backgroundColor: BeeTokens.surfaceElevated(context),
     shape: const RoundedRectangleBorder(
@@ -301,20 +301,18 @@ Future<DateTime?> showWheelDateTimePicker(
     builder: (_) => _TimeStepPicker(
       initialHour: initial.hour,
       initialMinute: initial.minute,
-      initialSecond: initial.second,
     ),
   );
 
   if (timeResult == null) return null;
 
-  // 组合日期和时间（含秒）
+  // 组合日期和时间（秒固定 0）
   return DateTime(
     dateResult.year,
     dateResult.month,
     dateResult.day,
     timeResult.hour,
     timeResult.minute,
-    timeResult.second,
   );
 }
 
@@ -523,16 +521,14 @@ class _DateStepPickerState extends State<_DateStepPicker> {
   }
 }
 
-/// 第二步：时间选择器（支持时分秒）
+/// 第二步：时间选择器（支持时分）
 class _TimeStepPicker extends StatefulWidget {
   final int initialHour;
   final int initialMinute;
-  final int initialSecond;
 
   const _TimeStepPicker({
     required this.initialHour,
     required this.initialMinute,
-    required this.initialSecond,
   });
 
   @override
@@ -542,27 +538,22 @@ class _TimeStepPicker extends StatefulWidget {
 class _TimeStepPickerState extends State<_TimeStepPicker> {
   late int hour;
   late int minute;
-  late int second;
   late FixedExtentScrollController _hourCtrl;
   late FixedExtentScrollController _minuteCtrl;
-  late FixedExtentScrollController _secondCtrl;
 
   @override
   void initState() {
     super.initState();
     hour = widget.initialHour;
     minute = widget.initialMinute;
-    second = widget.initialSecond;
     _hourCtrl = FixedExtentScrollController(initialItem: hour);
     _minuteCtrl = FixedExtentScrollController(initialItem: minute);
-    _secondCtrl = FixedExtentScrollController(initialItem: second);
   }
 
   @override
   void dispose() {
     _hourCtrl.dispose();
     _minuteCtrl.dispose();
-    _secondCtrl.dispose();
     super.dispose();
   }
 
@@ -602,7 +593,7 @@ class _TimeStepPickerState extends State<_TimeStepPicker> {
                     style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: BeeTokens.textPrimary(context))),
                   TextButton(
                     onPressed: () {
-                      Navigator.of(context).pop((hour: hour, minute: minute, second: second));
+                      Navigator.of(context).pop((hour: hour, minute: minute));
                     },
                     child: Text(l10n.commonOk,
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: Theme.of(context).primaryColor)),
@@ -638,17 +629,6 @@ class _TimeStepPickerState extends State<_TimeStepPicker> {
                     ),
                   ),
                   Text(':', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: BeeTokens.textPrimary(context))),
-                  Expanded(
-                    child: CupertinoPicker(
-                      scrollController: _secondCtrl,
-                      itemExtent: 40,
-                      onSelectedItemChanged: (index) => setState(() => second = index),
-                      children: List.generate(60, (index) => Center(
-                        child: Text(index.toString().padLeft(2, '0'),
-                          style: TextStyle(fontSize: 20, color: BeeTokens.textPrimary(context))),
-                      )),
-                    ),
-                  ),
                 ],
               ),
             ),

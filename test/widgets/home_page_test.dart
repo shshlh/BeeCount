@@ -22,17 +22,31 @@ void main() {
       ProviderScope(
         overrides: [
           homePeriodStatsProvider.overrideWith((ref) async => {
-                'today': (1.0, 2.0),
-                'week': (3.0, 4.0),
-                'month': (5.0, 6.0),
-                'year': (7.0, 8.0),
+                'today': (
+                  income: 1.0,
+                  expense: 2.0,
+                  start: DateTime(2026, 8, 6),
+                  end: DateTime(2026, 8, 7),
+                ),
+                'week': (
+                  income: 3.0,
+                  expense: 4.0,
+                  start: DateTime(2026, 8, 3),
+                  end: DateTime(2026, 8, 10),
+                ),
+                'month': (
+                  income: 5.0,
+                  expense: 6.0,
+                  start: DateTime(2026, 8, 1),
+                  end: DateTime(2026, 9, 1),
+                ),
+                'year': (
+                  income: 7.0,
+                  expense: 8.0,
+                  start: DateTime(2026, 1, 1),
+                  end: DateTime(2027, 1, 1),
+                ),
               }),
-          homeCategoryExpensesProvider.overrideWith(
-            (ref) async => const [
-              (id: 1, name: '餐饮', icon: 'restaurant', total: 100.0),
-              (id: 2, name: '交通', icon: 'transport', total: 50.0),
-            ],
-          ),
           netWorthBreakdownProvider.overrideWith(
             (ref) async => (
               totalAssets: 1000.0,
@@ -70,7 +84,12 @@ void main() {
     expect(find.text('本周'), findsOneWidget);
     expect(find.text('本月'), findsOneWidget);
     expect(find.text('今年'), findsOneWidget);
-    expect(find.text('月度分类占比'), findsOneWidget);
+    expect(find.text('2026.8.6'), findsOneWidget);
+    expect(find.text('8.3-8.9'), findsOneWidget);
+    expect(find.text('8.1-8.31'), findsOneWidget);
+    expect(find.text('2026'), findsOneWidget);
+    expect(find.text('收入'), findsNWidgets(4));
+    expect(find.text('支出'), findsNWidgets(4));
 
     final assetTap = tester.widget<InkWell>(
       find.byKey(const ValueKey('home_asset_overview_tap')),

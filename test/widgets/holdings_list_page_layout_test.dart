@@ -104,12 +104,15 @@ void main() {
 
     expect(find.text('排序'), findsOneWidget);
     expect(find.text('持有金额'), findsOneWidget);
-    expect(find.text('持有收益'), findsOneWidget);
-    expect(find.text('持有收益率'), findsOneWidget);
     expect(find.text('全部'), findsOneWidget);
     expect(find.text('组合A'), findsOneWidget);
     expect(find.text('新建分组'), findsOneWidget);
     expect(find.text('基金A'), findsOneWidget);
+
+    await tester.tap(find.text('持有金额'));
+    await tester.pumpAndSettle();
+    expect(find.text('持有收益'), findsOneWidget);
+    expect(find.text('持有收益率'), findsOneWidget);
   });
 
   testWidgets('选中分组无基金时显示分组空态', (tester) async {

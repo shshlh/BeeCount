@@ -33,6 +33,30 @@
 
 ## 2026-08-06
 
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.3 首页/资产/记账 6 项 UI 优化
+
+**完成工作**：
+- lib/pages/investment/holdings_list_page.dart — 分组胶囊加 minWidth 80 最小宽度；排序由 ChoiceChip 改为右侧下拉菜单（PopupMenuButton），左侧「排序」+ 单边向下箭头，菜单项左对齐并用黑色 Divider 分隔，holdingsSortProvider 逻辑不变
+- lib/pages/main/home_page.dart — 资产概览总资产/总负债改为上下两行、标签灰字、数值沿用 income/expense 语义色（资产红/负债绿），卡片高度保持 200；周期统计每项两行（黑字标签 + 灰字时间范围）+ 右侧收入/支出两行红绿数值，卡片高度自适应；homePeriodStatsProvider 补充 start/end 字段；删除月度分类占比组件与 homeCategoryExpensesProvider
+- lib/widgets/ui/wheel_date_picker.dart — showWheelDateTimePicker/_TimeStepPicker 删除秒列，只保留时分，组合 DateTime second 固定 0
+- test/widgets/home_page_test.dart — 删除分类占比 override/断言，周期统计 override 补日期范围，新增范围文本与收入/支出断言
+- test/widgets/holdings_list_page_layout_test.dart — 排序断言改为打开下拉菜单后校验
+
+**下一个任务需要知道的**：
+- homePeriodStatsProvider 返回结构变为 {income, expense, start, end}（start/end 为闭开区间，end 为 exclusive，UI 显示时减一天）
+- 时间选择器只保留时分后，现有 wheel_date_picker 测试（纯日期）不受影响；_TimeStepPicker 为私有类无直接测试
+- 视觉布局（资产卡 200 高度内排版、下拉菜单、周期统计两行）未做 Windows 实机截图验证；widget 测试覆盖结构断言
+- 全量 analyze 854 个既有 info/warning、零 error；全量测试 603 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交交 PM 审查
+
+---
+
+## 2026-08-06
+
 **移交角色**：项目经理（PM）
 **接收角色**：invest-ui
 
