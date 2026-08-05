@@ -110,58 +110,59 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
                     },
                   ),
                   sectionsSpace: 2,
-                  centerSpaceRadius: 42,
+                  centerSpaceRadius: 20,
                   sections: List.generate(slices.length, (i) {
                     final s = slices[i];
-                    final pct = (s.value / positiveSum * 100);
                     final isTouched = i == _touchedIndex;
                     return PieChartSectionData(
                       color: s.color,
                       value: s.value,
-                      title: pct >= 5 ? '${pct.toStringAsFixed(1)}%' : '',
-                      radius: isTouched ? 48 : 40,
-                      titleStyle: TextStyle(
-                        fontSize: isTouched ? 12 : 10,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
+                      title: '',
+                      radius: isTouched ? 34 : 30,
                     );
                   }),
                 ),
               ),
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    selectedSlice != null
-                        ? (selectedSlice.type == '_other_'
-                            ? l10n.commonOther
-                            : getAccountTypeLabel(context, selectedSlice.type))
-                        : l10n.assetComposition,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: BeeTokens.textTertiary(context),
-                          fontSize: 10,
-                        ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  AmountText(
-                    value: selectedSlice?.value ?? positiveSum,
-                    signed: false,
-                    decimals: 0,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: BeeTokens.textPrimary(context),
+              SizedBox(
+                width: 38,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      selectedSlice != null
+                          ? (selectedSlice.type == '_other_'
+                              ? l10n.commonOther
+                              : getAccountTypeLabel(
+                                  context, selectedSlice.type))
+                          : l10n.assetComposition,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: BeeTokens.textTertiary(context),
+                            fontSize: 9,
+                          ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 1),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: AmountText(
+                        value: selectedSlice?.value ?? positiveSum,
+                        signed: false,
+                        decimals: 0,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: BeeTokens.textPrimary(context),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Wrap(
           spacing: 16,
           runSpacing: 6,

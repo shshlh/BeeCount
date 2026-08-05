@@ -631,14 +631,6 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
     }
     _lastLedgerId = ledgerId;
 
-    // 监听滚动到顶部的信号
-    ref.listen<int>(homeScrollToTopProvider, (previous, next) {
-      if (previous != next) {
-        // 滚动到列表顶部
-        _transactionListKey.currentState?.jumpToTop();
-      }
-    });
-
     // 监听切换到 Stream 模式的信号
     ref.listen<int>(homeSwitchToStreamProvider, (previous, next) {
       if (previous != next) {
@@ -667,6 +659,7 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
           Consumer(builder: (context, ref, _) {
             return PrimaryHeader(
               title: AppLocalizations.of(context).tabHome,
+              showBack: true,
               compact: true,
               content: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,

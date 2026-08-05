@@ -13,9 +13,8 @@ import '../../utils/format_utils.dart';
 import '../../widgets/biz/home_header_bar.dart';
 import '../../widgets/charts/category_pie_chart.dart';
 import '../../widgets/ui/ui.dart';
-import 'transaction_list_page.dart';
 
-/// 首页仪表盘（v5.9）：Bento 便当格 + 顶部明细头（账本切换/AI/日历/搜索）
+/// 首页仪表盘（v6.0）：Bento 便当格 + 顶部明细头（账本切换/AI/日历/搜索）
 final homePeriodStatsProvider = FutureProvider.autoDispose<
     Map<String, (double income, double expense)>>((ref) async {
   final repo = ref.watch(repositoryProvider);
@@ -138,8 +137,6 @@ class HomePage extends ConsumerWidget {
             ),
           ],
         ),
-        const SizedBox(height: 10),
-        _buildTransactionEntry(context, l10n),
       ],
     );
   }
@@ -180,78 +177,64 @@ class HomePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildTransactionEntry(
-    BuildContext context,
-    AppLocalizations l10n,
-  ) {
-    return _BentoCard(
-      height: 68,
-      padding: EdgeInsets.zero,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const TransactionListPage()),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(
-            children: [
-              Icon(
-                Icons.receipt_long_outlined,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.tabHome,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: BeeTokens.textPrimary(context),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      l10n.homeDetailHint,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: BeeTokens.textTertiary(context),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.chevron_right,
-                color: BeeTokens.iconTertiary(context),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildAssetOverview(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
     final netWorthAsync = ref.watch(netWorthBreakdownProvider);
     return _BentoCard(
-      height: 170,
-      child: netWorthAsync.when(
+      height: 200,
+      padding: EdgeInsets.zero,
+      child: InkWell(
+        key: const ValueKey('home_asset_overview_tap'),
+        borderRadius: BorderRadius.circular(8),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const AccountsPage()),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: netWorthAsync.when(
           data: (nw) => Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Row(
+                children: [
+                  Text(
+                    l10n.assetOverviewTitle,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: BeeTokens.textPrimary(context),
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    Icons.chevron_right,
+                    size: 18,
+                    color: BeeTokens.iconTertiary(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
               Text(
-                l10n.assetOverviewTitle,
+                l10n.accountTotalBalance,
                 style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: BeeTokens.textPrimary(context),
+                  fontSize: 12,
+                  color: BeeTokens.textTertiary(context),
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 2),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  formatFullAmount(nw.netWorth),
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
               Row(
                 children: [
                   _overviewStat(
@@ -259,11 +242,10 @@ class HomePage extends ConsumerWidget {
                     label: l10n.accountsTotalAssets,
                     value: nw.totalAssets,
                   ),
-                  _overviewStat(
-                    context,
-                    label: l10n.accountTotalBalance,
-                    value: nw.netWorth,
-                    emphasize: true,
+                  Container(
+                    width: 1,
+                    height: 26,
+                    color: BeeTokens.divider(context),
                   ),
                   _overviewStat(
                     context,
@@ -279,7 +261,9 @@ class HomePage extends ConsumerWidget {
             child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
           ),
           error: (_, __) => const SizedBox.shrink(),
+          ),
         ),
+      ),
     );
   }
 
@@ -287,34 +271,32 @@ class HomePage extends ConsumerWidget {
     BuildContext context, {
     required String label,
     required double value,
-    bool emphasize = false,
   }) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: BeeTokens.textTertiary(context),
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: BeeTokens.textTertiary(context),
           ),
-          const SizedBox(height: 4),
-          Text(
+        ),
+        const SizedBox(height: 2),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
             formatFullAmount(value),
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: emphasize ? 18 : 14,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
-              color: emphasize
-                  ? Theme.of(context).colorScheme.primary
-                  : BeeTokens.textPrimary(context),
+              color: BeeTokens.textPrimary(context),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 

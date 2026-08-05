@@ -1,4 +1,4 @@
-/// v5.9 首页仪表盘：迁移头部 + Bento 入口 + 资产概览 + 收支统计 + 月度分类占比
+/// v6.0 首页仪表盘：迁移头部 + 4 入口 + 资产概览主视觉 + 收支统计 + 月度分类占比
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,7 +13,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues({});
 
-  testWidgets('首页显示迁移头部、5 入口与各概览模块', (tester) async {
+  testWidgets('首页显示迁移头部、4 入口与资产概览主视觉', (tester) async {
     tester.view.physicalSize = const Size(800, 1800);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -61,13 +61,20 @@ void main() {
     expect(find.text('智能记账'), findsOneWidget);
     expect(find.text('数据管理'), findsOneWidget);
     expect(find.text('自动化'), findsOneWidget);
-    expect(find.text('明细'), findsOneWidget);
+    expect(find.text('明细'), findsNothing);
     expect(find.text('资产概览'), findsOneWidget);
+    expect(find.text('净资产'), findsOneWidget);
     expect(find.text('总资产'), findsOneWidget);
+    expect(find.text('总负债'), findsOneWidget);
     expect(find.text('今天'), findsOneWidget);
     expect(find.text('本周'), findsOneWidget);
     expect(find.text('本月'), findsOneWidget);
     expect(find.text('今年'), findsOneWidget);
     expect(find.text('月度分类占比'), findsOneWidget);
+
+    final assetTap = tester.widget<InkWell>(
+      find.byKey(const ValueKey('home_asset_overview_tap')),
+    );
+    expect(assetTap.onTap, isNotNull);
   });
 }

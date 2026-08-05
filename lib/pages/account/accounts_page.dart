@@ -1356,6 +1356,10 @@ class _AccountCard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: BeeTokens.surfaceSheet(context),
           borderRadius: BorderRadius.circular(12.0.scaled(context, ref)),
+          border: Border.all(
+            color: BeeTokens.borderStrong(context),
+            width: 1,
+          ),
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12.0.scaled(context, ref)),

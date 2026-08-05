@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'pages/main/home_page.dart';
+import 'pages/main/transaction_list_page.dart';
 import 'pages/investment/holdings_list_page.dart';
 import 'widgets/investment/buy_dialog.dart';
 import 'pages/main/analytics_page.dart';
@@ -58,6 +59,9 @@ class _BeeAppState extends ConsumerState<BeeApp>
 
   // 双击返回退出：记录最后一次返回键按下时间
   DateTime? _lastBackPressTime;
+
+  // 明细入口防抖：记录最后一次 push 流水列表的时间
+  DateTime? _lastTransactionListPushTime;
 
   // AppLink 监听订阅
   ProviderSubscription<AppLinkAction?>? _appLinkSubscription;
@@ -806,6 +810,12 @@ class _BeeAppState extends ConsumerState<BeeApp>
       onPopInvokedWithResult: (bool didPop, Object? result) {
         if (didPop) return;
 
+        // v6.0 返工：非首页 tab 按返回先回首页；仅首页触发「再按一次退出」
+        if (ref.read(bottomTabIndexProvider) != 0) {
+          ref.read(bottomTabIndexProvider.notifier).state = 0;
+          return;
+        }
+
         final now = DateTime.now();
 
         if (_lastBackPressTime == null ||
@@ -834,14 +844,30 @@ class _BeeAppState extends ConsumerState<BeeApp>
               avatarPath: avatarPath,
               centerButtonKey: _centerButtonKey,
               onTabTap: (index) {
+                if (index == 0) {
+                  final now = DateTime.now();
+                  if (_lastTransactionListPushTime != null &&
+                      now.difference(_lastTransactionListPushTime!) <
+                          const Duration(milliseconds: 400)) {
+                    return;
+                  }
+                  _lastTransactionListPushTime = now;
+                  // v6.0: 明细入口回归底部导航，先切回首页再全屏进入流水列表
+                  ref.read(bottomTabIndexProvider.notifier).state = 0;
+                  _lastTapTime = null;
+                  _lastTappedIndex = null;
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const TransactionListPage(),
+                    ),
+                  );
+                  return;
+                }
                 final now = DateTime.now();
                 if (_lastTappedIndex == index &&
                     _lastTapTime != null &&
                     now.difference(_lastTapTime!) <
                         const Duration(milliseconds: 300)) {
-                  if (index == 0) {
-                    ref.read(homeScrollToTopProvider.notifier).state++;
-                  }
                   _lastTapTime = null;
                   _lastTappedIndex = null;
                 } else {

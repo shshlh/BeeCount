@@ -36,9 +36,6 @@ final pendingNewTransactionCategoryIdProvider = StateProvider<int?>((ref) => nul
 // 配合 AppLinkAction.open 使用
 final pendingOpenPageProvider = StateProvider<String?>((ref) => null);
 
-// 首页滚动到顶部触发器（每次改变值时触发滚动）
-final homeScrollToTopProvider = StateProvider<int>((ref) => 0);
-
 // 首页切换到 Stream 模式触发器（用户交互时触发）
 final homeSwitchToStreamProvider = StateProvider<int>((ref) => 0);
 

@@ -35,6 +35,28 @@
 
 ## 2026-08-05
 
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.0 返工完成
+
+**完成工作**：
+- lib/app.dart — PopScope：非首页 tab 按返回先切回首页，首页才走「再按一次退出」；明细按钮加 400ms 防抖，快速连点只 push 一页
+- lib/pages/account/accounts_page.dart — _AccountCard 边框改用 BeeTokens.borderStrong（亮色 12% 黑，暗色主题色 30%）
+- lib/providers/ui_state_providers.dart — 删除已无写入方的 homeScrollToTopProvider
+- lib/pages/main/transaction_list_page.dart — 删除 homeScrollToTopProvider 监听
+
+**下一个任务需要知道的**：
+- 返回链路：push 页面正常逐级返回；tab 层返回先回首页；首页再按两次退出
+- 明细防抖窗口 400ms
+- 全量 analyze 854 个既有问题（与基线持平）；全量测试 582 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交
+
+---
+
+## 2026-08-05
+
 **移交角色**：项目经理（PM）
 **接收角色**：invest-ui
 
