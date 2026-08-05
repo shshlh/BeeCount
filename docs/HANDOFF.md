@@ -38,6 +38,45 @@
 **移交角色**：项目经理（PM）
 **接收角色**：invest-logic + invest-ui
 
+**任务**：6.2 返工 2（analyzer warning）
+
+**问题（P1）：selectedGroupProvider 自定义 Notifier 后 UI 直接写 notifier.state**
+- 文件：lib/providers/investment_providers.dart、lib/pages/investment/holdings_list_page.dart（约 452 / 462 / 926 行）
+- 现象：dart analyze 新增 6 条 warning（invalid_use_of_protected_member / invalid_use_of_visible_for_testing_member），违反「新增代码零 error/warning」约束
+- 要求：
+  a) SelectedGroupNotifier 增加公开方法 select(int? groupId) 与 reset()（内部写 state，保留账本切换自动重置）
+  b) holdings_list_page 的 3 处 `notifier.state = ...` 改为调用 select(...) / reset()
+  c) 测试保持「切换账本后分组重置」覆盖，全部改用公开方法
+- 约束：flutter analyze 新增代码零 error/warning；全量测试保持 603 passed / 1 skipped / 1 failed；完成后更新 TEAM.md + HANDOFF.md，git 状态待提交交 PM 复审
+
+---
+
+## 2026-08-05
+
+**移交角色**：invest-logic + invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.2 返工完成（P2 账本切换分组重置 + P3 弹窗持仓加载）
+
+**完成工作**：
+- lib/providers/investment_providers.dart — selectedGroupProvider 从全局 StateProvider 改为 NotifierProvider，build 中监听 currentLedgerIdProvider，账本变化时重置为 null（回到「全部」），避免旧账本分组 id 过滤新账本持仓导致列表为空且无 chip 高亮
+- lib/pages/investment/holdings_list_page.dart — _showCreateGroupDialog / _showEditGroupMembersDialog 弹窗前 await currentHoldingsProvider.future（异常时兜底空列表），首帧即可列出可选基金
+- test/providers/investment_providers_test.dart — 新增「切换账本后选中的分组重置为全部」用例：账本 1 选中分组 → 切到账本 2 → selectedGroupProvider 回到 null，filteredHoldingsProvider 返回账本 2 全部持仓
+
+**下一个任务需要知道的**：
+- selectedGroupProvider 的 UI 读/写 API 不变（ref.watch / ref.read(...notifier).state），仅实现改为 Notifier + 账本监听重置
+- 弹窗打开前会等待持仓流首次数据；加载失败时仍显示「暂无基金可选」兜底
+- 全量 analyze 零 error；全量测试 603 passed / 1 skipped / 1 failed（既存 bill_creation_service_test 除外）
+
+**git 状态**：当前分支 main，待提交（工作区含 6.2 原实现 + 本次返工，交 PM 审查合入）
+
+---
+
+## 2026-08-05
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-logic + invest-ui
+
 **任务**：6.2 返工（PM 审查发现 1 个 P2 + 1 个 P3）
 
 **问题 1（P2）：切换账本后选中的分组未重置**

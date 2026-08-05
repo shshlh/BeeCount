@@ -47,7 +47,8 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 |---|---|---|---|---|
 | 6.2.1 持仓排序 | ✅ | invest-logic + invest-ui | sort provider + 排序行 | 2026-08-05 |
 | 6.2.2 基金分组 | ✅ | invest-logic + invest-ui | schema v36 + 分组 UI | 2026-08-05 |
-| 6.2.3 账本切换分组重置 + 弹窗加载 | ⏳ | invest-logic + invest-ui | provider 重置 + dialog future | — |
+| 6.2.3 账本切换分组重置 + 弹窗加载 | ✅ | invest-logic + invest-ui | provider 重置 + dialog future | 2026-08-05 |
+| 6.2.4 Notifier state 暴露方式修正 | ⏳ | invest-logic + invest-ui | select/reset 方法 + 调用点 | — |
 
 ### 阶段 6.1：投资买入调优 + 资产构成布局 + 我的页清理
 
