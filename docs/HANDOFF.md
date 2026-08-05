@@ -38,6 +38,50 @@
 **移交角色**：项目经理（PM）
 **接收角色**：invest-logic + invest-ui
 
+**任务**：6.2 返工（PM 审查发现 1 个 P2 + 1 个 P3）
+
+**问题 1（P2）：切换账本后选中的分组未重置**
+- 文件：lib/providers/investment_providers.dart（selectedGroupProvider / filteredHoldingsProvider）
+- 现状：selectedGroupProvider 是全局 StateProvider；资产页选中分组后切回首页换账本，再回资产页仍保留旧账本分组 id，filteredHoldingsProvider 用旧账本成员过滤新账本持仓，导致列表空且无 chip 高亮
+- 要求：currentLedgerIdProvider 变化时重置 selectedGroupProvider 为 null（或按 ledger 隔离，如 family<int, int>）；补「切换账本后回到全部」测试
+
+**问题 2（P3）：新建/编辑成员弹窗首帧读不到持仓**
+- 文件：lib/pages/investment/holdings_list_page.dart _showCreateGroupDialog / _showEditGroupMembersDialog
+- 现状：用 ref.read(currentHoldingsProvider).asData?.value 同步快照，数据未加载时显示「暂无基金可选」
+- 要求：弹窗前 await currentHoldingsProvider.future（带容错），确保列表可用
+
+**约束**：
+- flutter analyze 新增代码零 error/warning
+- 全量测试保持 602 passed / 1 skipped / 1 failed（既存 bill_creation_service_test 除外）
+- 完成后更新 TEAM.md 任务板 + HANDOFF.md 追加完成记录，git 状态待提交交 PM 复审
+
+---
+
+## 2026-08-05
+
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.2 UI（持仓排序 + 基金分组）
+
+**完成工作**：
+- lib/pages/investment/holdings_list_page.dart — 摘要卡下方新增固定区：分组 chips（全部 + 自定义分组 + 末尾「新建分组」，横向滚动）+ 排序行（持有金额/持有收益/持有收益率，默认持有金额降序）；列表改用 filteredHoldingsProvider，选中分组内无基金时显示分组空态；新建分组弹窗（名称 + 多选基金）、长按分组 chip 支持重命名/编辑成员/删除（「全部」不可改删）
+- test/widgets/holdings_list_page_layout_test.dart — 空态测试补 groupsProvider override；新增「有持仓时固定显示排序行与分组 chips」「选中分组无基金时显示分组空态」2 个用例
+
+**下一个任务需要知道的**：
+- 逻辑侧（invest-logic）并行落地 schema v36 + repository/service/providers + 测试，UI 已按其实际签名对齐：createGroup(ledgerId/name/sortOrder) + addHoldingsToGroup；watchGroupHoldingIds 返回 Stream<List<int>>；setGroupMembers 存在
+- 视觉布局（排序行/分组 chips/弹窗）未做 Windows 实机截图验证
+- 全量 analyze 854 个既有 info/warning、零 error；全量测试 602 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交（工作区含 invest-logic 并行改动，交 PM 审查合入）
+
+---
+
+## 2026-08-05
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-logic + invest-ui
+
 **任务**：6.2 持仓排序 + 基金分组（2 个问题，设计与用户已确认）
 
 **角色分工**：
