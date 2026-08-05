@@ -37,18 +37,28 @@ void main() {
 
   test('getPortfolioSummary：有持仓时计算总市值/成本/盈亏/收益率', () async {
     await repo.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000001', fundName: '基金A',
-      shares: 1000, nav: 2.0); // 成本 2000，市值 2000
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 2000,
+        shares: 1000,
+        nav: 2.0); // 成本 2000，市值 2000
     await repo.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000002', fundName: '基金B',
-      shares: 500, nav: 3.0);  // 成本 1500，市值 1500
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '基金B',
+        amount: 1500,
+        shares: 500,
+        nav: 3.0); // 成本 1500，市值 1500
     // 更新 B 的净值模拟浮盈
     await repo.updateNav(2, 4.0); // 市值 → 2000
 
     final summary = await service.getPortfolioSummary(1);
 
     expect(summary.holdingCount, 2);
-    expect(summary.totalCost, closeTo(3500, 0.01));   // 2000 + 1500
+    expect(summary.totalCost, closeTo(3500, 0.01)); // 2000 + 1500
     expect(summary.totalMarketValue, closeTo(4000, 0.01)); // 2000 + 2000
     expect(summary.unrealizedPnL, closeTo(500, 0.01));
     expect(summary.returnRate, closeTo(500 / 3500, 0.001));
@@ -58,11 +68,21 @@ void main() {
 
   test('batchUpdateNav：批量更新多支持仓净值', () async {
     await repo.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000001', fundName: '基金A',
-      shares: 1000, nav: 1.0);
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
     await repo.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000002', fundName: '基金B',
-      shares: 500, nav: 1.0);
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '基金B',
+        amount: 500,
+        shares: 500,
+        nav: 1.0);
 
     await service.batchUpdateNav({1: 2.0, 2: 3.0});
 
@@ -79,13 +99,18 @@ void main() {
 
   test('getHoldingReturn：计算未实现盈亏和收益率', () async {
     await repo.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000001', fundName: '基金A',
-      shares: 1000, nav: 2.0); // 成本 2000
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 2000,
+        shares: 1000,
+        nav: 2.0); // 成本 2000
     await repo.updateNav(1, 2.5); // 市值 2500
 
     final r = await service.getHoldingReturn(1);
-    expect(r.unrealizedPnL, closeTo(500, 0.01));     // 2500 - 2000
-    expect(r.returnRate, closeTo(0.25, 0.001));      // 500 / 2000
+    expect(r.unrealizedPnL, closeTo(500, 0.01)); // 2500 - 2000
+    expect(r.returnRate, closeTo(0.25, 0.001)); // 500 / 2000
   });
 
   test('getHoldingReturn：持仓不存在时返回零', () async {
@@ -94,34 +119,65 @@ void main() {
     expect(r.returnRate, 0);
   });
 
+  test('getHoldingReturn：Decimal 精度用例', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 0.005,
+        shares: 0.1,
+        nav: 0.1); // 市值 0.01，成本 0.005
+
+    final r = await service.getHoldingReturn(1);
+    expect(r.unrealizedPnL, 0.005);
+    expect(r.returnRate, 1.0);
+  });
+
   // ---- 验证 ----
 
   test('validateBuy：份额 <= 0 抛异常', () {
     expect(
-      () => service.validateBuy(shares: 0, nav: 1.0),
+      () => service.validateBuy(amount: 100, shares: 0, nav: 1.0),
       throwsArgumentError,
     );
     expect(
-      () => service.validateBuy(shares: -1, nav: 1.0),
+      () => service.validateBuy(amount: 100, shares: -1, nav: 1.0),
       throwsArgumentError,
     );
   });
 
   test('validateBuy：净值 <= 0 抛异常', () {
     expect(
-      () => service.validateBuy(shares: 100, nav: 0),
+      () => service.validateBuy(amount: 100, shares: 100, nav: 0),
       throwsArgumentError,
     );
     expect(
-      () => service.validateBuy(shares: 100, nav: -1),
+      () => service.validateBuy(amount: 100, shares: 100, nav: -1),
+      throwsArgumentError,
+    );
+  });
+
+  test('validateBuy：本金 <= 0 抛异常', () {
+    expect(
+      () => service.validateBuy(amount: 0, shares: 100, nav: 1.0),
+      throwsArgumentError,
+    );
+    expect(
+      () => service.validateBuy(amount: -1, shares: 100, nav: 1.0),
       throwsArgumentError,
     );
   });
 
   test('validateSell：份额不足时抛异常', () async {
     await repo.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000001', fundName: '基金A',
-      shares: 100, nav: 1.0);
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 100,
+        shares: 100,
+        nav: 1.0);
 
     await expectLater(
       () => service.validateSell(1, 200),
@@ -142,8 +198,13 @@ void main() {
 
   test('validateConvert：份额不足时抛异常', () async {
     await repo.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000001', fundName: '基金A',
-      shares: 100, nav: 1.0);
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 100,
+        shares: 100,
+        nav: 1.0);
 
     await expectLater(
       () => service.validateConvert(1, 200),
@@ -155,19 +216,29 @@ void main() {
 
   test('buy：委托 repo，返回交易 ID', () async {
     final txId = await service.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000001', fundName: '基金A',
-      shares: 500, nav: 2.0, fee: 5);
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 500,
+        nav: 2.0);
     expect(txId, isPositive);
 
     final h = await repo.getHolding(1);
-   expect(h!.totalShares, 500);
-    expect(h.totalCost, 1005.0); // 500*2.0+5
+    expect(h!.totalShares, 500);
+    expect(h.totalCost, 1000.0); // 投入本金
   });
 
   test('sell：委托 repo，按比例扣减成本', () async {
     await service.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000001', fundName: '基金A',
-      shares: 1000, nav: 2.0);
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 2000,
+        shares: 1000,
+        nav: 2.0);
 
     await service.sell(holdingId: 1, shares: 500, nav: 3.0, fee: 5);
 
@@ -178,17 +249,30 @@ void main() {
 
   test('convert：委托 repo，A减B增', () async {
     await service.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000001', fundName: '基金A',
-      shares: 1000, nav: 1.0);
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
     await service.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000002', fundName: '基金B',
-      shares: 500, nav: 1.0);
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '基金B',
+        amount: 500,
+        shares: 500,
+        nav: 1.0);
 
     await service.convert(
-      fromHoldingId: 1, toHoldingId: 2,
-      fromShares: 500, fromNav: 1.2,
-      toShares: 480, toNav: 1.25,
-      fee: 5);
+        fromHoldingId: 1,
+        toHoldingId: 2,
+        fromShares: 500,
+        fromNav: 1.2,
+        toShares: 480,
+        toNav: 1.25,
+        fee: 5);
 
     final from = await repo.getHolding(1);
     expect(from!.totalShares, 500); // 1000 - 500
@@ -201,8 +285,13 @@ void main() {
 
   test('watchHoldings：委托 repo 返回持仓流', () async {
     await service.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000001', fundName: '基金A',
-      shares: 100, nav: 1.0);
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 100,
+        shares: 100,
+        nav: 1.0);
 
     final holdings = await service.watchHoldings(ledgerId: 1).first;
     expect(holdings.length, 1);

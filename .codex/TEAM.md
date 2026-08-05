@@ -45,9 +45,9 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
 |---|---|---|---|---|
-| 6.1.1 买入三字段 + Decimal | ⏳ | invest-logic + invest-ui | buy_dialog/service/repo/tests | — |
-| 6.1.2 资产构成布局微调 | ⏳ | invest-ui | accounts/chart 布局 | — |
-| 6.1.3 我的页清理排序 | ⏳ | invest-ui | mine_page 精简重排 | — |
+| 6.1.1 买入三字段 + Decimal | ✅ | invest-logic + invest-ui | buy_dialog/service/repo/tests | 2026-08-05 |
+| 6.1.2 资产构成布局微调 | ✅ | invest-ui | accounts/chart 布局 | 2026-08-05 |
+| 6.1.3 我的页清理排序 | ✅ | invest-ui | mine_page 精简重排 | 2026-08-05 |
 
 ### 阶段 6.0：首页/明细导航修正 + 资产页视觉修正
 

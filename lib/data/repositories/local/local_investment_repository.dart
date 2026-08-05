@@ -1,6 +1,5 @@
-import 'dart:math';
-
 import 'package:drift/drift.dart' as d;
+import 'package:decimal/decimal.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../db.dart';
@@ -17,12 +16,21 @@ class LocalInvestmentRepository implements InvestmentRepository {
 
   LocalInvestmentRepository(this.db);
 
+  Decimal _toDecimal(double value) => Decimal.parse(value.toString());
+
+  Decimal _divide(Decimal a, Decimal b) =>
+      (a / b).toDecimal(scaleOnInfinitePrecision: 18);
+
   @override
   Stream<List<InvestmentHolding>> watchHoldings({required int ledgerId}) {
     return (db.select(db.investmentHoldings)
-          ..where((h) => h.ledgerId.equals(ledgerId) & h.totalShares.isBiggerThanValue(0.0))
-          ..orderBy(
-              [(h) => d.OrderingTerm(expression: h.marketValue, mode: d.OrderingMode.desc)]))
+          ..where((h) =>
+              h.ledgerId.equals(ledgerId) &
+              h.totalShares.isBiggerThanValue(0.0))
+          ..orderBy([
+            (h) => d.OrderingTerm(
+                expression: h.marketValue, mode: d.OrderingMode.desc)
+          ]))
         .watch();
   }
 
@@ -34,7 +42,8 @@ class LocalInvestmentRepository implements InvestmentRepository {
 
   // ---- 读辅助 ----
 
-  Future<InvestmentHolding?> _findHolding(int ledgerId, String fundCode, int accountId) {
+  Future<InvestmentHolding?> _findHolding(
+      int ledgerId, String fundCode, int accountId) {
     return (db.select(db.investmentHoldings)
           ..where((h) =>
               h.ledgerId.equals(ledgerId) &
@@ -62,8 +71,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
 
     final existing = await (db.select(db.accounts)
           ..where((a) => a.type.equals(accountTypeInvestment))
-          ..orderBy(
-              [(a) => d.OrderingTerm(expression: a.sortOrder)]))
+          ..orderBy([(a) => d.OrderingTerm(expression: a.sortOrder)]))
         .getSingleOrNull();
     if (existing != null) return existing.id;
 
@@ -85,14 +93,14 @@ class LocalInvestmentRepository implements InvestmentRepository {
     }
 
     return db.into(db.accounts).insert(AccountsCompanion.insert(
-      ledgerId: ledgerId,
-      name: name,
-      type: d.Value(accountTypeInvestment),
-      currency: d.Value(currency),
-      initialBalance: const d.Value(0.0),
-      createdAt: d.Value(DateTime.now()),
-      syncId: d.Value(_uuid.v4()),
-    ));
+          ledgerId: ledgerId,
+          name: name,
+          type: d.Value(accountTypeInvestment),
+          currency: d.Value(currency),
+          initialBalance: const d.Value(0.0),
+          createdAt: d.Value(DateTime.now()),
+          syncId: d.Value(_uuid.v4()),
+        ));
   }
 
   /// 把投资账户的缓存市值（initial_balance）同步为名下全部持仓市值之和。
@@ -110,11 +118,11 @@ class LocalInvestmentRepository implements InvestmentRepository {
     final holdings = await (db.select(db.investmentHoldings)
           ..where((h) => h.accountId.equals(accountId)))
         .get();
-    final total =
-        holdings.fold<double>(0, (sum, h) => sum + h.marketValue);
+    final total = holdings.fold<Decimal>(
+        Decimal.zero, (sum, h) => sum + _toDecimal(h.marketValue));
     await (db.update(db.accounts)..where((a) => a.id.equals(accountId)))
         .write(AccountsCompanion(
-      initialBalance: d.Value(total),
+      initialBalance: d.Value(total.toDouble()),
       updatedAt: d.Value(DateTime.now()),
     ));
   }
@@ -135,8 +143,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
         .get();
 
     // 转换产生跨持仓的一对交易（batchId 相同、holdingId 不同），买入侧不记手续费。
-    final batchIds =
-        txs.map((t) => t.batchId).whereType<String>().toSet();
+    final batchIds = txs.map((t) => t.batchId).whereType<String>().toSet();
     final convertBatches = <String>{};
     for (final batchId in batchIds) {
       final batchTxs = await (db.select(db.transactions)
@@ -147,43 +154,47 @@ class LocalInvestmentRepository implements InvestmentRepository {
       if (holdingIds.length > 1) convertBatches.add(batchId);
     }
 
-    double shares = 0;
-    double cost = 0;
-    double lastNav = 0;
+    Decimal shares = Decimal.zero;
+    Decimal cost = Decimal.zero;
+    Decimal lastNav = Decimal.zero;
     for (final tx in txs) {
-      final invShares = tx.investShares ?? 0;
-      final nav = tx.investNav ?? 0;
-      final fee = tx.investFee ?? 0;
+      final invShares = _toDecimal(tx.investShares ?? 0);
+      final nav = _toDecimal(tx.investNav ?? 0);
+      final fee = _toDecimal(tx.investFee ?? 0);
+      final amount = _toDecimal(tx.amount);
       final isConvert =
           tx.batchId != null && convertBatches.contains(tx.batchId);
 
-      if (invShares < 0) {
+      if (invShares < Decimal.zero) {
         // 卖出方向：按份额比例扣减成本
-        if (shares > 0) {
-          final ratio = (-invShares).clamp(0.0, shares) / shares;
+        if (shares > Decimal.zero) {
+          final sellShares = -invShares;
+          final ratioShares = sellShares > shares ? shares : sellShares;
+          final ratio = _divide(ratioShares, shares);
           cost -= cost * ratio;
         }
         shares += invShares;
       } else {
         shares += invShares;
         if (tx.investType == 'initial') {
-          cost += tx.amount > 0 ? tx.amount : invShares * nav;
+          cost += amount > Decimal.zero ? amount : invShares * nav;
         } else if (isConvert) {
           cost += invShares * nav;
         } else {
-          cost += tx.amount > 0 ? tx.amount : invShares * nav + fee;
+          cost += amount > Decimal.zero ? amount : invShares * nav + fee;
         }
       }
-      if (nav > 0) lastNav = nav;
+      if (nav > Decimal.zero) lastNav = nav;
     }
 
-    final safeShares = max(0.0, shares);
+    final safeShares = shares < Decimal.zero ? Decimal.zero : shares;
+    final safeCost = cost < Decimal.zero ? Decimal.zero : cost;
     await _updateHolding(
       holdingId,
-      totalShares: safeShares,
-      totalCost: max(0.0, cost),
-      currentNav: lastNav > 0 ? lastNav : null,
-      marketValue: safeShares * lastNav,
+      totalShares: safeShares.toDouble(),
+      totalCost: safeCost.toDouble(),
+      currentNav: lastNav > Decimal.zero ? lastNav.toDouble() : null,
+      marketValue: (safeShares * lastNav).toDouble(),
       updatedAt: DateTime.now(),
     );
   }
@@ -206,28 +217,29 @@ class LocalInvestmentRepository implements InvestmentRepository {
     bool excludeFromStats = false,
   }) {
     return db.into(db.transactions).insert(TransactionsCompanion.insert(
-      ledgerId: ledgerId,
-      type: 'transfer',
-      amount: amount,
-      accountId: d.Value(accountId),
-      toAccountId: d.Value(toAccountId),
-      happenedAt: d.Value(happenedAt),
-      note: d.Value(note),
-      syncId: d.Value(_uuid.v4()),
-      investType: d.Value(investType),
-      investShares: d.Value(investShares),
-      investNav: d.Value(investNav),
-      investFee: d.Value(investFee),
-      holdingId: d.Value(holdingId),
-      batchId: d.Value(batchId),
-      excludeFromStats: d.Value(excludeFromStats),
-      excludeFromBudget: const d.Value(true),
-      currencyCode: d.Value(null),
-      nativeAmount: d.Value(null),
-    ));
+          ledgerId: ledgerId,
+          type: 'transfer',
+          amount: amount,
+          accountId: d.Value(accountId),
+          toAccountId: d.Value(toAccountId),
+          happenedAt: d.Value(happenedAt),
+          note: d.Value(note),
+          syncId: d.Value(_uuid.v4()),
+          investType: d.Value(investType),
+          investShares: d.Value(investShares),
+          investNav: d.Value(investNav),
+          investFee: d.Value(investFee),
+          holdingId: d.Value(holdingId),
+          batchId: d.Value(batchId),
+          excludeFromStats: d.Value(excludeFromStats),
+          excludeFromBudget: const d.Value(true),
+          currencyCode: d.Value(null),
+          nativeAmount: d.Value(null),
+        ));
   }
 
-  Future<void> _updateHolding(int id, {
+  Future<void> _updateHolding(
+    int id, {
     double? totalShares,
     double? totalCost,
     double? currentNav,
@@ -236,11 +248,16 @@ class LocalInvestmentRepository implements InvestmentRepository {
   }) async {
     await (db.update(db.investmentHoldings)..where((h) => h.id.equals(id)))
         .write(InvestmentHoldingsCompanion(
-      totalShares: totalShares != null ? d.Value(totalShares) : const d.Value.absent(),
-      totalCost: totalCost != null ? d.Value(totalCost) : const d.Value.absent(),
-      currentNav: currentNav != null ? d.Value(currentNav) : const d.Value.absent(),
-      marketValue: marketValue != null ? d.Value(marketValue) : const d.Value.absent(),
-      updatedAt: updatedAt != null ? d.Value(updatedAt) : const d.Value.absent(),
+      totalShares:
+          totalShares != null ? d.Value(totalShares) : const d.Value.absent(),
+      totalCost:
+          totalCost != null ? d.Value(totalCost) : const d.Value.absent(),
+      currentNav:
+          currentNav != null ? d.Value(currentNav) : const d.Value.absent(),
+      marketValue:
+          marketValue != null ? d.Value(marketValue) : const d.Value.absent(),
+      updatedAt:
+          updatedAt != null ? d.Value(updatedAt) : const d.Value.absent(),
     ));
   }
 
@@ -254,13 +271,15 @@ class LocalInvestmentRepository implements InvestmentRepository {
     required String fundName,
     required double shares,
     required double nav,
-    double fee = 0,
+    required double amount,
     DateTime? happenedAt,
     String? note,
     int? holdingId,
     int? sourceAccountId,
   }) async {
-    final total = shares * nav + fee;
+    final sharesDecimal = _toDecimal(shares);
+    final navDecimal = _toDecimal(nav);
+    final amountDecimal = _toDecimal(amount);
     final effectiveHappenedAt = happenedAt ?? DateTime.now();
 
     return db.transaction(() async {
@@ -309,24 +328,24 @@ class LocalInvestmentRepository implements InvestmentRepository {
         accountId: sourceAccountId ?? investmentAccountId,
         toAccountId: investmentAccountId,
         investType: 'buy',
-        amount: total,
+        amount: amount,
         investShares: shares,
         investNav: nav,
-        investFee: fee,
+        investFee: 0,
         holdingId: effectiveHoldingId,
         happenedAt: effectiveHappenedAt,
         note: note,
       );
 
       // 3. 更新持仓
-      final newShares = oldShares + shares;
-      final newCost = oldCost + shares * nav + fee;
+      final newShares = _toDecimal(oldShares) + sharesDecimal;
+      final newCost = _toDecimal(oldCost) + amountDecimal;
       await _updateHolding(
         effectiveHoldingId,
-        totalShares: newShares,
-        totalCost: newCost,
+        totalShares: newShares.toDouble(),
+        totalCost: newCost.toDouble(),
         currentNav: nav,
-        marketValue: newShares * nav,
+        marketValue: (newShares * navDecimal).toDouble(),
         updatedAt: effectiveHappenedAt,
       );
 
@@ -348,7 +367,9 @@ class LocalInvestmentRepository implements InvestmentRepository {
     int? targetAccountId,
   }) async {
     final effectiveHappenedAt = happenedAt ?? DateTime.now();
-    final proceeds = shares * nav - fee;
+    final sharesDecimal = _toDecimal(shares);
+    final navDecimal = _toDecimal(nav);
+    final proceeds = (sharesDecimal * navDecimal - _toDecimal(fee)).toDouble();
 
     return db.transaction(() async {
       final holding = await getHolding(holdingId);
@@ -358,10 +379,17 @@ class LocalInvestmentRepository implements InvestmentRepository {
       }
 
       // 比例成本基数
-      final costRatio =
-          holding.totalShares > 0 ? shares / holding.totalShares : 1.0;
-      final deductedCost = holding.totalCost * costRatio;
-      final remainingShares = holding.totalShares - shares;
+      final totalSharesDecimal = _toDecimal(holding.totalShares);
+      final costRatio = totalSharesDecimal > Decimal.zero
+          ? _divide(sharesDecimal, totalSharesDecimal)
+          : Decimal.one;
+      final deductedCost = _toDecimal(holding.totalCost) * costRatio;
+      final remainingShares = totalSharesDecimal - sharesDecimal;
+      final safeRemaining =
+          remainingShares < Decimal.zero ? Decimal.zero : remainingShares;
+      final remainingCost = _toDecimal(holding.totalCost) - deductedCost;
+      final safeCost =
+          remainingCost < Decimal.zero ? Decimal.zero : remainingCost;
 
       // 插入交易（v4.7: transfer 类型，从投资账户 → targetAccount）
       final txId = await _insertTx(
@@ -381,10 +409,10 @@ class LocalInvestmentRepository implements InvestmentRepository {
       // 更新持仓
       await _updateHolding(
         holdingId,
-        totalShares: max(0, remainingShares),
-        totalCost: max(0, holding.totalCost - deductedCost),
+        totalShares: safeRemaining.toDouble(),
+        totalCost: safeCost.toDouble(),
         currentNav: nav,
-        marketValue: max(0, remainingShares) * nav,
+        marketValue: (safeRemaining * navDecimal).toDouble(),
         updatedAt: effectiveHappenedAt,
       );
 
@@ -421,10 +449,18 @@ class LocalInvestmentRepository implements InvestmentRepository {
       if (toHolding == null) throw StateError('目标持仓 $toHoldingId 不存在');
 
       // 卖出来源持仓
-      final costRatio =
-          fromHolding.totalShares > 0 ? fromShares / fromHolding.totalShares : 1.0;
-      final deductedCost = fromHolding.totalCost * costRatio;
-      final fromRemaining = fromHolding.totalShares - fromShares;
+      final fromSharesDecimal = _toDecimal(fromShares);
+      final fromNavDecimal = _toDecimal(fromNav);
+      final fromTotalShares = _toDecimal(fromHolding.totalShares);
+      final costRatio = fromTotalShares > Decimal.zero
+          ? _divide(fromSharesDecimal, fromTotalShares)
+          : Decimal.one;
+      final deductedCost = _toDecimal(fromHolding.totalCost) * costRatio;
+      final fromRemaining = fromTotalShares - fromSharesDecimal;
+      final safeFromRemaining =
+          fromRemaining < Decimal.zero ? Decimal.zero : fromRemaining;
+      final fromCost = _toDecimal(fromHolding.totalCost) - deductedCost;
+      final safeFromCost = fromCost < Decimal.zero ? Decimal.zero : fromCost;
 
       await _insertTx(
         ledgerId: fromHolding.ledgerId,
@@ -443,15 +479,16 @@ class LocalInvestmentRepository implements InvestmentRepository {
 
       await _updateHolding(
         fromHoldingId,
-        totalShares: max(0, fromRemaining),
-        totalCost: max(0, fromHolding.totalCost - deductedCost),
+        totalShares: safeFromRemaining.toDouble(),
+        totalCost: safeFromCost.toDouble(),
         currentNav: fromNav,
-        marketValue: max(0, fromRemaining) * fromNav,
+        marketValue: (safeFromRemaining * fromNavDecimal).toDouble(),
         updatedAt: effectiveHappenedAt,
       );
 
       // 买入目标持仓
-      final toNewShares = toHolding.totalShares + toShares;
+      final toNewShares =
+          _toDecimal(toHolding.totalShares) + _toDecimal(toShares);
       final txId = await _insertTx(
         ledgerId: toHolding.ledgerId,
         accountId: null,
@@ -469,10 +506,12 @@ class LocalInvestmentRepository implements InvestmentRepository {
 
       await _updateHolding(
         toHoldingId,
-        totalShares: toNewShares,
-        totalCost: toHolding.totalCost + toShares * toNav,
+        totalShares: toNewShares.toDouble(),
+        totalCost: (_toDecimal(toHolding.totalCost) +
+                _toDecimal(toShares) * _toDecimal(toNav))
+            .toDouble(),
         currentNav: toNav,
-        marketValue: toNewShares * toNav,
+        marketValue: (toNewShares * _toDecimal(toNav)).toDouble(),
         updatedAt: effectiveHappenedAt,
       );
 
@@ -492,7 +531,8 @@ class LocalInvestmentRepository implements InvestmentRepository {
     await _updateHolding(
       holdingId,
       currentNav: nav,
-      marketValue: holding.totalShares * nav,
+      marketValue:
+          (_toDecimal(holding.totalShares) * _toDecimal(nav)).toDouble(),
       updatedAt: DateTime.now(),
     );
 
@@ -501,7 +541,8 @@ class LocalInvestmentRepository implements InvestmentRepository {
   }
 
   @override
-  Future<void> updateTransaction(int transactionId, {
+  Future<void> updateTransaction(
+    int transactionId, {
     String? note,
     DateTime? happenedAt,
     double? investShares,
@@ -557,8 +598,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
 
     return db.transaction(() async {
       // 1. 复用已有持仓（同账本+基金代码+账户），否则新建
-      final existing =
-          await _findHolding(ledgerId, fundCode, accountId);
+      final existing = await _findHolding(ledgerId, fundCode, accountId);
       final int holdingId;
       if (existing != null) {
         holdingId = existing.id;
@@ -604,9 +644,10 @@ class LocalInvestmentRepository implements InvestmentRepository {
   Stream<List<Transaction>> watchTransactions(int holdingId) {
     return (db.select(db.transactions)
           ..where((t) => t.holdingId.equals(holdingId))
-          ..orderBy(
-              [(t) => d.OrderingTerm(expression: t.happenedAt, mode: d.OrderingMode.desc)]))
+          ..orderBy([
+            (t) => d.OrderingTerm(
+                expression: t.happenedAt, mode: d.OrderingMode.desc)
+          ]))
         .watch();
   }
 }
-

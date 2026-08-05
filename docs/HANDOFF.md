@@ -35,6 +35,28 @@
 
 ## 2026-08-05
 
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.1.1 UI + 6.1.2 + 6.1.3
+
+**完成工作**：
+- lib/widgets/investment/buy_dialog.dart — 删除「手续费」字段/控制器；新增「投入本金」字段；「份额/净值」label 改为「确认份额/确认净值」；校验本金/份额/净值 > 0；调用 service.validateBuy(amount:) 与 service.buy(amount:) 新签名
+- lib/pages/account/accounts_page.dart — 资产构成模块删除大号「资产构成」标题；加载占位高度 70 → 96 同步
+- lib/widgets/charts/asset_composition_chart.dart — 饼图高度 70 → 96，切片 radius 30/34 → 36/40，centerSpaceRadius 20 → 26，legend 间距 12 → 24
+- lib/pages/main/mine_page.dart — 删除「分享海报/复制推广文案」两个 tile 与「支持我们」SectionCard；年度账单移入外观设置所在卡片（外观设置之后）；清理 Platform/services/share_poster/donation/in_app_review 导入与 _rateApp
+
+**下一个任务需要知道的**：
+- 6.1.1 逻辑侧由 invest-logic 线程并行落地（service/repo buy 改 required amount、investFee=0、Decimal 算术、测试 +4 用例），本记录完成时已在工作区且验证通过；本次仅改 UI 文件，未触碰 service/repo/test
+- 视觉布局（饼图尺寸/间距、我的页重排）未做 Windows 实机截图验证
+- 全量 analyze 854 个既有 info/warning、零 error；全量测试 586 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交（工作区含 invest-logic 并行改动，交 PM 审查合入）
+
+---
+
+## 2026-08-05
+
 **移交角色**：项目经理（PM）
 **接收角色**：invest-logic + invest-ui
 

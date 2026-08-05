@@ -86,8 +86,8 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          // v5.7: 与净值走势图统一，降低图表高度
-          height: 70,
+          // v6.1: 放大饼图高度，避免占比文字与图重叠
+          height: 96,
           child: Stack(
             alignment: Alignment.center,
             children: [
@@ -110,7 +110,7 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
                     },
                   ),
                   sectionsSpace: 2,
-                  centerSpaceRadius: 20,
+                  centerSpaceRadius: 26,
                   sections: List.generate(slices.length, (i) {
                     final s = slices[i];
                     final isTouched = i == _touchedIndex;
@@ -118,7 +118,7 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
                       color: s.color,
                       value: s.value,
                       title: '',
-                      radius: isTouched ? 34 : 30,
+                      radius: isTouched ? 40 : 36,
                     );
                   }),
                 ),
@@ -162,7 +162,8 @@ class _AssetCompositionChartState extends ConsumerState<AssetCompositionChart> {
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        // v6.1: 饼图与 legend 间距由 12 调大到 24，占比文字下移一个文字行高
+        const SizedBox(height: 24),
         Wrap(
           spacing: 16,
           runSpacing: 6,

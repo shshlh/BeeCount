@@ -6,6 +6,12 @@ library;
 
 import '../../data/db.dart';
 import '../../data/repositories/investment_repository.dart';
+import 'package:decimal/decimal.dart';
+
+Decimal _toDecimal(double value) => Decimal.parse(value.toString());
+
+Decimal _divide(Decimal a, Decimal b) =>
+    (a / b).toDecimal(scaleOnInfinitePrecision: 18);
 
 /// 账本投资组合摘要。
 class PortfolioSummary {
@@ -55,21 +61,22 @@ class InvestmentService {
       );
     }
 
-    double totalMv = 0;
-    double totalCost = 0;
+    Decimal totalMv = Decimal.zero;
+    Decimal totalCost = Decimal.zero;
     for (final h in holdings) {
-      totalMv += h.marketValue;
-      totalCost += h.totalCost;
+      totalMv += _toDecimal(h.marketValue);
+      totalCost += _toDecimal(h.totalCost);
     }
 
     final pnl = totalMv - totalCost;
-    final rate = totalCost > 0 ? pnl / totalCost : 0.0;
+    final rate =
+        totalCost > Decimal.zero ? _divide(pnl, totalCost) : Decimal.zero;
 
     return PortfolioSummary(
-      totalMarketValue: totalMv,
-      totalCost: totalCost,
-      unrealizedPnL: pnl,
-      returnRate: rate,
+      totalMarketValue: totalMv.toDouble(),
+      totalCost: totalCost.toDouble(),
+      unrealizedPnL: pnl.toDouble(),
+      returnRate: rate.toDouble(),
       holdingCount: holdings.length,
     );
   }
@@ -89,9 +96,14 @@ class InvestmentService {
     if (holding == null) {
       return const HoldingReturn(unrealizedPnL: 0, returnRate: 0);
     }
-    final pnl = holding.marketValue - holding.totalCost;
-    final rate = holding.totalCost > 0 ? pnl / holding.totalCost : 0.0;
-    return HoldingReturn(unrealizedPnL: pnl, returnRate: rate);
+    final marketValue = _toDecimal(holding.marketValue);
+    final cost = _toDecimal(holding.totalCost);
+    final pnl = marketValue - cost;
+    final rate = cost > Decimal.zero ? _divide(pnl, cost) : Decimal.zero;
+    return HoldingReturn(
+      unrealizedPnL: pnl.toDouble(),
+      returnRate: rate.toDouble(),
+    );
   }
 
   // ---- 前端验证 ----
@@ -114,7 +126,12 @@ class InvestmentService {
     }
   }
 
-  void validateBuy({required double shares, required double nav}) {
+  void validateBuy({
+    required double shares,
+    required double nav,
+    required double amount,
+  }) {
+    if (amount <= 0) throw ArgumentError('投入本金必须大于 0');
     if (shares <= 0) throw ArgumentError('买入份额必须大于 0');
     if (nav <= 0) throw ArgumentError('净值必须大于 0');
   }
@@ -128,7 +145,7 @@ class InvestmentService {
     required String fundName,
     required double shares,
     required double nav,
-    double fee = 0,
+    required double amount,
     DateTime? happenedAt,
     String? note,
     int? holdingId,
@@ -141,7 +158,7 @@ class InvestmentService {
       fundName: fundName,
       shares: shares,
       nav: nav,
-      fee: fee,
+      amount: amount,
       happenedAt: happenedAt,
       note: note,
       holdingId: holdingId,
@@ -207,7 +224,8 @@ class InvestmentService {
 
   /// 更新投资交易的可编辑字段（note / happenedAt / shares / nav / fee / amount）。
   /// 保存后重算持仓统计并联动投资账户市值。
-  Future<void> updateTransaction(int transactionId, {
+  Future<void> updateTransaction(
+    int transactionId, {
     String? note,
     DateTime? happenedAt,
     double? investShares,

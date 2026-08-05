@@ -18,6 +18,8 @@ abstract class InvestmentRepository {
   /// [accountId] 为持仓归属的投资账户；为 null 或非投资类型时，自动查找
   /// 账本内已有投资账户，仍无则新建「投资账户」。禁止把扣款账户当作持仓归属。
   /// [sourceAccountId] 为扣款账户，买入视为从 source → 投资账户的转账。
+  /// [amount] 为投入本金（确认金额），交易 amount 记录该本金，investFee 固定为 0；
+  /// 持仓 totalCost 累加本金，市值按「份额 × 净值」计算。
   Future<int> buy({
     required int ledgerId,
     int? accountId,
@@ -25,7 +27,7 @@ abstract class InvestmentRepository {
     required String fundName,
     required double shares,
     required double nav,
-    double fee = 0,
+    required double amount,
     DateTime? happenedAt,
     String? note,
     int? holdingId,
@@ -70,7 +72,8 @@ abstract class InvestmentRepository {
   /// 仅允许编辑 note / happenedAt / investShares / investNav / investFee / amount。
   /// 保存后在同一事务内按全部投资交易重算持仓 totalShares / totalCost /
   /// currentNav / marketValue，并同步投资账户市值。
-  Future<void> updateTransaction(int transactionId, {
+  Future<void> updateTransaction(
+    int transactionId, {
     String? note,
     DateTime? happenedAt,
     double? investShares,

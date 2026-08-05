@@ -34,29 +34,28 @@ void main() {
       accountId: 10,
       fundCode: '000001',
       fundName: '华夏成长混合',
+      amount: 1500,
       shares: 1000,
       nav: 1.5,
-      fee: 10,
     );
 
     // 验证交易
-    final tx = await db.customSelect(
-        'SELECT * FROM transactions WHERE id = ?',
+    final tx = await db.customSelect('SELECT * FROM transactions WHERE id = ?',
         variables: [Variable<int>(txId)]).getSingle();
 
     expect(tx.read<String>('type'), 'transfer');
     expect(tx.read<String>('invest_type'), 'buy');
-    expect(tx.read<double>('amount'), 1510.0); // 1000*1.5+10
+    expect(tx.read<double>('amount'), 1500.0); // 投入本金
     expect(tx.read<double>('invest_shares'), 1000);
     expect(tx.read<double>('invest_nav'), 1.5);
-    expect(tx.read<double>('invest_fee'), 10);
+    expect(tx.read<double>('invest_fee'), 0);
 
     // 验证持仓
     final holdings = db.select(db.investmentHoldings).get();
     final h = (await holdings).single;
-   expect(h.totalShares, 1000);
-    expect(h.totalCost, 1510.0); // 1000*1.5+10
-   expect(h.currentNav, 1.5);
+    expect(h.totalShares, 1000);
+    expect(h.totalCost, 1500.0); // 投入本金
+    expect(h.currentNav, 1.5);
     expect(h.marketValue, 1500.0); // 1000*1.5
     expect(h.fundCode, '000001');
     expect(h.accountId, 10);
@@ -65,19 +64,66 @@ void main() {
   test('买入：追加已有持仓份额', () async {
     // 先买一次
     await repo.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000001', fundName: '华夏成长',
-      shares: 1000, nav: 1.0);
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '华夏成长',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
 
     // 再买一次（同组基金代码+账户）
     await repo.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000001', fundName: '华夏成长',
-      shares: 500, nav: 1.2);
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '华夏成长',
+        amount: 600,
+        shares: 500,
+        nav: 1.2);
 
     final holdings = db.select(db.investmentHoldings).get();
     expect((await holdings).length, 1); // 同一持仓
     final h = (await holdings).single;
     expect(h.totalShares, 1500);
     expect(h.totalCost, closeTo(1600, 0.01)); // 1000*1.0+500*1.2
+  });
+
+  test('买入：投入本金即成本，手续费固定为 0', () async {
+    final txId = await repo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000001',
+      fundName: '华夏成长混合',
+      amount: 1001.5,
+      shares: 1000,
+      nav: 1.0,
+    );
+
+    final tx = await db.customSelect('SELECT * FROM transactions WHERE id = ?',
+        variables: [Variable<int>(txId)]).getSingle();
+    expect(tx.read<double>('amount'), 1001.5);
+    expect(tx.read<double>('invest_fee'), 0);
+
+    final h = await repo.getHolding(1);
+    expect(h!.totalCost, 1001.5);
+    expect(h.marketValue, 1000.0); // 1000 × 1.0
+  });
+
+  test('Decimal 精度：0.1 份额 × 0.1 净值 = 0.01 市值', () async {
+    await repo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000001',
+      fundName: '华夏成长混合',
+      amount: 0.01,
+      shares: 0.1,
+      nav: 0.1,
+    );
+
+    final h = await repo.getHolding(1);
+    expect(h!.marketValue, 0.01);
+    expect(h.totalCost, 0.01);
   });
 
   test('买入：无投资账户时自动创建，不把扣款账户当持仓归属', () async {
@@ -89,13 +135,13 @@ void main() {
       accountId: 20, // 扣款账户（virtual_account）
       fundCode: '000001',
       fundName: '华夏成长混合',
+      amount: 1500,
       shares: 1000,
       nav: 1.5,
       sourceAccountId: 20,
     );
 
-    final tx = await db.customSelect(
-        'SELECT * FROM transactions WHERE id = ?',
+    final tx = await db.customSelect('SELECT * FROM transactions WHERE id = ?',
         variables: [Variable<int>(txId)]).getSingle();
     expect(tx.read<int>('account_id'), 20); // 扣款方
 
@@ -115,6 +161,7 @@ void main() {
       accountId: 20, // 错误传成扣款账户
       fundCode: '000001',
       fundName: '华夏成长混合',
+      amount: 1500,
       shares: 1000,
       nav: 1.5,
       sourceAccountId: 20,
@@ -123,8 +170,7 @@ void main() {
     final holding = await db.select(db.investmentHoldings).getSingle();
     expect(holding.accountId, 10); // 归到种子投资账户
 
-    final tx = await db.customSelect(
-        'SELECT * FROM transactions WHERE id = ?',
+    final tx = await db.customSelect('SELECT * FROM transactions WHERE id = ?',
         variables: [Variable<int>(txId)]).getSingle();
     expect(tx.read<int>('account_id'), 20);
     expect(tx.read<int>('to_account_id'), 10);
@@ -135,15 +181,15 @@ void main() {
   test('余额联动：买入/卖出同步扣款账户与投资账户市值', () async {
     final accountRepo = LocalAccountRepository(db);
 
-    // 买入 1000 @ 1.5 + 手续费 10
+    // 买入 1000 @ 1.5，投入本金 1510
     await repo.buy(
       ledgerId: 1,
       accountId: 10,
       fundCode: '000001',
       fundName: '华夏成长混合',
+      amount: 1510,
       shares: 1000,
       nav: 1.5,
-      fee: 10,
       sourceAccountId: 20,
     );
 
@@ -151,7 +197,8 @@ void main() {
           ..where((a) => a.id.equals(10)))
         .getSingle();
     expect(afterBuy.initialBalance, closeTo(1500, 0.01)); // 1000*1.5
-    expect(await accountRepo.getAccountBalance(20), closeTo(3490, 0.01)); // 5000-1510
+    expect(await accountRepo.getAccountBalance(20),
+        closeTo(3490, 0.01)); // 5000-1510
 
     // 卖出 500 @ 2.0，手续费 5，回款到支付宝
     await repo.sell(
@@ -176,6 +223,7 @@ void main() {
       accountId: 10,
       fundCode: '000001',
       fundName: '华夏成长混合',
+      amount: 1000,
       shares: 1000,
       nav: 1.0,
     );
@@ -194,6 +242,7 @@ void main() {
       accountId: 10,
       fundCode: '000001',
       fundName: '基金A',
+      amount: 1000,
       shares: 1000,
       nav: 1.0,
     );
@@ -202,6 +251,7 @@ void main() {
       accountId: 10,
       fundCode: '000002',
       fundName: '基金B',
+      amount: 500,
       shares: 500,
       nav: 1.0,
     );
@@ -230,9 +280,9 @@ void main() {
       accountId: 10,
       fundCode: '000001',
       fundName: '华夏成长混合',
+      amount: 1510,
       shares: 1000,
       nav: 1.5,
-      fee: 10,
     );
 
     await repo.updateTransaction(
@@ -261,9 +311,9 @@ void main() {
       accountId: 10,
       fundCode: '000001',
       fundName: '华夏成长混合',
+      amount: 1510,
       shares: 1000,
       nav: 1.5,
-      fee: 10,
     );
 
     await repo.updateTransaction(txId, amount: 2000);
@@ -280,6 +330,7 @@ void main() {
       accountId: 10,
       fundCode: '000001',
       fundName: '华夏成长混合',
+      amount: 2000,
       shares: 1000,
       nav: 2.0,
     );
@@ -380,15 +431,18 @@ void main() {
   test('卖出：全额卖出成本减为零', () async {
     // 买入
     await repo.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000001', fundName: '华夏成长',
-      shares: 1000, nav: 2.0);
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '华夏成长',
+        amount: 2000,
+        shares: 1000,
+        nav: 2.0);
 
     // 卖出全部
-    final txId = await repo.sell(
-      holdingId: 1, shares: 1000, nav: 2.5, fee: 5);
+    final txId = await repo.sell(holdingId: 1, shares: 1000, nav: 2.5, fee: 5);
 
-    final tx = await db.customSelect(
-        'SELECT * FROM transactions WHERE id = ?',
+    final tx = await db.customSelect('SELECT * FROM transactions WHERE id = ?',
         variables: [Variable<int>(txId)]).getSingle();
     expect(tx.read<String>('invest_type'), 'sell');
     expect(tx.read<double>('invest_shares'), -1000);
@@ -402,8 +456,13 @@ void main() {
 
   test('卖出：部分卖出按比例扣减成本', () async {
     await repo.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000001', fundName: '华夏成长',
-      shares: 1000, nav: 2.0); // 总成本 2000
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '华夏成长',
+        amount: 2000,
+        shares: 1000,
+        nav: 2.0); // 总成本 2000
 
     await repo.sell(holdingId: 1, shares: 500, nav: 2.5);
 
@@ -414,8 +473,13 @@ void main() {
 
   test('卖出：份额不足应抛异常', () async {
     await repo.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000001', fundName: '华夏成长',
-      shares: 100, nav: 1.0);
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '华夏成长',
+        amount: 100,
+        shares: 100,
+        nav: 1.0);
 
     await expectLater(
       () => repo.sell(holdingId: 1, shares: 200, nav: 1.0),
@@ -428,17 +492,30 @@ void main() {
   test('转换：A→B 两笔交易共享 batchId', () async {
     // 买入 A
     await repo.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000001', fundName: '基金A',
-      shares: 1000, nav: 1.0);
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
     // 买入 B（初始买入，以便转换时有现有持仓）
     await repo.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000002', fundName: '基金B',
-      shares: 500, nav: 1.0);
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '基金B',
+        amount: 500,
+        shares: 500,
+        nav: 1.0);
 
     await repo.convert(
-      fromHoldingId: 1, toHoldingId: 2,
-      fromShares: 500, fromNav: 1.2,
-      toShares: 480, toNav: 1.25,
+      fromHoldingId: 1,
+      toHoldingId: 2,
+      fromShares: 500,
+      fromNav: 1.2,
+      toShares: 480,
+      toNav: 1.25,
       fee: 5,
     );
 
@@ -469,8 +546,13 @@ void main() {
 
   test('更新净值：NAV 和市值联动更新', () async {
     await repo.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000001', fundName: '华夏成长',
-      shares: 1000, nav: 1.0);
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '华夏成长',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
 
     await repo.updateNav(1, 1.5);
 
@@ -484,18 +566,27 @@ void main() {
   test('watchHoldings：过滤份额为 0 的持仓', () async {
     // 买入并全卖
     await repo.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000001', fundName: '华夏成长',
-      shares: 1000, nav: 1.0);
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '华夏成长',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
     await repo.sell(holdingId: 1, shares: 1000, nav: 1.0);
 
     // 再买另一支
     await repo.buy(
-      ledgerId: 1, accountId: 10, fundCode: '000002', fundName: '基金B',
-      shares: 500, nav: 1.0);
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '基金B',
+        amount: 500,
+        shares: 500,
+        nav: 1.0);
 
     final holdings = await repo.watchHoldings(ledgerId: 1).first;
     expect(holdings.length, 1);
     expect(holdings.single.fundCode, '000002');
   });
 }
-

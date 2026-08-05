@@ -281,7 +281,6 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     WidgetRef ref,
     AsyncValue<List<({String type, double totalBalance})>> compositionAsync,
   ) {
-    final l10n = AppLocalizations.of(context);
     final multiCurrencyActive = ref.watch(multiCurrencyActiveProvider);
     final effectiveCompositionAsync = multiCurrencyActive
         ? ref.watch(convertedAssetCompositionProvider)
@@ -293,24 +292,13 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Padding(
-            padding: EdgeInsets.only(top: 14.0.scaled(context, ref)),
-            child: Text(
-              l10n.assetComposition,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: BeeTokens.textPrimary(context),
-              ),
-            ),
-          ),
-          Padding(
             padding: EdgeInsets.all(12.0.scaled(context, ref)),
             child: effectiveCompositionAsync.when(
               skipLoadingOnReload: true,
               data: (data) =>
                   AssetCompositionChart(data: data, embedded: true),
               loading: () => SizedBox(
-                height: 70.0.scaled(context, ref),
+                height: 96.0.scaled(context, ref),
                 child: const Center(
                     child: CircularProgressIndicator(strokeWidth: 2)),
               ),
