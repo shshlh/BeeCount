@@ -33,6 +33,51 @@
 
 ## 2026-08-07
 
+**移交角色**：项目经理（PM）
+**接收角色**：invest-logic + invest-ui
+
+**任务**：6.7 转换记账口径修正 + 支持新目标基金 + 退回账户加载容错（3 项）
+
+**角色分工**：
+- invest-logic：6.7.1（记账口径修正）+ 6.7.2 数据层（支持新目标基金）
+- invest-ui：6.7.2 UI（“无 + 手填代码/名称”走新路径）+ 6.7.3
+
+**6.7.1 转换记账口径修正（invest-logic）**
+- 现状（6.5）：卖出 A amount=转出市值、买入 B amount=转入市值、退回转账，共 3 笔资金流水形态
+- 修正：转换本质是卖出 A + 买入 B，但两者都在投资账户内部完成，不与非投资账户发生资金往来；**实际与非投资账户的关联只有退回这笔钱**
+- 要求：
+  a) 卖出 A / 买入 B：amount 固定 0（投资账户内部记账，不产生资金流水），仍记录确认份额/净值、手续费、持仓归属、batchId；投资账户市值仍由持仓合计覆盖
+  b) 退回（refund>0）：唯一真实转账，accountId=投资账户、toAccountId=退回账户、amount=refund，计入退回账户余额与总资产
+  c) 测试同步修正：卖出/买入 amount=0；退回账户余额仅 +refund；持仓/成本/市值断言不变
+- 展示：如需在持仓明细看到转换确认金额，可在展示层按份额×净值计算，不改 amount 语义
+
+**6.7.2 转换支持新目标基金（invest-logic + invest-ui）**
+- 目标：用户在下拉选「无」并手动填写目标基金代码/名称时，可正常完成转换；若该代码已有持仓则复用，否则创建新目标持仓后再买入 B
+- 数据层（invest-logic）：
+  - repo.convert / service.convert：toHoldingId 改为可空（int?），新增可选 fundCode / fundName
+  - toHoldingId 非空：沿用现有逻辑
+  - toHoldingId 为空：fundCode / fundName 必填（空则抛 ArgumentError）；先按 (ledgerId, fundCode, 来源投资账户) 查找已有持仓，找到则复用，否则创建新持仓（挂到来源基金所在投资账户）后执行转换
+  - 卖出 A / 买入 B 内部记账 + 退回转账逻辑不变（按 6.7.1 修正后口径）
+  - 测试：转换到新基金创建持仓并记账；手动输入代码命中已有持仓时复用；代码/名称为空抛错
+- UI 层（invest-ui）：
+  - convert_dialog「无 + 手填代码/名称」路径：代码/名称非空校验（仅“无”时必填）；提交时传 toHoldingId=null + fundCode/fundName
+  - 选中已有持仓时仍传其 id，行为不变
+
+**6.7.3 退回账户加载错误处理（invest-ui）**
+- 文件：lib/widgets/investment/convert_dialog.dart _loadRefundAccounts
+- 现状：无 try/catch，账户加载失败成未处理异步异常
+- 要求：补 try/catch + 错误状态；失败时显示「退回账户加载失败，请重试」+ 重试按钮；refund>0 且账户未加载成功时提交被拦截
+
+**约束**：
+- flutter analyze 新增代码零 error/warning
+- 全量测试保持 619 passed / 1 skipped / 1 failed（既存 bill_creation_service_test 除外）
+- 完成后更新 TEAM.md 任务板 + HANDOFF.md 追加完成记录，git 状态待提交交 PM 审查
+- HANDOFF 铁律：只 prepend 追加，不整文件重写、不用模糊正则范围替换
+
+---
+
+## 2026-08-07
+
 **移交角色**：invest-ui
 **接收角色**：项目经理（PM）
 
