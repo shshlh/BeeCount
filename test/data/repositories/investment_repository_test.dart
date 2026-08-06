@@ -677,9 +677,9 @@ void main() {
     expect(batchTxs.length, 2); // 卖出 + 买入共享 batchId
 
     final sell = batchTxs.singleWhere((t) => t.investType == 'sell');
-    expect(sell.amount, closeTo(600, 0.01)); // 转出市值
+    expect(sell.amount, 0); // 投资账户内部记账，不产生资金流水
     final buy = batchTxs.singleWhere((t) => t.investType == 'buy');
-    expect(buy.amount, closeTo(600, 0.01)); // 转入市值
+    expect(buy.amount, 0); // 投资账户内部记账，不产生资金流水
 
     final refunds = txs.where((t) => t.note == '基金转换退回').toList();
     expect(refunds.length, 1);
@@ -781,6 +781,125 @@ void main() {
         toShares: 480,
         toNav: 1.25,
         refundAmount: 1,
+      ),
+      throwsArgumentError,
+    );
+  });
+
+  test('转换：toHoldingId 为空时创建新目标持仓并记账', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+
+    await repo.convert(
+      fromHoldingId: 1,
+      toHoldingId: null,
+      fundCode: '000009',
+      fundName: '新基金',
+      fromShares: 500,
+      fromNav: 1.2,
+      toShares: 480,
+      toNav: 1.25,
+      fee: 5,
+    );
+
+    final holdings = await db.select(db.investmentHoldings).get();
+    expect(holdings.length, 2);
+    final target = holdings.firstWhere((h) => h.fundCode == '000009');
+    expect(target.accountId, 10);
+    expect(target.totalShares, 480);
+    expect(target.totalCost, closeTo(600, 0.01)); // 480*1.25
+    expect(target.currentNav, 1.25);
+    expect(target.marketValue, closeTo(600, 0.01));
+
+    final txs = await db.select(db.transactions).get();
+    final sellTx =
+        txs.singleWhere((t) => t.investType == 'sell' && t.batchId != null);
+    final buyTx =
+        txs.singleWhere((t) => t.investType == 'buy' && t.batchId != null);
+    expect(sellTx.amount, 0);
+    expect(buyTx.amount, 0);
+    expect(buyTx.holdingId, target.id);
+    expect(sellTx.batchId, buyTx.batchId);
+  });
+
+  test('转换：手填代码命中已有持仓时复用', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '基金B',
+        amount: 500,
+        shares: 500,
+        nav: 1.0);
+    final existingB = await (db.select(db.investmentHoldings)
+          ..where((h) => h.fundCode.equals('000002')))
+        .getSingle();
+
+    await repo.convert(
+      fromHoldingId: 1,
+      toHoldingId: null,
+      fundCode: '000002',
+      fundName: '基金B',
+      fromShares: 500,
+      fromNav: 1.2,
+      toShares: 480,
+      toNav: 1.25,
+    );
+
+    final holdings = await db.select(db.investmentHoldings).get();
+    expect(holdings.length, 2); // 不新建持仓
+    final target = await repo.getHolding(existingB.id);
+    expect(target!.totalShares, 980);
+    expect(target.totalCost, closeTo(1100, 0.01));
+  });
+
+  test('转换：toHoldingId 为空且代码/名称为空抛错', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+
+    await expectLater(
+      () => repo.convert(
+        fromHoldingId: 1,
+        toHoldingId: null,
+        fundCode: '',
+        fundName: '新基金',
+        fromShares: 500,
+        fromNav: 1.2,
+        toShares: 480,
+        toNav: 1.25,
+      ),
+      throwsArgumentError,
+    );
+    await expectLater(
+      () => repo.convert(
+        fromHoldingId: 1,
+        toHoldingId: null,
+        fundCode: '000009',
+        fundName: '   ',
+        fromShares: 500,
+        fromNav: 1.2,
+        toShares: 480,
+        toNav: 1.25,
       ),
       throwsArgumentError,
     );

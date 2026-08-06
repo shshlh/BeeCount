@@ -127,6 +127,9 @@ class InvestmentService {
   Future<void> validateConvert(
     int fromHoldingId,
     double shares, {
+    int? toHoldingId,
+    String? fundCode,
+    String? fundName,
     double? fromNav,
     double? toShares,
     double? toNav,
@@ -148,6 +151,11 @@ class InvestmentService {
     if (refundAmount < 0) throw ArgumentError('退回金额不能为负数');
     if (refundAmount > 0 && refundAccountId == null) {
       throw ArgumentError('退回金额大于 0 时必须指定退回账户');
+    }
+    if (toHoldingId == null &&
+        ((fundCode == null || fundCode.trim().isEmpty) ||
+            (fundName == null || fundName.trim().isEmpty))) {
+      throw ArgumentError('目标基金代码和名称必填');
     }
     final holding = await _repo.getHolding(fromHoldingId);
     if (holding == null) throw StateError('来源持仓 $fromHoldingId 不存在');
@@ -218,7 +226,7 @@ class InvestmentService {
 
   Future<int> convert({
     required int fromHoldingId,
-    required int toHoldingId,
+    int? toHoldingId,
     required double fromShares,
     required double fromNav,
     required double toShares,
@@ -226,6 +234,8 @@ class InvestmentService {
     double fee = 0,
     double refundAmount = 0,
     int? refundAccountId,
+    String? fundCode,
+    String? fundName,
     DateTime? happenedAt,
     String? note,
   }) {
@@ -239,6 +249,8 @@ class InvestmentService {
       fee: fee,
       refundAmount: refundAmount,
       refundAccountId: refundAccountId,
+      fundCode: fundCode,
+      fundName: fundName,
       happenedAt: happenedAt,
       note: note,
     );

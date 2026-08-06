@@ -111,4 +111,21 @@ void main() {
     expect(find.text('目标基金代码'), findsNothing);
     expect(find.text('目标基金名称'), findsNothing);
   });
+
+  testWidgets('选「无」手填目标基金：空代码/名称被校验拦截', (tester) async {
+    await tester.runAsync(() async {
+      await tester.pumpWidget(host());
+      await tester.pumpAndSettle();
+    });
+
+    expect(find.text('目标基金代码'), findsOneWidget);
+    expect(find.text('目标基金名称'), findsOneWidget);
+    await tester.ensureVisible(find.widgetWithText(FilledButton, '确认'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '确认'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('请输入目标基金代码'), findsOneWidget);
+    expect(find.text('请输入目标基金名称'), findsOneWidget);
+  });
 }

@@ -419,6 +419,10 @@ class _TransactionTile extends ConsumerWidget {
     final fee = transaction.investFee ?? 0;
     final amount = transaction.amount;
     final isExcludedFromStats = transaction.excludeFromStats;
+    // v6.7 返工：转换的卖出/买入 amount 固定 0（内部记账），
+    // 展示层按「确认份额 × 确认净值」还原确认成交金额，不写回 DB
+    final isConvert = transaction.batchId != null;
+    final displayAmount = isConvert ? shares.abs() * nav : amount;
 
     return SectionCard(
       padding: const EdgeInsets.all(BeeDimens.p12),
@@ -485,7 +489,7 @@ class _TransactionTile extends ConsumerWidget {
               Row(
                 children: [
                   AmountText(
-                    value: amount.abs(),
+                    value: displayAmount,
                     signed: false,
                     style: TextStyle(
                       fontSize: 14,

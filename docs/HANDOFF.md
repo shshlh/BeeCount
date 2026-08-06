@@ -33,6 +33,25 @@
 
 ## 2026-08-07
 
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.7 返工（转换记录展示金额回归）
+
+**完成工作**：
+- lib/pages/investment/holding_detail_page.dart — _TransactionTile 对 batchId != null 的转换交易，第二行金额按「|investShares| × investNav」展示（sell/buy 两侧均适用），amount 保持 0 不写回 DB；非转换交易照常显示 amount
+- test/widgets/holding_detail_convert_row_test.dart — 新增转换行展示 widget 测试：amount=0 + shares=500 + nav=1.2 → AmountText 展示 600，断言「转换」类型与「净值 1.2」
+
+**下一个任务需要知道的**：
+- 转换交易的 amount 语义已固定为 0（投资账户内部记账），展示层计算只在 UI，不回写数据库
+- 全量 analyze 零 error；全量测试 625 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交（工作区含 invest-logic 并行改动，交 PM 复审）
+
+---
+
+## 2026-08-07
+
 **移交角色**：项目经理（PM）
 **接收角色**：invest-ui
 

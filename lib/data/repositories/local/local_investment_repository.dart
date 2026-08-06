@@ -442,7 +442,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
   @override
   Future<int> convert({
     required int fromHoldingId,
-    required int toHoldingId,
+    int? toHoldingId,
     required double fromShares,
     required double fromNav,
     required double toShares,
@@ -450,12 +450,19 @@ class LocalInvestmentRepository implements InvestmentRepository {
     double fee = 0,
     double refundAmount = 0,
     int? refundAccountId,
+    String? fundCode,
+    String? fundName,
     DateTime? happenedAt,
     String? note,
   }) async {
     if (refundAmount < 0) throw ArgumentError('退回金额不能为负数');
     if (refundAmount > 0 && refundAccountId == null) {
       throw ArgumentError('退回金额大于 0 时必须指定退回账户');
+    }
+    final targetCode = fundCode?.trim() ?? '';
+    final targetName = fundName?.trim() ?? '';
+    if (toHoldingId == null && (targetCode.isEmpty || targetName.isEmpty)) {
+      throw ArgumentError('目标基金代码和名称必填');
     }
     final effectiveHappenedAt = happenedAt ?? DateTime.now();
     final batchId = _uuid.v4();
@@ -467,8 +474,29 @@ class LocalInvestmentRepository implements InvestmentRepository {
         throw StateError(
             '来源持仓份额不足：持有 ${fromHolding.totalShares}，试图转换 $fromShares');
       }
-      final toHolding = await getHolding(toHoldingId);
-      if (toHolding == null) throw StateError('目标持仓 $toHoldingId 不存在');
+      final InvestmentHolding toHolding;
+      if (toHoldingId != null) {
+        final found = await getHolding(toHoldingId);
+        if (found == null) throw StateError('目标持仓 $toHoldingId 不存在');
+        toHolding = found;
+      } else {
+        final existing = await _findHolding(
+            fromHolding.ledgerId, targetCode, fromHolding.accountId);
+        if (existing != null) {
+          toHolding = existing;
+        } else {
+          final newId = await db.into(db.investmentHoldings).insert(
+                InvestmentHoldingsCompanion.insert(
+                  ledgerId: fromHolding.ledgerId,
+                  fundCode: targetCode,
+                  fundName: targetName,
+                  accountId: fromHolding.accountId,
+                  note: d.Value(note),
+                ),
+              );
+          toHolding = (await getHolding(newId))!;
+        }
+      }
 
       // 卖出来源持仓
       final fromSharesDecimal = _toDecimal(fromShares);
@@ -476,7 +504,6 @@ class LocalInvestmentRepository implements InvestmentRepository {
       final toSharesDecimal = _toDecimal(toShares);
       final toNavDecimal = _toDecimal(toNav);
       final fromTotalShares = _toDecimal(fromHolding.totalShares);
-      final fromValueDecimal = fromSharesDecimal * fromNavDecimal;
       final toValueDecimal = toSharesDecimal * toNavDecimal;
       final costRatio = fromTotalShares > Decimal.zero
           ? _divide(fromSharesDecimal, fromTotalShares)
@@ -493,7 +520,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
         accountId: fromHolding.accountId,
         toAccountId: null, // 转换无实际资金流动
         investType: 'sell',
-        amount: fromValueDecimal.toDouble(),
+        amount: 0, // 投资账户内部记账，不产生资金流水
         investShares: -fromShares,
         investNav: fromNav,
         investFee: fee,
@@ -519,18 +546,18 @@ class LocalInvestmentRepository implements InvestmentRepository {
         accountId: null,
         toAccountId: toHolding.accountId,
         investType: 'buy',
-        amount: toValueDecimal.toDouble(),
+        amount: 0, // 投资账户内部记账，不产生资金流水
         investShares: toShares,
         investNav: toNav,
         investFee: fee,
-        holdingId: toHoldingId,
+        holdingId: toHolding.id,
         happenedAt: effectiveHappenedAt,
         note: note,
         batchId: batchId,
       );
 
       await _updateHolding(
-        toHoldingId,
+        toHolding.id,
         totalShares: toNewShares.toDouble(),
         totalCost:
             (_toDecimal(toHolding.totalCost) + toValueDecimal).toDouble(),

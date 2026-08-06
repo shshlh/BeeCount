@@ -232,7 +232,7 @@ void main() {
         nav: 1.0);
 
     await expectLater(
-      () => service.validateConvert(1, 200),
+      () => service.validateConvert(1, 200, toHoldingId: 2),
       throwsA(isA<StateError>()),
     );
   });
@@ -248,24 +248,25 @@ void main() {
         nav: 1.0);
 
     await expectLater(
-      () => service.validateConvert(1, 10, fromNav: 0),
+      () => service.validateConvert(1, 10, toHoldingId: 2, fromNav: 0),
       throwsArgumentError,
     );
     await expectLater(
-      () => service.validateConvert(1, 10, toShares: 0),
+      () => service.validateConvert(1, 10, toHoldingId: 2, toShares: 0),
       throwsArgumentError,
     );
     await expectLater(
-      () => service.validateConvert(1, 10, toNav: -1),
+      () => service.validateConvert(1, 10, toHoldingId: 2, toNav: -1),
       throwsArgumentError,
     );
     await expectLater(
-      () => service.validateConvert(1, 10, fee: -1),
+      () => service.validateConvert(1, 10, toHoldingId: 2, fee: -1),
       throwsArgumentError,
     );
     await service.validateConvert(
       1,
       10,
+      toHoldingId: 2,
       fromNav: 1.0,
       toShares: 10,
       toNav: 1.2,
@@ -284,15 +285,53 @@ void main() {
         nav: 1.0);
 
     await expectLater(
-      () => service.validateConvert(1, 10, refundAmount: -1),
+      () => service.validateConvert(1, 10, toHoldingId: 2, refundAmount: -1),
       throwsArgumentError,
     );
     await expectLater(
-      () => service.validateConvert(1, 10, refundAmount: 1),
+      () => service.validateConvert(1, 10, toHoldingId: 2, refundAmount: 1),
       throwsArgumentError,
     );
-    await service.validateConvert(1, 10, refundAmount: 0);
-    await service.validateConvert(1, 10, refundAmount: 1, refundAccountId: 20);
+    await service.validateConvert(1, 10, toHoldingId: 2, refundAmount: 0);
+    await service.validateConvert(
+      1,
+      10,
+      toHoldingId: 2,
+      refundAmount: 1,
+      refundAccountId: 20,
+    );
+  });
+
+  test('validateConvert：新目标基金代码/名称校验', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 100,
+        shares: 100,
+        nav: 1.0);
+
+    await expectLater(
+      () => service.validateConvert(1, 10, toHoldingId: null),
+      throwsArgumentError,
+    );
+    await expectLater(
+      () => service.validateConvert(
+        1,
+        10,
+        toHoldingId: null,
+        fundCode: '000002',
+      ),
+      throwsArgumentError,
+    );
+    await service.validateConvert(
+      1,
+      10,
+      toHoldingId: null,
+      fundCode: '000002',
+      fundName: '基金B',
+    );
   });
 
   // ---- 委托验证 ----

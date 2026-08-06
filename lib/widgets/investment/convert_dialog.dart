@@ -41,6 +41,8 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
   bool _submitting = false;
   bool _loadingHoldings = false;
   bool _loadFailed = false;
+  bool _loadingRefundAccounts = false;
+  bool _refundAccountsLoadFailed = false;
   bool _refundManual = false;
   bool _updatingRefund = false;
   int? _refundAccountId;
@@ -109,15 +111,24 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
   }
 
   Future<void> _loadRefundAccounts() async {
-    final accounts = await ref
-        .read(repositoryProvider)
-        .getAvailableAccountsForLedger(widget.ledgerId);
-    if (mounted) {
-      setState(() {
-        _refundAccounts = accounts
-            .where((a) => isTradableType(a.type) && !a.hidden)
-            .toList();
-      });
+    if (_loadingRefundAccounts) return;
+    _loadingRefundAccounts = true;
+    if (mounted) setState(() => _refundAccountsLoadFailed = false);
+    try {
+      final accounts = await ref
+          .read(repositoryProvider)
+          .getAvailableAccountsForLedger(widget.ledgerId);
+      if (mounted) {
+        setState(() {
+          _refundAccounts = accounts
+              .where((a) => isTradableType(a.type) && !a.hidden)
+              .toList();
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _refundAccountsLoadFailed = true);
+    } finally {
+      _loadingRefundAccounts = false;
     }
   }
 
@@ -174,12 +185,6 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_toHolding == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请选择目标基金')),
-      );
-      return;
-    }
     setState(() => _submitting = true);
     try {
       final service = ref.read(investmentServiceProvider);
@@ -192,6 +197,12 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
           : double.parse(_feeCtrl.text);
       final refundAmount = double.parse(_refundCtrl.text);
       final refundAccountId = refundAmount > 0 ? _refundAccountId : null;
+      if (refundAmount > 0 && _refundAccountsLoadFailed) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('退回账户加载失败，请重试')),
+        );
+        return;
+      }
       if (refundAmount > 0 && refundAccountId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('请选择退回账户')),
@@ -212,7 +223,9 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
 
       await service.convert(
         fromHoldingId: widget.fromHolding.id,
-        toHoldingId: _toHolding!.id,
+        toHoldingId: _toHolding?.id,
+        fundCode: _toHolding == null ? _toCodeCtrl.text.trim() : null,
+        fundName: _toHolding == null ? _toNameCtrl.text.trim() : null,
         fromShares: fromShares,
         fromNav: fromNav,
         toShares: toShares,
@@ -353,12 +366,22 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
               controller: _toCodeCtrl,
               decoration: const InputDecoration(
                   labelText: '目标基金代码', isDense: true),
+              validator: (v) {
+                if (_toHolding != null) return null;
+                if (v == null || v.trim().isEmpty) return '请输入目标基金代码';
+                return null;
+              },
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _toNameCtrl,
               decoration: const InputDecoration(
                   labelText: '目标基金名称', isDense: true),
+              validator: (v) {
+                if (_toHolding != null) return null;
+                if (v == null || v.trim().isEmpty) return '请输入目标基金名称';
+                return null;
+              },
             ),
           ],
           const SizedBox(height: 12),
@@ -455,7 +478,19 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
               return null;
             },
           ),
-          if (_refundAccounts.isNotEmpty && refund > 0) ...[
+          if (_refundAccountsLoadFailed)
+            Row(
+              children: [
+                Text('退回账户加载失败，请重试',
+                    style: TextStyle(
+                        fontSize: 12, color: BeeTokens.error(context))),
+                TextButton(
+                  onPressed: _loadRefundAccounts,
+                  child: const Text('重试'),
+                ),
+              ],
+            )
+          else if (_refundAccounts.isNotEmpty && refund > 0) ...[
             const SizedBox(height: 12),
             _buildLabeledDropdownRow(context),
           ],
