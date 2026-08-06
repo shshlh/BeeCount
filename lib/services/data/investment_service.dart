@@ -108,8 +108,15 @@ class InvestmentService {
 
   // ---- 前端验证 ----
 
-  Future<void> validateSell(int holdingId, double shares) async {
+  Future<void> validateSell(
+    int holdingId,
+    double shares, {
+    double? nav,
+    double? fee,
+  }) async {
     if (shares <= 0) throw ArgumentError('卖出份额必须大于 0');
+    if (nav != null && nav <= 0) throw ArgumentError('卖出净值必须大于 0');
+    if (fee != null && fee < 0) throw ArgumentError('手续费不能为负数');
     final holding = await _repo.getHolding(holdingId);
     if (holding == null) throw StateError('持仓 $holdingId 不存在');
     if (holding.totalShares < shares) {
@@ -117,8 +124,25 @@ class InvestmentService {
     }
   }
 
-  Future<void> validateConvert(int fromHoldingId, double shares) async {
+  Future<void> validateConvert(
+    int fromHoldingId,
+    double shares, {
+    double? fromNav,
+    double? toShares,
+    double? toNav,
+    double? fee,
+  }) async {
     if (shares <= 0) throw ArgumentError('转换份额必须大于 0');
+    if (fromNav != null && fromNav <= 0) {
+      throw ArgumentError('转出净值必须大于 0');
+    }
+    if (toShares != null && toShares <= 0) {
+      throw ArgumentError('转入份额必须大于 0');
+    }
+    if (toNav != null && toNav <= 0) {
+      throw ArgumentError('转入净值必须大于 0');
+    }
+    if (fee != null && fee < 0) throw ArgumentError('手续费不能为负数');
     final holding = await _repo.getHolding(fromHoldingId);
     if (holding == null) throw StateError('来源持仓 $fromHoldingId 不存在');
     if (holding.totalShares < shares) {
@@ -223,10 +247,12 @@ class InvestmentService {
       _repo.watchTransactions(holdingId);
 
   /// 更新投资交易的可编辑字段（note / happenedAt / shares / nav / fee / amount）。
+  /// [note] 为 null 表示不更新；[clearNote] 为 true 时把备注清空。
   /// 保存后重算持仓统计并联动投资账户市值。
   Future<void> updateTransaction(
     int transactionId, {
     String? note,
+    bool clearNote = false,
     DateTime? happenedAt,
     double? investShares,
     double? investNav,
@@ -236,6 +262,7 @@ class InvestmentService {
     return _repo.updateTransaction(
       transactionId,
       note: note,
+      clearNote: clearNote,
       happenedAt: happenedAt,
       investShares: investShares,
       investNav: investNav,

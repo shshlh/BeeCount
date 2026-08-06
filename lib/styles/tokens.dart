@@ -232,12 +232,12 @@ class BeeTokens {
           : Colors.black.withValues(alpha: 0.06);
 
   /// 边框颜色（卡片边框）
-  /// - 亮色模式：transparent（使用阴影）
+  /// - 亮色模式：rgba(0,0,0,0.08)
   /// - 暗黑模式：主题色 30% 透明度
   static Color border(BuildContext context) =>
       isDark(context)
           ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
-          : Colors.transparent;
+          : Colors.black.withValues(alpha: 0.08);
 
   /// 强调边框颜色
   /// - 亮色模式：rgba(0,0,0,0.12)

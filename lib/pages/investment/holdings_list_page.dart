@@ -365,8 +365,7 @@ class HoldingsListPage extends ConsumerWidget {
       (HoldingsSort.pnl, '持有收益'),
       (HoldingsSort.returnRate, '持有收益率'),
     ];
-    final currentLabel =
-        options.firstWhere((o) => o.$1 == current).$2;
+    final currentLabel = options.firstWhere((o) => o.$1 == current).$2;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -398,15 +397,7 @@ class HoldingsListPage extends ConsumerWidget {
                 ref.read(holdingsSortProvider.notifier).state = value,
             itemBuilder: (ctx) => [
               for (var i = 0; i < options.length; i++) ...[
-                if (i > 0)
-                  const PopupMenuItem<HoldingsSort>(
-                    enabled: false,
-                    height: 1,
-                    child: SizedBox(
-                      height: 1,
-                      child: ColoredBox(color: Colors.black),
-                    ),
-                  ),
+                if (i > 0) const PopupMenuDivider(),
                 PopupMenuItem<HoldingsSort>(
                   value: options[i].$1,
                   child: Align(
@@ -662,115 +653,118 @@ class HoldingsListPage extends ConsumerWidget {
     if (!context.mounted) return;
     final nameCtrl = TextEditingController();
     final selectedIds = <int>{};
-
-    final created = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          return AlertDialog(
-            title: const Text('新建分组'),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: nameCtrl,
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      labelText: '分组名称',
-                      hintText: '如 宽基指数',
+    try {
+      final created = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              title: const Text('新建分组'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: nameCtrl,
+                      autofocus: true,
+                      decoration: const InputDecoration(
+                        labelText: '分组名称',
+                        hintText: '如 宽基指数',
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '选择基金（可多选）',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: BeeTokens.textSecondary(ctx),
+                    const SizedBox(height: 12),
+                    Text(
+                      '选择基金（可多选）',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: BeeTokens.textSecondary(ctx),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  SizedBox(
-                    height: 220,
-                    child: holdings.isEmpty
-                        ? Center(
-                            child: Text(
-                              '暂无基金可选',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: BeeTokens.textTertiary(ctx),
-                              ),
-                            ),
-                          )
-                        : ListView(
-                            shrinkWrap: true,
-                            children: [
-                              for (final h in holdings)
-                                CheckboxListTile(
-                                  dense: true,
-                                  controlAffinity:
-                                      ListTileControlAffinity.leading,
-                                  value: selectedIds.contains(h.id),
-                                  title: Text(
-                                    h.fundName,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  subtitle: Text(h.fundCode),
-                                  onChanged: (checked) => setDialogState(() {
-                                    if (checked ?? false) {
-                                      selectedIds.add(h.id);
-                                    } else {
-                                      selectedIds.remove(h.id);
-                                    }
-                                  }),
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      height: 220,
+                      child: holdings.isEmpty
+                          ? Center(
+                              child: Text(
+                                '暂无基金可选',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: BeeTokens.textTertiary(ctx),
                                 ),
-                            ],
-                          ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('取消'),
-              ),
-              ValueListenableBuilder<TextEditingValue>(
-                valueListenable: nameCtrl,
-                builder: (ctx, value, _) => FilledButton(
-                  onPressed: value.text.trim().isEmpty
-                      ? null
-                      : () => Navigator.pop(ctx, true),
-                  child: const Text('创建'),
+                              ),
+                            )
+                          : ListView(
+                              shrinkWrap: true,
+                              children: [
+                                for (final h in holdings)
+                                  CheckboxListTile(
+                                    dense: true,
+                                    controlAffinity:
+                                        ListTileControlAffinity.leading,
+                                    value: selectedIds.contains(h.id),
+                                    title: Text(
+                                      h.fundName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    subtitle: Text(h.fundCode),
+                                    onChanged: (checked) => setDialogState(() {
+                                      if (checked ?? false) {
+                                        selectedIds.add(h.id);
+                                      } else {
+                                        selectedIds.remove(h.id);
+                                      }
+                                    }),
+                                  ),
+                              ],
+                            ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          );
-        },
-      ),
-    );
-
-    if (created != true) return;
-    final name = nameCtrl.text.trim();
-    if (name.isEmpty) return;
-    try {
-      final service = ref.read(investmentServiceProvider);
-      final groupId = await service.createGroup(
-        ledgerId: ref.read(currentLedgerIdProvider),
-        name: name,
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('取消'),
+                ),
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: nameCtrl,
+                  builder: (ctx, value, _) => FilledButton(
+                    onPressed: value.text.trim().isEmpty
+                        ? null
+                        : () => Navigator.pop(ctx, true),
+                    child: const Text('创建'),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
       );
-      if (selectedIds.isNotEmpty) {
-        await service.addHoldingsToGroup(groupId, selectedIds.toList());
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('创建分组失败：$e')),
+
+      if (created != true) return;
+      final name = nameCtrl.text.trim();
+      if (name.isEmpty) return;
+      try {
+        final service = ref.read(investmentServiceProvider);
+        final groupId = await service.createGroup(
+          ledgerId: ref.read(currentLedgerIdProvider),
+          name: name,
         );
+        if (selectedIds.isNotEmpty) {
+          await service.addHoldingsToGroup(groupId, selectedIds.toList());
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('创建分组失败：$e')),
+          );
+        }
       }
+    } finally {
+      nameCtrl.dispose();
     }
   }
 
@@ -780,47 +774,51 @@ class HoldingsListPage extends ConsumerWidget {
     InvestmentGroup group,
   ) async {
     final nameCtrl = TextEditingController(text: group.name);
-    final renamed = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('重命名分组'),
-        content: TextField(
-          controller: nameCtrl,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: '分组名称'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('取消'),
-          ),
-          ValueListenableBuilder<TextEditingValue>(
-            valueListenable: nameCtrl,
-            builder: (ctx, value, _) => FilledButton(
-              onPressed: value.text.trim().isEmpty
-                  ? null
-                  : () => Navigator.pop(ctx, value.text.trim()),
-              child: const Text('保存'),
-            ),
-          ),
-        ],
-      ),
-    );
-    if (renamed == null ||
-        renamed.trim().isEmpty ||
-        renamed.trim() == group.name) {
-      return;
-    }
     try {
-      await ref
-          .read(investmentServiceProvider)
-          .renameGroup(group.id, renamed.trim());
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('重命名失败：$e')),
-        );
+      final renamed = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('重命名分组'),
+          content: TextField(
+            controller: nameCtrl,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: '分组名称'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('取消'),
+            ),
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: nameCtrl,
+              builder: (ctx, value, _) => FilledButton(
+                onPressed: value.text.trim().isEmpty
+                    ? null
+                    : () => Navigator.pop(ctx, value.text.trim()),
+                child: const Text('保存'),
+              ),
+            ),
+          ],
+        ),
+      );
+      if (renamed == null ||
+          renamed.trim().isEmpty ||
+          renamed.trim() == group.name) {
+        return;
       }
+      try {
+        await ref
+            .read(investmentServiceProvider)
+            .renameGroup(group.id, renamed.trim());
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('重命名失败：$e')),
+          );
+        }
+      }
+    } finally {
+      nameCtrl.dispose();
     }
   }
 

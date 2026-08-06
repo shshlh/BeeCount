@@ -70,8 +70,11 @@ class LocalInvestmentRepository implements InvestmentRepository {
     }
 
     final existing = await (db.select(db.accounts)
-          ..where((a) => a.type.equals(accountTypeInvestment))
-          ..orderBy([(a) => d.OrderingTerm(expression: a.sortOrder)]))
+          ..where((a) =>
+              a.ledgerId.equals(ledgerId) &
+              a.type.equals(accountTypeInvestment))
+          ..orderBy([(a) => d.OrderingTerm(expression: a.sortOrder)])
+          ..limit(1))
         .getSingleOrNull();
     if (existing != null) return existing.id;
 
@@ -125,6 +128,15 @@ class LocalInvestmentRepository implements InvestmentRepository {
       initialBalance: d.Value(total.toDouble()),
       updatedAt: d.Value(DateTime.now()),
     ));
+  }
+
+  /// 供通用删除等外部路径在同一事务内重算持仓并联动投资账户市值。
+  Future<void> recomputeHolding(int holdingId) async {
+    await _recomputeHolding(holdingId);
+    final holding = await getHolding(holdingId);
+    if (holding != null) {
+      await _syncInvestmentAccountValue(holding.accountId);
+    }
   }
 
   /// 按该持仓的全部投资交易重算统计（与 buy/sell/convert 的成本口径一致）。
@@ -293,12 +305,11 @@ class LocalInvestmentRepository implements InvestmentRepository {
       double oldCost = 0;
 
       if (holdingId != null) {
-        effectiveHoldingId = holdingId;
         final h = await getHolding(holdingId);
-        if (h != null) {
-          oldShares = h.totalShares;
-          oldCost = h.totalCost;
-        }
+        if (h == null) throw StateError('持仓 $holdingId 不存在');
+        effectiveHoldingId = holdingId;
+        oldShares = h.totalShares;
+        oldCost = h.totalCost;
       } else {
         final existing =
             await _findHolding(ledgerId, fundCode, investmentAccountId);
@@ -525,25 +536,28 @@ class LocalInvestmentRepository implements InvestmentRepository {
 
   @override
   Future<void> updateNav(int holdingId, double nav) async {
-    final holding = await getHolding(holdingId);
-    if (holding == null) throw StateError('持仓 $holdingId 不存在');
+    await db.transaction(() async {
+      final holding = await getHolding(holdingId);
+      if (holding == null) throw StateError('持仓 $holdingId 不存在');
 
-    await _updateHolding(
-      holdingId,
-      currentNav: nav,
-      marketValue:
-          (_toDecimal(holding.totalShares) * _toDecimal(nav)).toDouble(),
-      updatedAt: DateTime.now(),
-    );
+      await _updateHolding(
+        holdingId,
+        currentNav: nav,
+        marketValue:
+            (_toDecimal(holding.totalShares) * _toDecimal(nav)).toDouble(),
+        updatedAt: DateTime.now(),
+      );
 
-    // 净值变化联动投资账户市值
-    await _syncInvestmentAccountValue(holding.accountId);
+      // 净值变化联动投资账户市值
+      await _syncInvestmentAccountValue(holding.accountId);
+    });
   }
 
   @override
   Future<void> updateTransaction(
     int transactionId, {
     String? note,
+    bool clearNote = false,
     DateTime? happenedAt,
     double? investShares,
     double? investNav,
@@ -551,10 +565,13 @@ class LocalInvestmentRepository implements InvestmentRepository {
     double? amount,
   }) async {
     await db.transaction(() async {
+      final effectiveNote = clearNote ? '' : note;
       await (db.update(db.transactions)
             ..where((t) => t.id.equals(transactionId)))
           .write(TransactionsCompanion(
-        note: note != null ? d.Value(note) : const d.Value.absent(),
+        note: effectiveNote != null
+            ? d.Value(effectiveNote)
+            : const d.Value.absent(),
         happenedAt:
             happenedAt != null ? d.Value(happenedAt) : const d.Value.absent(),
         investShares: investShares != null

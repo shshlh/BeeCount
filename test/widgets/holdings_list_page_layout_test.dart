@@ -113,6 +113,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('持有收益'), findsOneWidget);
     expect(find.text('持有收益率'), findsOneWidget);
+    expect(find.byType(PopupMenuDivider), findsNWidgets(2));
   });
 
   testWidgets('选中分组无基金时显示分组空态', (tester) async {

@@ -274,6 +274,13 @@ class HoldingDetailPage extends ConsumerWidget {
 
   /// 弹出交易编辑弹窗（v4.7: 支持编辑交易记录）
   void _showEditDialog(BuildContext context, WidgetRef ref, Transaction tx) {
+    // v6.4 返工：转换产生的 batch 交易禁止单边编辑，避免两持仓口径不一致
+    if (tx.batchId != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请编辑完整的转换记录')),
+      );
+      return;
+    }
     showDialog(
       context: context,
       builder: (ctx) => _TransactionEditDialog(
@@ -583,18 +590,28 @@ class _TransactionEditDialogState
       final investType = tx.investType ?? '';
 
       // 份额符号：buy/initial 为正，sell/redeem 为负
-      final rawShares = double.tryParse(_sharesCtrl.text) ?? 0;
+      final rawShares = double.parse(_sharesCtrl.text);
       final isNegative = investType == 'sell' || investType == 'redeem';
       final shares = isNegative ? -rawShares.abs() : rawShares.abs();
+      final amount = double.parse(_amountCtrl.text);
+      final nav = double.parse(_navCtrl.text);
+      final fee = double.parse(_feeCtrl.text);
+
+      // 备注：清空走 clearNote sentinel，未变化则不更新
+      final newNote = _noteCtrl.text.trim();
+      final originalNote = tx.note ?? '';
+      final clearNote = newNote.isEmpty && originalNote.isNotEmpty;
+      final noteArg = !clearNote && newNote != originalNote ? newNote : null;
 
       await service.updateTransaction(
         tx.id,
-        note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+        note: noteArg,
+        clearNote: clearNote,
         happenedAt: _happenedAt != tx.happenedAt ? _happenedAt : null,
         investShares: shares != (tx.investShares ?? 0) ? shares : null,
-        investNav: double.tryParse(_navCtrl.text),
-        investFee: double.tryParse(_feeCtrl.text),
-        amount: double.tryParse(_amountCtrl.text),
+        investNav: nav,
+        investFee: fee,
+        amount: amount,
       );
 
       widget.onSave?.call();
@@ -652,7 +669,8 @@ class _TransactionEditDialogState
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return '请输入金额';
-                  if (double.tryParse(v) == null) return '无效金额';
+                  final n = double.tryParse(v);
+                  if (n == null || n <= 0) return '金额必须大于 0';
                   return null;
                 },
               ),
@@ -661,18 +679,36 @@ class _TransactionEditDialogState
                 controller: _sharesCtrl,
                 decoration: const InputDecoration(labelText: '份额', isDense: true),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return '请输入份额';
+                  final n = double.tryParse(v);
+                  if (n == null || n <= 0) return '份额必须大于 0';
+                  return null;
+                },
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _navCtrl,
                 decoration: const InputDecoration(labelText: '净值', isDense: true),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return '请输入净值';
+                  final n = double.tryParse(v);
+                  if (n == null || n <= 0) return '净值必须大于 0';
+                  return null;
+                },
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _feeCtrl,
                 decoration: const InputDecoration(labelText: '手续费', isDense: true),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return '请输入手续费';
+                  final n = double.tryParse(v);
+                  if (n == null || n < 0) return '手续费不能为负数';
+                  return null;
+                },
               ),
               const SizedBox(height: 12),
               TextFormField(

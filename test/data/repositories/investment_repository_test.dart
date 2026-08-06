@@ -126,6 +126,69 @@ void main() {
     expect(h.totalCost, 0.01);
   });
 
+  test('买入：多账本各有投资账户时回退不串账本', () async {
+    await db.customStatement(
+        "INSERT INTO ledgers (id, name, currency) VALUES (2, 'L2', 'CNY')");
+    await db.customStatement(
+        "INSERT INTO accounts (id, ledger_id, name, type, currency) "
+        "VALUES (30, 2, '投资账户2', 'investment', 'CNY')");
+
+    final txId = await repo.buy(
+      ledgerId: 2,
+      accountId: null,
+      fundCode: '000010',
+      fundName: '基金X',
+      amount: 100,
+      shares: 100,
+      nav: 1.0,
+    );
+
+    final tx = await db.customSelect('SELECT * FROM transactions WHERE id = ?',
+        variables: [Variable<int>(txId)]).getSingle();
+    final holding = await db.select(db.investmentHoldings).getSingle();
+
+    expect(holding.accountId, 30);
+    expect(tx.read<int>('account_id'), 30);
+  });
+
+  test('买入：同账本多个投资账户时回退取首个不抛错', () async {
+    await db.customStatement(
+        "INSERT INTO accounts (id, ledger_id, name, type, currency, sort_order) "
+        "VALUES (11, 1, '投资账户2', 'investment', 'CNY', 1)");
+
+    await repo.buy(
+      ledgerId: 1,
+      accountId: null,
+      fundCode: '000001',
+      fundName: '基金A',
+      amount: 100,
+      shares: 100,
+      nav: 1.0,
+    );
+
+    final holding = await db.select(db.investmentHoldings).getSingle();
+    expect(holding.accountId, 10); // sortOrder 0 的投资账户优先
+  });
+
+  test('买入：指定不存在的 holdingId 时抛 StateError，不产生孤儿交易', () async {
+    await expectLater(
+      () => repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 100,
+        shares: 100,
+        nav: 1.0,
+        holdingId: 999,
+      ),
+      throwsA(isA<StateError>()),
+    );
+
+    final txs = await db.select(db.transactions).get();
+    expect(txs, isEmpty);
+  });
+
   test('买入：无投资账户时自动创建，不把扣款账户当持仓归属', () async {
     // 删掉种子投资账户，只剩可交易账户
     await db.customStatement('DELETE FROM accounts WHERE id = 10');
@@ -322,6 +385,37 @@ void main() {
     expect(h!.totalShares, 1000);
     expect(h.totalCost, closeTo(2000, 0.01));
     expect(h.marketValue, closeTo(1500, 0.01)); // 市值仍按净值算
+  });
+
+  test('编辑交易：clearNote 清空备注，null 不更新备注', () async {
+    final txId = await repo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000001',
+      fundName: '华夏成长混合',
+      amount: 1000,
+      shares: 1000,
+      nav: 1.0,
+      note: '原始备注',
+    );
+
+    await repo.updateTransaction(txId, note: '新备注');
+    final updated = await (db.select(db.transactions)
+          ..where((t) => t.id.equals(txId)))
+        .getSingle();
+    expect(updated.note, '新备注');
+
+    await repo.updateTransaction(txId, clearNote: true);
+    final cleared = await (db.select(db.transactions)
+          ..where((t) => t.id.equals(txId)))
+        .getSingle();
+    expect(cleared.note, '');
+
+    await repo.updateTransaction(txId, note: '保留我');
+    final untouched = await (db.select(db.transactions)
+          ..where((t) => t.id.equals(txId)))
+        .getSingle();
+    expect(untouched.note, '保留我');
   });
 
   test('编辑交易：部分卖出后改买入份额按比例重算成本', () async {

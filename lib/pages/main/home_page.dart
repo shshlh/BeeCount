@@ -17,6 +17,7 @@ final homePeriodStatsProvider = FutureProvider.autoDispose<
     Map<String,
         ({double income, double expense, DateTime start, DateTime end})>>(
     (ref) async {
+  ref.watch(statsRefreshProvider);
   final repo = ref.watch(repositoryProvider);
   final ledgerId = ref.watch(currentLedgerIdProvider);
   final now = DateTime.now();
@@ -217,7 +218,7 @@ class HomePage extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: 30,
                     fontWeight: FontWeight.w800,
-                    color: Theme.of(context).colorScheme.primary,
+                    color: BeeTokens.textPrimary(context),
                   ),
                 ),
               ),

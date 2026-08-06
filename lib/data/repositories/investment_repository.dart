@@ -70,11 +70,13 @@ abstract class InvestmentRepository {
 
   /// 更新投资交易的可编辑字段。
   /// 仅允许编辑 note / happenedAt / investShares / investNav / investFee / amount。
+  /// [note] 为 null 表示不更新备注；[clearNote] 为 true 时把备注清空。
   /// 保存后在同一事务内按全部投资交易重算持仓 totalShares / totalCost /
   /// currentNav / marketValue，并同步投资账户市值。
   Future<void> updateTransaction(
     int transactionId, {
     String? note,
+    bool clearNote = false,
     DateTime? happenedAt,
     double? investShares,
     double? investNav,

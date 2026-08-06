@@ -196,6 +196,31 @@ void main() {
     );
   });
 
+  test('validateSell：净值 <= 0 / 手续费 < 0 抛异常', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 100,
+        shares: 100,
+        nav: 1.0);
+
+    await expectLater(
+      () => service.validateSell(1, 10, nav: 0),
+      throwsArgumentError,
+    );
+    await expectLater(
+      () => service.validateSell(1, 10, nav: -1),
+      throwsArgumentError,
+    );
+    await expectLater(
+      () => service.validateSell(1, 10, fee: -1),
+      throwsArgumentError,
+    );
+    await service.validateSell(1, 10, nav: 2.0, fee: 1);
+  });
+
   test('validateConvert：份额不足时抛异常', () async {
     await repo.buy(
         ledgerId: 1,
@@ -209,6 +234,42 @@ void main() {
     await expectLater(
       () => service.validateConvert(1, 200),
       throwsA(isA<StateError>()),
+    );
+  });
+
+  test('validateConvert：转出净值/转入份额/转入净值/手续费校验', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 100,
+        shares: 100,
+        nav: 1.0);
+
+    await expectLater(
+      () => service.validateConvert(1, 10, fromNav: 0),
+      throwsArgumentError,
+    );
+    await expectLater(
+      () => service.validateConvert(1, 10, toShares: 0),
+      throwsArgumentError,
+    );
+    await expectLater(
+      () => service.validateConvert(1, 10, toNav: -1),
+      throwsArgumentError,
+    );
+    await expectLater(
+      () => service.validateConvert(1, 10, fee: -1),
+      throwsArgumentError,
+    );
+    await service.validateConvert(
+      1,
+      10,
+      fromNav: 1.0,
+      toShares: 10,
+      toNav: 1.2,
+      fee: 1,
     );
   });
 

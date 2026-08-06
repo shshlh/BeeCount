@@ -69,6 +69,14 @@ class _WheelDatePickerState extends State<WheelDatePicker> {
     // month/day 控制器在 build 中根据当前 year/month 的有效范围惰性创建
   }
 
+  @override
+  void dispose() {
+    _yearCtrl.dispose();
+    _monthCtrl?.dispose();
+    _dayCtrl?.dispose();
+    super.dispose();
+  }
+
   // v5.5: 年份范围 = 今年上下 30 年（如 2026 → 1996~2056），月份/日期按自然历
   DateTime get _min =>
       widget.minDate ?? DateTime(DateTime.now().year - 30, 1, 1);
@@ -355,6 +363,14 @@ class _DateStepPickerState extends State<_DateStepPicker> {
     _yearCtrl = FixedExtentScrollController(initialItem: years.indexOf(year));
   }
 
+  @override
+  void dispose() {
+    _yearCtrl.dispose();
+    _monthCtrl?.dispose();
+    _dayCtrl?.dispose();
+    super.dispose();
+  }
+
   DateTime _clamp(DateTime d) {
     if (d.isBefore(_min)) return _min;
     if (d.isAfter(_max)) return _max;
@@ -628,7 +644,6 @@ class _TimeStepPickerState extends State<_TimeStepPicker> {
                       )),
                     ),
                   ),
-                  Text(':', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: BeeTokens.textPrimary(context))),
                 ],
               ),
             ),

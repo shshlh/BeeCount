@@ -32,6 +32,7 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
   late final TextEditingController _feeCtrl;
   InvestmentHolding? _toHolding;
   bool _submitting = false;
+  bool _loadingHoldings = false;
   List<InvestmentHolding> _holdings = [];
 
   @override
@@ -46,6 +47,7 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
     _toSharesCtrl = TextEditingController();
     _toNavCtrl = TextEditingController();
     _feeCtrl = TextEditingController(text: '0');
+    _loadHoldings();
   }
 
   @override
@@ -61,11 +63,21 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
   }
 
   Future<void> _loadHoldings() async {
-    final service = ref.read(investmentServiceProvider);
-    final ledgerId = ref.read(currentLedgerIdProvider);
-    final stream = service.watchHoldings(ledgerId: ledgerId);
-    final holdings = await stream.first;
-    setState(() => _holdings = holdings.where((h) => h.id != widget.fromHolding.id).toList());
+    if (_loadingHoldings) return;
+    _loadingHoldings = true;
+    try {
+      final service = ref.read(investmentServiceProvider);
+      final ledgerId = ref.read(currentLedgerIdProvider);
+      final stream = service.watchHoldings(ledgerId: ledgerId);
+      final holdings = await stream.first;
+      if (mounted) {
+        setState(() => _holdings = holdings
+            .where((h) => h.id != widget.fromHolding.id)
+            .toList());
+      }
+    } finally {
+      _loadingHoldings = false;
+    }
   }
 
   void _selectToHolding(InvestmentHolding h) {
@@ -89,11 +101,21 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
     try {
       final service = ref.read(investmentServiceProvider);
       final fromShares = double.parse(_fromSharesCtrl.text);
-      final fromNav = double.parse(_fromNavCtrl.text.isEmpty ? '0' : _fromNavCtrl.text);
-      final toShares = double.parse(_toSharesCtrl.text.isEmpty ? '0' : _toSharesCtrl.text);
-      final toNav = double.parse(_toNavCtrl.text.isEmpty ? '0' : _toNavCtrl.text);
+      final fromNav = double.parse(_fromNavCtrl.text);
+      final toShares = double.parse(_toSharesCtrl.text);
+      final toNav = double.parse(_toNavCtrl.text);
+      final fee = _feeCtrl.text.trim().isEmpty
+          ? 0.0
+          : double.parse(_feeCtrl.text);
 
-      await service.validateConvert(widget.fromHolding.id, fromShares);
+      await service.validateConvert(
+        widget.fromHolding.id,
+        fromShares,
+        fromNav: fromNav,
+        toShares: toShares,
+        toNav: toNav,
+        fee: fee,
+      );
 
       await service.convert(
         fromHoldingId: widget.fromHolding.id,
@@ -102,7 +124,7 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
         fromNav: fromNav,
         toShares: toShares,
         toNav: toNav,
-        fee: double.tryParse(_feeCtrl.text) ?? 0,
+        fee: fee,
       );
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
@@ -119,9 +141,6 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
   @override
   Widget build(BuildContext context) {
     final h = widget.fromHolding;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_holdings.isEmpty && !_submitting) _loadHoldings();
-    });
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
@@ -175,6 +194,12 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
                 controller: _fromNavCtrl,
                 decoration: const InputDecoration(labelText: '转出净值', suffixText: '元/份'),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return '请输入转出净值';
+                  final n = double.tryParse(v);
+                  if (n == null || n <= 0) return '净值必须大于 0';
+                  return null;
+                },
               ),
               const SizedBox(height: 24),
               Text('目标基金',
@@ -209,18 +234,36 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
                 controller: _toSharesCtrl,
                 decoration: const InputDecoration(labelText: '转入份额', suffixText: '份'),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return '请输入转入份额';
+                  final n = double.tryParse(v);
+                  if (n == null || n <= 0) return '份额必须大于 0';
+                  return null;
+                },
               ),
               const SizedBox(height: BeeDimens.p16),
               TextFormField(
                 controller: _toNavCtrl,
                 decoration: const InputDecoration(labelText: '转入净值', suffixText: '元/份'),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return '请输入转入净值';
+                  final n = double.tryParse(v);
+                  if (n == null || n <= 0) return '净值必须大于 0';
+                  return null;
+                },
               ),
               const SizedBox(height: BeeDimens.p16),
               TextFormField(
                 controller: _feeCtrl,
                 decoration: const InputDecoration(labelText: '手续费', suffixText: '元'),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return null;
+                  final n = double.tryParse(v);
+                  if (n == null || n < 0) return '手续费不能为负数';
+                  return null;
+                },
               ),
             ],
           ),

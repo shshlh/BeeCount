@@ -71,14 +71,22 @@ class _SellDialogState extends ConsumerState<SellDialog> {
     try {
       final service = ref.read(investmentServiceProvider);
       final shares = double.parse(_sharesCtrl.text);
-      await service.validateSell(widget.holding.id, shares);
+      final nav = double.parse(_navCtrl.text);
+      final fee = _feeCtrl.text.trim().isEmpty
+          ? 0.0
+          : double.parse(_feeCtrl.text);
+      await service.validateSell(
+        widget.holding.id,
+        shares,
+        nav: nav,
+        fee: fee,
+      );
 
-      final nav = double.parse(_navCtrl.text.isEmpty ? '0' : _navCtrl.text);
       await service.sell(
         holdingId: widget.holding.id,
         shares: shares,
         nav: nav,
-        fee: double.tryParse(_feeCtrl.text) ?? 0,
+        fee: fee,
         targetAccountId: _targetAccountId,
       );
       if (mounted) Navigator.of(context).pop(true);
@@ -164,12 +172,24 @@ class _SellDialogState extends ConsumerState<SellDialog> {
                 controller: _navCtrl,
                 decoration: const InputDecoration(labelText: '卖出净值', suffixText: '元/份'),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return '请输入卖出净值';
+                  final n = double.tryParse(v);
+                  if (n == null || n <= 0) return '净值必须大于 0';
+                  return null;
+                },
               ),
               const SizedBox(height: BeeDimens.p16),
               TextFormField(
                 controller: _feeCtrl,
                 decoration: const InputDecoration(labelText: '手续费', suffixText: '元'),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return null;
+                  final n = double.tryParse(v);
+                  if (n == null || n < 0) return '手续费不能为负数';
+                  return null;
+                },
               ),
               const SizedBox(height: BeeDimens.p16),
               // v4.7: 回款账户选择

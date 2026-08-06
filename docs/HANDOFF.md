@@ -33,6 +33,29 @@
 
 ## 2026-08-06
 
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.4 返工（6.4.3 UI 部分 + 🔴#4 悬空冒号）
+
+**完成工作**：
+- lib/widgets/investment/convert_dialog.dart — build 副作用修复：_loadHoldings 移到 initState + 防重入标记 + await 后 mounted 检查，仅一只基金时保持空态不再循环请求；转出净值/转入份额/转入净值必填 >0、手续费 >=0；提交前调用 service.validateConvert(fromNav/toShares/toNav/fee)，去掉空值静默写 0
+- lib/widgets/ui/wheel_date_picker.dart — _TimeStepPicker 删除分钟后的多余冒号，只保留时分间 1 个分隔符；保留 _WheelDatePickerState/_DateStepPickerState 滚轮控制器 dispose（6.4.4 遗留）
+- lib/widgets/investment/sell_dialog.dart — 卖出净值必填 >0、手续费 >=0；提交前调用 service.validateSell(nav/fee)
+- lib/pages/investment/holding_detail_page.dart — 编辑弹窗份额/金额/净值必填 >0、手续费 >=0，禁止 tryParse ?? 0 静默写 0；备注清空走 updateTransaction(clearNote: true)，未变化不更新；带 batchId 的转换交易禁止单边编辑（提示「请编辑完整的转换记录」）
+
+**下一个任务需要知道的**：
+- service.updateTransaction 已支持 clearNote sentinel；validateSell/validateConvert 已支持 nav/fee/toShares/toNav 校验（invest-logic 并行落地）
+- 转换 batch 交易现在不可单条编辑，只能整体处理（当前无批量编辑入口，属已知限制）
+- 弹窗校验逻辑沿用现有测试基线，未新增独立弹窗 widget 测试（弹窗依赖 repositoryProvider，mock 成本高）
+- 全量 analyze 零 error（854 个既有 info/warning 基线不变）；全量测试 612 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交（工作区含 architect/invest-logic 并行改动，交 PM 复审）
+
+---
+
+## 2026-08-06
+
 **移交角色**：项目经理（PM）
 **接收角色**：invest-ui
 
