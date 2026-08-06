@@ -132,7 +132,8 @@ class LocalInvestmentRepository implements InvestmentRepository {
 
   /// 供通用删除等外部路径在同一事务内重算持仓并联动投资账户市值。
   Future<void> recomputeHolding(int holdingId) async {
-    await _recomputeHolding(holdingId);
+    final before = await getHolding(holdingId);
+    await _recomputeHolding(holdingId, preservedNav: before?.currentNav);
     final holding = await getHolding(holdingId);
     if (holding != null) {
       await _syncInvestmentAccountValue(holding.accountId);
@@ -144,7 +145,8 @@ class LocalInvestmentRepository implements InvestmentRepository {
   /// 买入/初始登记按交易金额累加成本（金额缺失时按「份额 × 净值 + 手续费」，
   /// 转换买入只按份额 × 净值）；卖出/赎回/转换转出按卖出份额占比扣减成本。
   /// 当前净值取最后一笔交易净值，市值 = 份额 × 当前净值。
-  Future<void> _recomputeHolding(int holdingId) async {
+  /// [preservedNav] 用于删除路径：保留删除前的手动净值，市值按保留净值重算。
+  Future<void> _recomputeHolding(int holdingId, {double? preservedNav}) async {
     final txs = await (db.select(db.transactions)
           ..where((t) => t.holdingId.equals(holdingId))
           ..orderBy([
@@ -201,12 +203,15 @@ class LocalInvestmentRepository implements InvestmentRepository {
 
     final safeShares = shares < Decimal.zero ? Decimal.zero : shares;
     final safeCost = cost < Decimal.zero ? Decimal.zero : cost;
+    final navToUse = preservedNav != null && preservedNav > 0
+        ? _toDecimal(preservedNav)
+        : lastNav;
     await _updateHolding(
       holdingId,
       totalShares: safeShares.toDouble(),
       totalCost: safeCost.toDouble(),
-      currentNav: lastNav > Decimal.zero ? lastNav.toDouble() : null,
-      marketValue: (safeShares * lastNav).toDouble(),
+      currentNav: navToUse > Decimal.zero ? navToUse.toDouble() : null,
+      marketValue: (safeShares * navToUse).toDouble(),
       updatedAt: DateTime.now(),
     );
   }
@@ -217,12 +222,12 @@ class LocalInvestmentRepository implements InvestmentRepository {
     required int ledgerId,
     required int? accountId,
     int? toAccountId,
-    required String investType,
+    String? investType,
     required double amount,
-    required double investShares,
-    required double investNav,
-    required double investFee,
-    required int holdingId,
+    double? investShares,
+    double? investNav,
+    double? investFee,
+    int? holdingId,
     required DateTime happenedAt,
     String? note,
     String? batchId,
@@ -443,9 +448,15 @@ class LocalInvestmentRepository implements InvestmentRepository {
     required double toShares,
     required double toNav,
     double fee = 0,
+    double refundAmount = 0,
+    int? refundAccountId,
     DateTime? happenedAt,
     String? note,
   }) async {
+    if (refundAmount < 0) throw ArgumentError('退回金额不能为负数');
+    if (refundAmount > 0 && refundAccountId == null) {
+      throw ArgumentError('退回金额大于 0 时必须指定退回账户');
+    }
     final effectiveHappenedAt = happenedAt ?? DateTime.now();
     final batchId = _uuid.v4();
 
@@ -462,7 +473,11 @@ class LocalInvestmentRepository implements InvestmentRepository {
       // 卖出来源持仓
       final fromSharesDecimal = _toDecimal(fromShares);
       final fromNavDecimal = _toDecimal(fromNav);
+      final toSharesDecimal = _toDecimal(toShares);
+      final toNavDecimal = _toDecimal(toNav);
       final fromTotalShares = _toDecimal(fromHolding.totalShares);
+      final fromValueDecimal = fromSharesDecimal * fromNavDecimal;
+      final toValueDecimal = toSharesDecimal * toNavDecimal;
       final costRatio = fromTotalShares > Decimal.zero
           ? _divide(fromSharesDecimal, fromTotalShares)
           : Decimal.one;
@@ -478,7 +493,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
         accountId: fromHolding.accountId,
         toAccountId: null, // 转换无实际资金流动
         investType: 'sell',
-        amount: 0, // 转换无现金流
+        amount: fromValueDecimal.toDouble(),
         investShares: -fromShares,
         investNav: fromNav,
         investFee: fee,
@@ -498,14 +513,13 @@ class LocalInvestmentRepository implements InvestmentRepository {
       );
 
       // 买入目标持仓
-      final toNewShares =
-          _toDecimal(toHolding.totalShares) + _toDecimal(toShares);
+      final toNewShares = _toDecimal(toHolding.totalShares) + toSharesDecimal;
       final txId = await _insertTx(
         ledgerId: toHolding.ledgerId,
         accountId: null,
         toAccountId: toHolding.accountId,
         investType: 'buy',
-        amount: fee, // 转换手续费记为支出
+        amount: toValueDecimal.toDouble(),
         investShares: toShares,
         investNav: toNav,
         investFee: fee,
@@ -518,13 +532,29 @@ class LocalInvestmentRepository implements InvestmentRepository {
       await _updateHolding(
         toHoldingId,
         totalShares: toNewShares.toDouble(),
-        totalCost: (_toDecimal(toHolding.totalCost) +
-                _toDecimal(toShares) * _toDecimal(toNav))
-            .toDouble(),
+        totalCost:
+            (_toDecimal(toHolding.totalCost) + toValueDecimal).toDouble(),
         currentNav: toNav,
-        marketValue: (toNewShares * _toDecimal(toNav)).toDouble(),
+        marketValue: (toNewShares * toNavDecimal).toDouble(),
         updatedAt: effectiveHappenedAt,
       );
+
+      // 退回差额：投资账户 → 退回账户，真实转账记录，不进持仓。
+      if (refundAmount > 0) {
+        await _insertTx(
+          ledgerId: fromHolding.ledgerId,
+          accountId: fromHolding.accountId,
+          toAccountId: refundAccountId,
+          investType: null,
+          amount: refundAmount,
+          investShares: null,
+          investNav: null,
+          investFee: null,
+          holdingId: null,
+          happenedAt: effectiveHappenedAt,
+          note: '基金转换退回',
+        );
+      }
 
       // 同步双方投资账户市值（可能同一账户，重复同步无害）
       await _syncInvestmentAccountValue(fromHolding.accountId);
@@ -565,13 +595,12 @@ class LocalInvestmentRepository implements InvestmentRepository {
     double? amount,
   }) async {
     await db.transaction(() async {
-      final effectiveNote = clearNote ? '' : note;
       await (db.update(db.transactions)
             ..where((t) => t.id.equals(transactionId)))
           .write(TransactionsCompanion(
-        note: effectiveNote != null
-            ? d.Value(effectiveNote)
-            : const d.Value.absent(),
+        note: clearNote
+            ? d.Value<String?>(null)
+            : (note != null ? d.Value(note) : const d.Value.absent()),
         happenedAt:
             happenedAt != null ? d.Value(happenedAt) : const d.Value.absent(),
         investShares: investShares != null

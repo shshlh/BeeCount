@@ -273,6 +273,28 @@ void main() {
     );
   });
 
+  test('validateConvert：退回金额/退回账户校验', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 100,
+        shares: 100,
+        nav: 1.0);
+
+    await expectLater(
+      () => service.validateConvert(1, 10, refundAmount: -1),
+      throwsArgumentError,
+    );
+    await expectLater(
+      () => service.validateConvert(1, 10, refundAmount: 1),
+      throwsArgumentError,
+    );
+    await service.validateConvert(1, 10, refundAmount: 0);
+    await service.validateConvert(1, 10, refundAmount: 1, refundAccountId: 20);
+  });
+
   // ---- 委托验证 ----
 
   test('buy：委托 repo，返回交易 ID', () async {

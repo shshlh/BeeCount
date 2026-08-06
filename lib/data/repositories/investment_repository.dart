@@ -52,6 +52,8 @@ abstract class InvestmentRepository {
   /// 基金转换（A → B）。
   ///
   /// 同一事务内执行 A 卖出 + B 买入，两笔交易共享 batchId。
+  /// [refundAmount] 为转换确认后退回金额（>=0），[refundAccountId] 为退回账户，
+  /// refundAmount > 0 时必填；退回差额生成独立 transfer 记录，不进持仓。
   /// 返回买入交易 ID。
   Future<int> convert({
     required int fromHoldingId,
@@ -61,6 +63,8 @@ abstract class InvestmentRepository {
     required double toShares,
     required double toNav,
     double fee = 0,
+    double refundAmount = 0,
+    int? refundAccountId,
     DateTime? happenedAt,
     String? note,
   });

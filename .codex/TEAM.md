@@ -46,10 +46,10 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
 |---|---|---|---|---|
-| 6.5.1 转换弹窗加载失败提示 | ⏳ | invest-ui | convert 错误态 + 重试 | — |
-| 6.5.2 删除旧记录保留手动净值 | ⏳ | invest-logic | recompute 保留 currentNav + 测试 | — |
-| 6.5.3 clearNote 写 NULL | ⏳ | invest-logic | updateTransaction NULL + 测试 | — |
-| 6.5.4 转换确认记账 + 退回金额/账户 | ⏳ | invest-logic + invest-ui | convert 三笔记账 + 退回 UI | — |
+| 6.5.1 转换弹窗加载失败提示 | ✅ | invest-ui | convert 错误态 + 重试 | 2026-08-06 |
+| 6.5.2 删除旧记录保留手动净值 | ✅ | invest-logic | recompute 保留 currentNav + 测试 | 2026-08-06 |
+| 6.5.3 clearNote 写 NULL | ✅ | invest-logic | updateTransaction NULL + 测试 | 2026-08-06 |
+| 6.5.4 转换确认记账 + 退回金额/账户 | ✅ | invest-logic + invest-ui | convert 三笔记账 + 退回 UI | 2026-08-06 |
 
 ### 外部审查：kimi 全量审查（2026-08-06，待 PM 审查分派）
 

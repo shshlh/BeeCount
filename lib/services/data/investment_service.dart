@@ -131,6 +131,8 @@ class InvestmentService {
     double? toShares,
     double? toNav,
     double? fee,
+    double refundAmount = 0,
+    int? refundAccountId,
   }) async {
     if (shares <= 0) throw ArgumentError('转换份额必须大于 0');
     if (fromNav != null && fromNav <= 0) {
@@ -143,6 +145,10 @@ class InvestmentService {
       throw ArgumentError('转入净值必须大于 0');
     }
     if (fee != null && fee < 0) throw ArgumentError('手续费不能为负数');
+    if (refundAmount < 0) throw ArgumentError('退回金额不能为负数');
+    if (refundAmount > 0 && refundAccountId == null) {
+      throw ArgumentError('退回金额大于 0 时必须指定退回账户');
+    }
     final holding = await _repo.getHolding(fromHoldingId);
     if (holding == null) throw StateError('来源持仓 $fromHoldingId 不存在');
     if (holding.totalShares < shares) {
@@ -218,6 +224,8 @@ class InvestmentService {
     required double toShares,
     required double toNav,
     double fee = 0,
+    double refundAmount = 0,
+    int? refundAccountId,
     DateTime? happenedAt,
     String? note,
   }) {
@@ -229,6 +237,8 @@ class InvestmentService {
       toShares: toShares,
       toNav: toNav,
       fee: fee,
+      refundAmount: refundAmount,
+      refundAccountId: refundAccountId,
       happenedAt: happenedAt,
       note: note,
     );

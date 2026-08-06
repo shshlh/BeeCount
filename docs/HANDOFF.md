@@ -33,6 +33,50 @@
 
 ## 2026-08-06
 
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.5.1 + 6.5.4 UI
+
+**完成工作**：
+- lib/widgets/investment/convert_dialog.dart — 6.5.1：_loadHoldings 加 try/catch + _loadFailed 状态，失败显示「加载失败，请重试」+ 重试按钮，不再静默空态
+- convert_dialog — 6.5.4 UI：新增「退回金额」「退回账户」；退回金额默认自动 = 转出市值 - 转入市值 - 手续费（Decimal、>=0 截断、两位小数），手动编辑后不再自动覆盖；退回账户用可交易账户下拉（排除投资/债权/负债/隐藏），refund>0 必填、refund=0 隐藏；提交前调用 validateConvert/convert 传 refundAmount/refundAccountId；份额/净值标签改为「确认转出/确认转入」
+
+**下一个任务需要知道的**：
+- invest-logic 数据层已落地 convert 三笔记账 + validateConvert/convert refund 参数（refundAmount 默认 0、refundAccountId 可空），UI 已按其签名对齐
+- 退回账户在无可用可交易账户或 refund=0 时隐藏；refund>0 且未选账户时提交被拦截
+- 未新增独立弹窗 widget 测试（弹窗依赖 repositoryProvider，mock 成本高）；全量测试覆盖数据层 refund 用例
+- 全量 analyze 零 error（854 个既有 info/warning 基线不变）；全量测试 617 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交（工作区含 invest-logic 并行改动，交 PM 审查合入）
+
+---
+
+## 2026-08-06
+
+**移交角色**：invest-logic
+**接收角色**：项目经理（PM）
+
+**任务**：6.5.2 / 6.5.3 / 6.5.4 数据层
+
+**完成工作**：
+- 6.5.2 — lib/data/repositories/local/local_investment_repository.dart：recomputeHolding 删除路径先读删除前 currentNav，重算时保留该净值；_recomputeHolding 增加 preservedNav 参数，剩余份额 >0 时市值按保留净值计算；updateTransaction 编辑路径仍按交易净值更新
+- 6.5.3 — updateTransaction 的 clearNote 分支改为写入 d.Value(null) 真 NULL；note 传值正常更新、「不更新」仍 absent
+- 6.5.4 — repo/service convert 新增 refundAmount / refundAccountId（可选默认 0/null，保持现有 UI 编译，UI 线程传入后生效）；事务内生成卖出 A（amount=转出市值）、买入 B（amount=转入市值，成本仍按 toShares×toNav）、退回（refund>0 时 type=transfer，投资账户→退回账户，note=基金转换退回，不进持仓/不挂 batchId）；refund<0 或 refund>0 缺账户在 repo/service 双侧抛错
+- 测试 +5：删除旧流水保留手动净值、转换含退回三笔记账与余额、refund=0 不生成退回、refund 参数校验（repo + service）
+
+**下一个任务需要知道的**：
+- 6.5.1 / 6.5.4 UI（convert_dialog 退回字段 + 加载失败提示）由 invest-ui 并行处理
+- convert 的 refundAmount/refundAccountId 为可选参数，最终 UI 应显式传入；refund>0 时账户必填
+
+**验证**：flutter analyze 854 个既有 issue、零 error；全量测试 617 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，工作区含 invest-logic + invest-ui 并行改动，待提交交 PM 审查
+
+---
+
+## 2026-08-06
+
 **移交角色**：项目经理（PM）
 **接收角色**：invest-logic + invest-ui
 

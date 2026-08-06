@@ -409,7 +409,12 @@ void main() {
     final cleared = await (db.select(db.transactions)
           ..where((t) => t.id.equals(txId)))
         .getSingle();
-    expect(cleared.note, '');
+    expect(cleared.note, isNull);
+
+    final clearedRow = await db.customSelect(
+        'SELECT note FROM transactions WHERE id = ?',
+        variables: [Variable<int>(txId)]).getSingle();
+    expect(clearedRow.readNullable<String>('note'), isNull);
 
     await repo.updateTransaction(txId, note: '保留我');
     final untouched = await (db.select(db.transactions)
@@ -634,6 +639,151 @@ void main() {
 
     // 两笔交易 batchId 相同
     expect(convertTxs.first.batchId, convertTxs2.first.batchId);
+  });
+
+  test('转换：确认数据记账 + 退回金额/账户', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '基金B',
+        amount: 500,
+        shares: 500,
+        nav: 1.0);
+    final accountRepo = LocalAccountRepository(db);
+
+    await repo.convert(
+      fromHoldingId: 1,
+      toHoldingId: 2,
+      fromShares: 500,
+      fromNav: 1.2,
+      toShares: 480,
+      toNav: 1.25,
+      fee: 5,
+      refundAmount: 100,
+      refundAccountId: 20,
+    );
+
+    final txs = await db.select(db.transactions).get();
+    final batchTxs = txs.where((t) => t.batchId != null).toList();
+    expect(batchTxs.length, 2); // 卖出 + 买入共享 batchId
+
+    final sell = batchTxs.singleWhere((t) => t.investType == 'sell');
+    expect(sell.amount, closeTo(600, 0.01)); // 转出市值
+    final buy = batchTxs.singleWhere((t) => t.investType == 'buy');
+    expect(buy.amount, closeTo(600, 0.01)); // 转入市值
+
+    final refunds = txs.where((t) => t.note == '基金转换退回').toList();
+    expect(refunds.length, 1);
+    final refund = refunds.single;
+    expect(refund.investType, isNull);
+    expect(refund.holdingId, isNull);
+    expect(refund.batchId, isNull);
+    expect(refund.accountId, 10);
+    expect(refund.toAccountId, 20);
+    expect(refund.amount, 100.0);
+
+    final from = await repo.getHolding(1);
+    expect(from!.totalShares, 500);
+    expect(from.totalCost, closeTo(500, 0.01));
+    expect(from.marketValue, closeTo(600, 0.01));
+
+    final to = await repo.getHolding(2);
+    expect(to!.totalShares, 980);
+    expect(to.totalCost, closeTo(1100, 0.01)); // 500 + 480*1.25
+    expect(to.marketValue, closeTo(1225, 0.01));
+
+    final investment = await (db.select(db.accounts)
+          ..where((a) => a.id.equals(10)))
+        .getSingle();
+    expect(investment.initialBalance, closeTo(1825, 0.01));
+
+    expect(await accountRepo.getAccountBalance(20), closeTo(5100, 0.01));
+  });
+
+  test('转换：refund=0 不生成退回记录', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '基金B',
+        amount: 500,
+        shares: 500,
+        nav: 1.0);
+
+    await repo.convert(
+      fromHoldingId: 1,
+      toHoldingId: 2,
+      fromShares: 500,
+      fromNav: 1.2,
+      toShares: 480,
+      toNav: 1.25,
+      refundAmount: 0,
+    );
+
+    final txs = await db.select(db.transactions).get();
+    expect(txs.where((t) => t.note == '基金转换退回'), isEmpty);
+  });
+
+  test('转换：refund<0 / refund>0 缺账户抛错', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '基金B',
+        amount: 500,
+        shares: 500,
+        nav: 1.0);
+
+    await expectLater(
+      () => repo.convert(
+        fromHoldingId: 1,
+        toHoldingId: 2,
+        fromShares: 500,
+        fromNav: 1.2,
+        toShares: 480,
+        toNav: 1.25,
+        refundAmount: -1,
+        refundAccountId: 20,
+      ),
+      throwsArgumentError,
+    );
+    await expectLater(
+      () => repo.convert(
+        fromHoldingId: 1,
+        toHoldingId: 2,
+        fromShares: 500,
+        fromNav: 1.2,
+        toShares: 480,
+        toNav: 1.25,
+        refundAmount: 1,
+      ),
+      throwsArgumentError,
+    );
   });
 
   // ---- 净值更新 ----
