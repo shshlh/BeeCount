@@ -34,6 +34,68 @@
 ## 2026-08-07
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-ui
+
+**任务**：6.7 返工（转换记录展示金额回归）
+
+**问题（P2）**：6.7.1 把转换的卖出 A / 买入 B amount 改为 0（投资账户内部记账）后，持仓明细里转换交易行会显示「金额 0.00」，用户看不到确认成交金额
+- 文件：lib/pages/investment/holding_detail_page.dart _TransactionTile（约 420-490 行）
+- 要求：对 batch 转换交易（batchId != null），第二行金额改为按「确认份额 × 确认净值」展示（|investShares| × investNav），sell/buy 两侧均适用；金额不写回 DB，amount 仍为 0；非转换交易照常显示 amount
+- 可选：补一个转换行展示的 widget 断言
+
+**约束**：
+- flutter analyze 新增代码零 error/warning
+- 全量测试保持 624 passed / 1 skipped / 1 failed（既存 bill_creation_service_test 除外）
+- 完成后更新 TEAM.md 任务板 + HANDOFF.md 追加完成记录，git 状态待提交交 PM 复审
+
+---
+
+## 2026-08-07
+
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.7.2 UI + 6.7.3
+
+**完成工作**：
+- lib/widgets/investment/convert_dialog.dart — 6.7.2 UI：「无 + 手填代码/名称」路径可提交：代码/名称仅「无」时必填（validator）；提交时 toHoldingId=null + fundCode/fundName（选中已有持仓仍传 id，行为不变）
+- convert_dialog — 6.7.3：_loadRefundAccounts 加 try/catch + 防重入 + _refundAccountsLoadFailed 状态；失败显示「退回账户加载失败，请重试」+ 重试按钮；refund>0 且账户未加载成功或未选账户时提交被拦截
+- test/widgets/convert_dialog_layout_test.dart — 新增「选「无」手填目标基金：空代码/名称被校验拦截」用例（ensureVisible 滚动后点确认）
+
+**下一个任务需要知道的**：
+- invest-logic 6.7.1/6.7.2 数据层已落地（convert amount=0 + toHoldingId 可空 + 查找/创建新持仓），UI 已按其签名对齐
+- 手填新目标基金由数据层按 (ledgerId, fundCode, 来源投资账户) 查找/创建；转换确认金额如需展示，展示层按份额×净值计算，amount 语义不再承载
+- 全量 analyze 零 error；全量测试 624 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交（工作区含 invest-logic 并行改动，交 PM 审查合入）
+
+---
+
+## 2026-08-07
+
+**移交角色**：invest-logic
+**接收角色**：项目经理（PM）
+
+**任务**：6.7.1 + 6.7.2 数据层
+
+**完成工作**：
+- 6.7.1 — lib/data/repositories/local/local_investment_repository.dart：convert 卖出 A / 买入 B 的 amount 固定 0（投资账户内部记账，不产生资金流水），仍记录份额/净值/手续费/持仓/batchId；退回金额仍是唯一真实转账（投资账户 → 退回账户），退回账户余额只 +refund；持仓/成本/市值逻辑不变
+- 6.7.2 — repo/service convert 的 toHoldingId 改为可空，新增 fundCode / fundName；toHoldingId 为空时校验代码/名称必填，先按 (ledgerId, fundCode, 来源投资账户) 查找已有持仓，命中复用，未命中则创建新持仓（挂到来源基金所在投资账户）后执行转换；validateConvert 同步补新目标校验
+- 测试：卖出/买入 amount=0 断言更新；新增 toHoldingId 为空创建新持仓并记账、手填代码命中已有持仓复用、代码/名称为空抛错、validateConvert 新目标校验
+
+**下一个任务需要知道的**：
+- 6.7.2 UI（无 + 手填代码/名称提交）与 6.7.3（退回账户加载容错）由 invest-ui 并行处理
+- toHoldingId 为空时服务端要求 fundCode/fundName 非空；选中已有持仓仍传 toHoldingId
+
+**验证**：flutter analyze 853 个既有 issue、零 error；全量测试 624 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，工作区含 invest-logic + invest-ui 并行改动，待提交交 PM 审查
+
+---
+
+## 2026-08-07
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-logic + invest-ui
 
 **任务**：6.7 转换记账口径修正 + 支持新目标基金 + 退回账户加载容错（3 项）

@@ -46,9 +46,10 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
 |---|---|---|---|---|
-| 6.7.1 转换记账口径修正 | ⏳ | invest-logic | sell/buy amount=0 + 测试 | — |
-| 6.7.2 转换到新目标基金 | ⏳ | invest-logic + invest-ui | convert 查找/创建 + 手填提交 | — |
-| 6.7.3 退回账户加载错误处理 | ⏳ | invest-ui | catch + 重试 | — |
+| 6.7.1 转换记账口径修正 | ✅ | invest-logic | sell/buy amount=0 + 测试 | 2026-08-07 |
+| 6.7.2 转换到新目标基金 | ✅ | invest-logic + invest-ui | convert 查找/创建 + 手填提交 | 2026-08-07 |
+| 6.7.3 退回账户加载错误处理 | ✅ | invest-ui | catch + 重试 | 2026-08-07 |
+| 6.7.4 转换记录展示金额修复 | ⏳ | invest-ui | holding_detail 份额×净值展示 | — |
 
 ### 阶段 6.6：基金转换页面 1x4 组件化
 
