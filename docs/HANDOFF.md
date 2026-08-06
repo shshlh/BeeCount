@@ -33,6 +33,90 @@
 
 ## 2026-08-06
 
+**移交角色**：项目经理（PM）
+**接收角色**：invest-logic + invest-ui
+
+**任务**：6.5 遗留修复 + 基金转换确认记账改造（4 项）
+
+**角色分工**：
+- invest-logic：6.5.2 / 6.5.3 / 6.5.4 数据层（convert 记账 + 退回 + 测试）
+- invest-ui：6.5.1 / 6.5.4 UI（转换弹窗退回字段 + 加载失败提示）
+
+**6.5.1 转换弹窗加载失败提示（invest-ui）**
+- 文件：lib/widgets/investment/convert_dialog.dart _loadHoldings
+- 现状：只有 finally 无 catch，stream.first 抛错成未处理异步异常，列表静默为空
+- 要求：加 try/catch + 错误状态，失败时界面显示「加载失败，请重试」，可点重试重新加载
+
+**6.5.2 删除旧记录保留手动净值（invest-logic）**
+- 文件：lib/data/repositories/local/local_investment_repository.dart recomputeHolding / _recomputeHolding
+- 现状：删除任意旧流水触发重算时，currentNav 被重置为「最后一笔剩余流水的净值」，覆盖用户手动 updateNav 的最新值
+- 要求：recomputeHolding（删除路径专用）重算时保留删除前的 currentNav；若剩余份额 >0，市值按保留净值重算；编辑路径（updateTransaction）保持按交易净值更新
+- 净值数据源：用户建议接入数据源拉取最新净值（如天天基金/雪球），源未定，登记 backlog 待确认，不在本轮实现
+
+**6.5.3 清空备注写 NULL（invest-logic）**
+- 文件：local_investment_repository.dart updateTransaction（clearNote 分支）
+- 现状：clearNote 写空串 ''，展示等价但语义是「空内容」
+- 要求：clearNote 时写 d.Value(null)（真 NULL）；note 传值仍正常更新；「不更新」仍用 absent
+
+**6.5.4 基金转换按确认数据记账 + 退回金额/退回账户（invest-logic + invest-ui）**
+- 目标：转换本质 = 卖出 A + 买入 B，按转换确认后的实际成交数据记账：转出基金确认份额/单位净值、转入基金确认份额/单位净值、手续费、退回金额、退回账户；转出市值扣转入市值和手续费后的尾差退回，计入总资产
+- 数据层（invest-logic）：
+  - service.convert / repo.convert 签名新增：required double refundAmount（退回金额，>=0）、required int? refundAccountId（退回账户，refund>0 时必填）
+  - validateConvert 新增：refundAmount >= 0；refundAmount > 0 时 refundAccountId 非空
+  - 事务内生成 3 笔记录（batchId 相同）：
+    a) 卖出 A：amount = 转出市值（fromShares×fromNav），investType='sell'，investFee=fee，batchId
+    b) 买入 B：amount = 转入市值（toShares×toNav，不含手续费），investType='buy'，investFee=fee，batchId；持仓成本仍按 toShares×toNav
+    c) 退回（refund>0 时）：type='transfer'，accountId=A 的投资账户，toAccountId=refundAccountId，amount=refund，note='基金转换退回'，不进持仓、不挂 batchId 编辑防护
+  - 账户联动：退回账户余额 +refund（计入总资产）；投资账户市值仍由持仓合计覆盖
+  - 测试：转换含退回 → 3 笔记录、B 成本=转入市值、退回账户余额 +refund、持仓/市值正确；refund=0 时不生成退回记录；refund<0 / 缺账户校验抛错
+- UI 层（invest-ui）：
+  - convert_dialog 字段补齐：确认转出份额/确认转出净值/确认转入份额/确认转入净值/手续费 + 新增「退回金额」「退回账户」
+  - 退回金额默认自动计算 = 转出市值 - 转入市值 - 手续费（Decimal，>=0 截断），可手动改为平台确认值
+  - 退回账户：可交易账户下拉（排除投资/债权/负债/隐藏），refund>0 时必填；refund=0 时禁用/隐藏
+  - 提交前调用新 validateConvert 并传 refundAmount/refundAccountId
+
+**约束**：
+- flutter analyze 新增代码零 error/warning
+- 全量测试保持 612 passed / 1 skipped / 1 failed（既存 bill_creation_service_test 除外）
+- 完成后更新 TEAM.md 任务板 + HANDOFF.md 追加完成记录，git 状态待提交交 PM 审查
+- HANDOFF 铁律：只 prepend 追加，不整文件重写、不用模糊正则范围替换
+
+---
+
+## 2026-08-06
+
+**移交角色**：外部审查员 kimi
+**接收角色**：项目经理（PM）
+
+**任务**：6.4 修复（commit 937449e）针对性复审
+
+**复审结论：验收通过 ✅**
+
+12 项修复逐条对照代码核实，全部真实落地、实现正确，无虚假声明：
+- 🔴#1 回退查询已加 ledgerId 过滤 + limit(1)（local_investment_repository.dart:72-78），多账本/多账户测试覆盖
+- 🔴#2 删除重算已落地：单条（local_transaction_repository.dart:640-664）与批量（:1585-1619，holdingId 去重）均在同一事务内重算持仓 + 同步账户市值；recomputeHolding 自身不开新事务无嵌套；sync_diff_service 两条回删路径均覆盖；非投资交易不受影响
+- 🔴#3 convert_dialog 加载移入 initState + 防重入 + mounted 检查，单基金空态不再循环
+- 🔴#4 悬空冒号已删（wheel_date_picker.dart:622-648 时分结构正确）
+- 🔴#5 homePeriodStatsProvider 已补 ref.watch(statsRefreshProvider)（home_page.dart:20）
+- 🔴#6 编辑弹窗四字段 validator 落地，全文件已无 tryParse ?? 0 路径
+- 🟡 updateNav 已包事务；buy 孤儿 holdingId 抛 StateError 且事务回滚；clearNote sentinel 四层全通（接口/实现/service/UI）；validateSell/validateConvert 校验补齐且弹窗实际传参；batchId 单边编辑已拦截；排序菜单改 PopupMenuDivider；分组弹窗 controller 与 wheel_date_picker 三个 State 的 dispose 均补齐
+- 美化 Q1（border 亮色 8%）、Q2（净资产 textPrimary）顺带确认落地
+
+**独立验证**：flutter analyze 854 issues / 0 error（基线不变）；flutter test 612 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test，与交接记录一致）；新增 3 个测试文件 45 用例实跑全绿，断言到具体数值，非空测试
+
+**复审新发现问题（均为 🟢 轻微，不阻塞验收，建议记入下轮迭代）**：
+1. convert_dialog.dart:65-81 _loadHoldings 有 finally 无 catch：stream.first 出错会成为未处理异步异常且列表静默为空，建议补 catch + 空态提示
+2. _recomputeHolding 会把 currentNav 重置为「最后一笔剩余流水的净值」：用户手动 updateNav 后再删除任意旧流水，手动净值被覆盖。口径上可辩解，但与用户预期可能有偏差，建议产品层面确认
+3. clearNote 写入空串 '' 而非 NULL：展示层等价，仅备注口径
+
+**软约束提示**：batchId 单边编辑防护目前仅在 UI 层（holding_detail_page.dart:278-283），InvestmentService.updateTransaction 本身不拒绝 batch 交易；当前编辑入口唯一，可接受，后续若新增入口需在 service 层兜底
+
+**git 状态**：当前分支 main，HEAD 937449e，复审全程只读，仅本文档新增本条目
+
+---
+
+## 2026-08-06
+
 **移交角色**：invest-ui
 **接收角色**：项目经理（PM）
 
