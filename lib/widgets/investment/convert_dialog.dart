@@ -9,6 +9,9 @@ import '../../utils/account_type_utils.dart';
 import '../biz/section_card.dart';
 
 /// 转换弹窗 — 将 A 基金份额转换为 B 基金。
+///
+/// v6.6: 1x4 组件化布局（A 转出 / B 转入 / C 手续费退回 / D 确认），
+/// 目标基金改为下拉选择，页面不再随持仓数量变长；记账逻辑不变。
 class ConvertDialog extends ConsumerStatefulWidget {
   final int ledgerId;
   final InvestmentHolding fromHolding;
@@ -34,6 +37,7 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
   late final TextEditingController _feeCtrl;
   late final TextEditingController _refundCtrl;
   InvestmentHolding? _toHolding;
+  int _targetSelectionId = -1; // -1 = 无（不选已有持仓）
   bool _submitting = false;
   bool _loadingHoldings = false;
   bool _loadFailed = false;
@@ -146,10 +150,26 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
   void _selectToHolding(InvestmentHolding h) {
     setState(() {
       _toHolding = h;
+      _targetSelectionId = h.id;
       _toCodeCtrl.text = h.fundCode;
       _toNameCtrl.text = h.fundName;
       _toNavCtrl.text = h.currentNav > 0 ? h.currentNav.toString() : '';
     });
+  }
+
+  void _onTargetChanged(int? id) {
+    if (id == null || id == -1) {
+      setState(() {
+        _targetSelectionId = -1;
+        _toHolding = null;
+        _toCodeCtrl.text = '';
+        _toNameCtrl.text = '';
+        _toNavCtrl.text = '';
+      });
+      return;
+    }
+    final holding = _holdings.firstWhere((x) => x.id == id);
+    _selectToHolding(holding);
   }
 
   Future<void> _submit() async {
@@ -222,14 +242,6 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
       appBar: AppBar(
         title: Text('转换 - ${h.fundName}'),
         backgroundColor: BeeTokens.surface(context),
-        actions: [
-          TextButton(
-            onPressed: _submitting ? null : _submit,
-            child: _submitting
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('确认'),
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(BeeDimens.p16),
@@ -238,24 +250,45 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 来源持仓摘要
-              SectionCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('从 ${h.fundName} (${h.fundCode}) 转出',
-                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: BeeTokens.textPrimary(context))),
-                    const SizedBox(height: 4),
-                    Text('可转份额 ${h.totalShares.toStringAsFixed(2)} 份',
-                        style: TextStyle(fontSize: 12, color: BeeTokens.textTertiary(context))),
-                  ],
-                ),
-              ),
-              const SizedBox(height: BeeDimens.p16),
-              TextFormField(
+              _buildFromCard(context, h),
+              const SizedBox(height: BeeDimens.p12),
+              _buildToCard(context),
+              const SizedBox(height: BeeDimens.p12),
+              _buildFeeRefundCard(context),
+              const SizedBox(height: BeeDimens.p12),
+              _buildConfirmCard(context),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ───── A 转出基金组件 ─────
+
+  Widget _buildFromCard(BuildContext context, InvestmentHolding h) {
+    return SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('从 ${h.fundName} (${h.fundCode}) 转出',
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: BeeTokens.textPrimary(context))),
+          const SizedBox(height: 4),
+          Text('可转份额 ${h.totalShares.toStringAsFixed(2)} 份',
+              style: TextStyle(
+                  fontSize: 12, color: BeeTokens.textTertiary(context))),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildPairInput(
+                context,
+                label: '确认转出份额',
                 controller: _fromSharesCtrl,
-                decoration: const InputDecoration(labelText: '确认转出份额', suffixText: '份'),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                suffix: '份',
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return '请输入转出份额';
                   final n = double.tryParse(v);
@@ -264,11 +297,12 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
                   return null;
                 },
               ),
-              const SizedBox(height: BeeDimens.p16),
-              TextFormField(
+              const SizedBox(width: BeeDimens.p12),
+              _buildPairInput(
+                context,
+                label: '确认转出净值',
                 controller: _fromNavCtrl,
-                decoration: const InputDecoration(labelText: '确认转出净值', suffixText: '元/份'),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                suffix: '元/份',
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return '请输入转出净值';
                   final n = double.tryParse(v);
@@ -276,52 +310,66 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
                   return null;
                 },
               ),
-              const SizedBox(height: 24),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ───── B 转入基金组件 ─────
+
+  Widget _buildToCard(BuildContext context) {
+    return SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
               Text('目标基金',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: BeeTokens.textPrimary(context))),
-              const SizedBox(height: BeeDimens.p8),
-              if (_loadFailed)
-                Row(
-                  children: [
-                    Text('加载失败，请重试',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: BeeTokens.error(context))),
-                    TextButton(
-                      onPressed: _loadHoldings,
-                      child: const Text('重试'),
-                    ),
-                  ],
-                )
-              else if (_holdings.isNotEmpty)
-                ..._holdings.map((holding) => ListTile(
-                      dense: true,
-                      leading: Radio<InvestmentHolding>(
-                        value: holding,
-                        groupValue: _toHolding,
-                        onChanged: (v) {
-                          if (v != null) _selectToHolding(v);
-                        },
-                      ),
-                      title: Text(holding.fundName,
-                          style: TextStyle(fontSize: 14, color: BeeTokens.textPrimary(context))),
-                      subtitle: Text(holding.fundCode,
-                          style: TextStyle(fontSize: 11, color: BeeTokens.textTertiary(context))),
-                    )),
-              TextFormField(
-                controller: _toCodeCtrl,
-                decoration: const InputDecoration(labelText: '目标基金代码（如选已有持仓可不填）'),
-              ),
-              const SizedBox(height: BeeDimens.p16),
-              TextFormField(
-                controller: _toNameCtrl,
-                decoration: const InputDecoration(labelText: '目标基金名称'),
-              ),
-              const SizedBox(height: BeeDimens.p16),
-              TextFormField(
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: BeeTokens.textPrimary(context))),
+              const Spacer(),
+              SizedBox(width: 200, child: _buildTargetDropdown(context)),
+            ],
+          ),
+          if (_loadFailed)
+            Row(
+              children: [
+                Text('加载失败，请重试',
+                    style: TextStyle(
+                        fontSize: 12, color: BeeTokens.error(context))),
+                TextButton(
+                  onPressed: _loadHoldings,
+                  child: const Text('重试'),
+                ),
+              ],
+            ),
+          if (_toHolding == null) ...[
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _toCodeCtrl,
+              decoration: const InputDecoration(
+                  labelText: '目标基金代码', isDense: true),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _toNameCtrl,
+              decoration: const InputDecoration(
+                  labelText: '目标基金名称', isDense: true),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildPairInput(
+                context,
+                label: '确认转入份额',
                 controller: _toSharesCtrl,
-                decoration: const InputDecoration(labelText: '确认转入份额', suffixText: '份'),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                suffix: '份',
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return '请输入转入份额';
                   final n = double.tryParse(v);
@@ -329,11 +377,12 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
                   return null;
                 },
               ),
-              const SizedBox(height: BeeDimens.p16),
-              TextFormField(
+              const SizedBox(width: BeeDimens.p12),
+              _buildPairInput(
+                context,
+                label: '确认转入净值',
                 controller: _toNavCtrl,
-                decoration: const InputDecoration(labelText: '确认转入净值', suffixText: '元/份'),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                suffix: '元/份',
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return '请输入转入净值';
                   final n = double.tryParse(v);
@@ -341,52 +390,198 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
                   return null;
                 },
               ),
-              const SizedBox(height: BeeDimens.p16),
-              TextFormField(
-                controller: _feeCtrl,
-                decoration: const InputDecoration(labelText: '手续费', suffixText: '元'),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return null;
-                  final n = double.tryParse(v);
-                  if (n == null || n < 0) return '手续费不能为负数';
-                  return null;
-                },
-              ),
-              const SizedBox(height: BeeDimens.p16),
-              TextFormField(
-                controller: _refundCtrl,
-                decoration: const InputDecoration(
-                    labelText: '退回金额', suffixText: '元'),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) return '请输入退回金额';
-                  final n = double.tryParse(v);
-                  if (n == null || n < 0) return '退回金额不能为负数';
-                  return null;
-                },
-              ),
-              if (_refundAccounts.isNotEmpty &&
-                  (double.tryParse(_refundCtrl.text) ?? 0) > 0) ...[
-                const SizedBox(height: BeeDimens.p16),
-                DropdownButtonFormField<int>(
-                  key: ValueKey(_refundAccounts.length),
-                  initialValue: _refundAccountId,
-                  decoration: const InputDecoration(labelText: '退回账户'),
-                  items: _refundAccounts.map((a) => DropdownMenuItem(
-                    value: a.id,
-                    child: Text(a.name),
-                  )).toList(),
-                  onChanged: (v) => setState(() => _refundAccountId = v),
-                  validator: (_) =>
-                      _refundAccountId == null ? '请选择退回账户' : null,
-                ),
-              ],
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTargetDropdown(BuildContext context) {
+    final selectedId =
+        _holdings.any((h) => h.id == _targetSelectionId) ? _targetSelectionId : -1;
+    return DropdownButtonFormField<int>(
+      key: ValueKey('convert_target_${_holdings.length}_$selectedId'),
+      initialValue: selectedId,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: '选择基金',
+        isDense: true,
+      ),
+      items: [
+        const DropdownMenuItem<int>(value: -1, child: Text('无')),
+        for (final holding in _holdings)
+          DropdownMenuItem<int>(
+            value: holding.id,
+            child: Text(
+              holding.fundName,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+      ],
+      onChanged: _onTargetChanged,
+    );
+  }
+
+  // ───── C 手续费与退回组件 ─────
+
+  Widget _buildFeeRefundCard(BuildContext context) {
+    final refund = double.tryParse(_refundCtrl.text) ?? 0;
+    return SectionCard(
+      child: Column(
+        children: [
+          _buildLabeledInputRow(
+            context,
+            label: '手续费',
+            controller: _feeCtrl,
+            suffix: '元',
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return null;
+              final n = double.tryParse(v);
+              if (n == null || n < 0) return '手续费不能为负数';
+              return null;
+            },
+          ),
+          const SizedBox(height: 12),
+          _buildLabeledInputRow(
+            context,
+            label: '退回金额',
+            controller: _refundCtrl,
+            suffix: '元',
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return '请输入退回金额';
+              final n = double.tryParse(v);
+              if (n == null || n < 0) return '退回金额不能为负数';
+              return null;
+            },
+          ),
+          if (_refundAccounts.isNotEmpty && refund > 0) ...[
+            const SizedBox(height: 12),
+            _buildLabeledDropdownRow(context),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLabeledDropdownRow(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text('退回账户',
+              style: TextStyle(
+                  fontSize: 13, color: BeeTokens.textPrimary(context))),
+        ),
+        const SizedBox(width: 12),
+        SizedBox(
+          width: 200,
+          child: DropdownButtonFormField<int>(
+            key: ValueKey(_refundAccounts.length),
+            initialValue: _refundAccountId,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: '选择账户',
+              isDense: true,
+            ),
+            items: _refundAccounts.map((a) => DropdownMenuItem(
+              value: a.id,
+              child: Text(a.name, overflow: TextOverflow.ellipsis),
+            )).toList(),
+            onChanged: (v) => setState(() => _refundAccountId = v),
+            validator: (_) =>
+                _refundAccountId == null ? '请选择退回账户' : null,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ───── D 确认组件 ─────
+
+  Widget _buildConfirmCard(BuildContext context) {
+    return SectionCard(
+      child: SizedBox(
+        width: double.infinity,
+        child: FilledButton(
+          onPressed: _submitting ? null : _submit,
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+          child: _submitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('确认'),
         ),
       ),
+    );
+  }
+
+  Widget _buildPairInput(
+    BuildContext context, {
+    required String label,
+    required TextEditingController controller,
+    String? suffix,
+    required String? Function(String?) validator,
+  }) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: TextStyle(
+                  fontSize: 12, color: BeeTokens.textSecondary(context))),
+          const SizedBox(height: 4),
+          TextFormField(
+            controller: controller,
+            decoration: InputDecoration(
+              isDense: true,
+              suffixText: suffix,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            validator: validator,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLabeledInputRow(
+    BuildContext context, {
+    required String label,
+    required TextEditingController controller,
+    String? suffix,
+    required String? Function(String?) validator,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(label,
+              style: TextStyle(
+                  fontSize: 13, color: BeeTokens.textPrimary(context))),
+        ),
+        const SizedBox(width: 12),
+        SizedBox(
+          width: 200,
+          child: TextFormField(
+            controller: controller,
+            decoration: InputDecoration(
+              isDense: true,
+              suffixText: suffix,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            validator: validator,
+          ),
+        ),
+      ],
     );
   }
 }

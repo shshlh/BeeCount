@@ -33,6 +33,27 @@
 
 ## 2026-08-07
 
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.6 基金转换页面 1x4 组件化改造
+
+**完成工作**：
+- lib/widgets/investment/convert_dialog.dart — 重构为 1x4 竖排组件：A 转出（摘要 + 确认转出份额/净值左右并排）、B 转入（目标基金下拉 + 无/持仓列表 + 手动代码/名称 + 确认转入份额/净值并排）、C 手续费/退回金额/退回账户三行、D 全宽确认按钮；AppBar 删除「确认」动作；6.5 记账字段与校验/提交逻辑不动
+- 目标基金下拉首项「无」，选中持仓自动填入代码/名称/净值，选「无」恢复手动填写
+- test/widgets/convert_dialog_layout_test.dart — 新增 2 个 widget 测试：1x4 组件结构断言 + 下拉选择持仓后自动填入并隐藏手动代码/名称（种子内存库 + runAsync 驱动 Drift 异步）
+
+**下一个任务需要知道的**：
+- 页面仍包 SingleChildScrollView，结构固定、不随持仓数量变长
+- 选择「无」后手动填写的代码/名称当前不参与提交（提交仍需选择已有持仓，沿用原逻辑）；如需支持手动新建目标基金，需数据层增加 create-on-convert，登记待确认
+- 全量 analyze 零 error；全量测试 619 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交交 PM 审查
+
+---
+
+## 2026-08-07
+
 **移交角色**：项目经理（PM）
 **接收角色**：invest-ui
 
