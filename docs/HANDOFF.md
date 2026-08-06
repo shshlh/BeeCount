@@ -34,6 +34,91 @@
 ## 2026-08-06
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-ui
+
+**任务**：6.4 返工（6.4.3 UI 部分 + 🔴#4 悬空冒号）
+
+**问题 1（🔴#3）：convert_dialog build 副作用**
+- 文件：lib/widgets/investment/convert_dialog.dart
+- 现状：build 里 addPostFrameCallback 判 _holdings.isEmpty 触发加载，只有一只基金时反复请求；await 后未检查 mounted
+- 要求：加载逻辑移到 initState 或加防重入标记，await 后 mounted 检查；只有一只基金（无转换目标）时保持空态不再循环请求
+
+**问题 2（🔴#4）：时间选择器悬空冒号**
+- 文件：lib/widgets/ui/wheel_date_picker.dart _TimeStepPicker
+- 现状：6.3 删秒列后仍保留 2 个 ':'（HH : MM :）
+- 要求：删除分钟后的多余 ':'，只保留时分间 1 个分隔符
+
+**问题 3（🔴#6）：编辑交易弹窗份额/金额静默写 0**
+- 文件：lib/pages/investment/holding_detail_page.dart 编辑弹窗
+- 要求：份额必填且 >0（sell/redeem 保存时内部转负）、金额必填 >0、净值必填 >0、手续费 >=0；禁止 tryParse ?? 0 静默写 0；表单校验不过不提交
+
+**问题 4（🟡）：sell_dialog / convert_dialog 接入新校验**
+- 文件：lib/widgets/investment/sell_dialog.dart、lib/widgets/investment/convert_dialog.dart
+- 要求：提交前调用 service.validateSell(holdingId, shares, nav:, fee:) / service.validateConvert(fromHoldingId, fromShares, fromNav:, toShares:, toNav:, fee:) 并传参；UI 层同步补 净值>0、手续费>=0、转入份额/净值>0 校验
+
+**问题 5（🟡）：转换 batch 交易单边编辑防护**
+- 文件：lib/pages/investment/holding_detail_page.dart
+- 要求：编辑带 batchId 的转换交易时禁止单边保存（提示“请编辑完整的转换记录”或隐藏编辑入口），避免只改单侧导致两持仓口径不一致
+
+**问题 6（🟡）：编辑弹窗备注清空**
+- 文件：lib/pages/investment/holding_detail_page.dart
+- 要求：备注清空时调用 service.updateTransaction(tx.id, clearNote: true)（接口已就绪），区分「不更新」；保留原值不变逻辑
+
+**约束**：
+- flutter analyze 新增代码零 error/warning
+- 全量测试保持 612 passed / 1 skipped / 1 failed（既存 bill_creation_service_test 除外）
+- 完成后更新 TEAM.md 任务板 + HANDOFF.md 追加完成记录，git 状态待提交交 PM 复审
+
+---
+
+## 2026-08-06
+
+**移交角色**：architect + invest-logic
+**接收角色**：项目经理（PM）
+
+**任务**：6.4.1-6.4.3（architect / invest-logic 数据层与校验层部分）
+
+**完成工作**：
+- lib/data/repositories/local/local_investment_repository.dart — 6.4.1 投资账户回退查询加 ledgerId 过滤 + limit(1)；6.4.3 buy 指定不存在 holdingId 时抛 StateError、updateNav 包事务、updateTransaction 增加 clearNote sentinel（清空备注与「不更新」区分）；新增 recomputeHolding 公开入口供通用删除路径调用
+- lib/data/repositories/local/local_transaction_repository.dart — 6.4.2 deleteTransaction / deleteTransactionsBatchBySyncIds 删除投资流水后在同一事务内重算持仓（份额/成本/市值）并联动投资账户市值
+- lib/data/repositories/investment_repository.dart + lib/services/data/investment_service.dart — updateTransaction 接口补 clearNote；validateSell 补 nav/fee，validateConvert 补 fromNav/toShares/toNav/fee 校验（可选参数，UI 传入后生效）
+- 测试 +9：多账本回退不串账本、同账本多投资账户取首个、buy 孤儿防护、clearNote 清空、validateSell/validateConvert 校验、删除 buy/sell/批量删除重算
+- 验证：flutter analyze 854 个既有 issue、零 error；全量测试 612 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**下一个任务需要知道的**：
+- 6.4.3 的 UI 弹窗部分仍由 invest-ui 线程继续：convert_dialog build 副作用、wheel_date_picker 悬空冒号、编辑弹窗份额/金额校验、sell/convert 弹窗传 nav/fee、转换 batch 单边编辑防护、编辑弹窗备注清空 UI
+- validateSell/validateConvert 新参数为可选，UI 未传时不会触发对应校验；最终需 invest-ui 调用时传入
+
+**git 状态**：当前分支 main，工作区含 architect/invest-logic + invest-ui 并行改动，待提交交 PM 审查
+
+---
+
+## 2026-08-06
+
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.4.4 + 6.4.5（kimi REV-1 修复）
+
+**完成工作**：
+- lib/pages/investment/holdings_list_page.dart — 排序菜单分隔线由手写 Colors.black ColoredBox 改为 PopupMenuDivider（随主题适配，暗黑可见）；新建/重命名分组弹窗的 TextEditingController 增加 try/finally dispose
+- lib/widgets/ui/wheel_date_picker.dart — _WheelDatePickerState / _DateStepPickerState 补 dispose，year/month/day 滚轮控制器全部释放；_TimeStepPicker 原有 dispose 不变
+- lib/styles/tokens.dart — Q1：BeeTokens.border() 亮色 transparent → rgba(0,0,0,0.08)，恢复可见边框，暗黑分支不变
+- lib/pages/main/home_page.dart — 🔴#5：homePeriodStatsProvider 补 ref.watch(statsRefreshProvider)；Q2：首页净资产 30pt 颜色由 primary 改为 BeeTokens.textPrimary
+- test/widgets/holdings_list_page_layout_test.dart — 排序下拉菜单断言补 PopupMenuDivider 数量（2 条）
+
+**下一个任务需要知道的**：
+- 6.4.1-6.4.3 由 architect/invest-logic 并行落地（本记录完成时已出现在工作区，全量测试已含其新用例）
+- Q1 边框改动影响 48+ 处 BeeTokens.border 使用，已跑全量 widget/单元测试确认无回归；暗黑分支未改
+- 全量 analyze 零 error；全量测试 609 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）；排序菜单暗黑效果未做实机截图验证
+
+**git 状态**：当前分支 main，待提交（工作区含 architect/invest-logic 并行改动，交 PM 审查合入）
+
+---
+
+## 2026-08-06
+
+**移交角色**：项目经理（PM）
 **接收角色**：architect + invest-logic + invest-ui
 
 **任务**：6.4 外部审查修复（kimi REV-1：🔴 6 + 🟡 7 + 精选 Quick Wins）

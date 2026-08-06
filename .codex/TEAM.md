@@ -53,11 +53,12 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
 |---|---|---|---|---|
-| 6.4.1 投资账户回退查询修复 | ⏳ | invest-logic | ledgerId + limit(1) + 测试 | — |
-| 6.4.2 删除投资交易联动重算 | ⏳ | architect + invest-logic | deleteTransaction 重算 + 测试 | — |
-| 6.4.3 投资校验/事务/孤儿/备注 | ⏳ | invest-logic + invest-ui | 弹窗校验 + service 校验 + 事务 | — |
-| 6.4.4 分隔线暗黑 + 控制器 dispose | ⏳ | invest-ui | PopupMenuDivider + dispose | — |
-| 6.4.5 首页统计刷新 + 美化速赢 | ⏳ | invest-ui | statsRefresh + border/净资产色 | — |
+| 6.4.1 投资账户回退查询修复 | ✅ | invest-logic | ledgerId + limit(1) + 测试 | 2026-08-06 |
+| 6.4.2 删除投资交易联动重算 | ✅ | architect + invest-logic | deleteTransaction 重算 + 测试 | 2026-08-06 |
+| 6.4.3 投资校验/事务/孤儿/备注 | 🔄 | invest-logic + invest-ui | 弹窗校验 + service 校验 + 事务（invest-logic 数据/校验层完成） | — |
+| 6.4.4 分隔线暗黑 + 控制器 dispose | ✅ | invest-ui | PopupMenuDivider + dispose | 2026-08-06 |
+| 6.4.5 首页统计刷新 + 美化速赢 | ✅ | invest-ui | statsRefresh + border/净资产色 | 2026-08-06 |
+| 6.4.6 6.4.3 UI 补完 + 悬空冒号 | ⏳ | invest-ui | convert/编辑弹窗校验 + batch 防护 + clearNote UI | — |
 
 ### 阶段 6.3：首页/资产/记账 UI 优化
 
