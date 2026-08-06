@@ -36,10 +36,28 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 测试工程师 | qa | 单元测试、端到端测试 | test/ |
 | 功能集成工程师 | integration | Excel 导入、日历视图、WebDAV | lib/services/import/, lib/pages/calendar/ |
 | 数据迁移工程师 | migration | 旧数据导出、CSV 生成、字段映射 | scripts/ |
+| 外部审查员 | kimi | 只读代码审查、美化建议 | 无（只读，不修改代码） |
 
 ---
 
 ## 任务板
+
+### 外部审查：kimi 全量审查（2026-08-06，待 PM 审查分派）
+
+| 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
+|---|---|---|---|---|
+| REV-1 代码审查（逻辑层 + UI 层） | ✅ 已分派6.4 | kimi | docs/HANDOFF.md 最新条目：🔴6 / 🟡7 / 🔵4 | 2026-08-06 |
+| REV-2 前端美化分析 | ✅ 已分派6.4 | kimi | 同上：Quick Wins Q1-Q7 + 长期项 L1-L5 | 2026-08-06 |
+
+### 阶段 6.4：外部审查修复（kimi REV-1）
+
+| 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
+|---|---|---|---|---|
+| 6.4.1 投资账户回退查询修复 | ⏳ | invest-logic | ledgerId + limit(1) + 测试 | — |
+| 6.4.2 删除投资交易联动重算 | ⏳ | architect + invest-logic | deleteTransaction 重算 + 测试 | — |
+| 6.4.3 投资校验/事务/孤儿/备注 | ⏳ | invest-logic + invest-ui | 弹窗校验 + service 校验 + 事务 | — |
+| 6.4.4 分隔线暗黑 + 控制器 dispose | ⏳ | invest-ui | PopupMenuDivider + dispose | — |
+| 6.4.5 首页统计刷新 + 美化速赢 | ⏳ | invest-ui | statsRefresh + border/净资产色 | — |
 
 ### 阶段 6.3：首页/资产/记账 UI 优化
 

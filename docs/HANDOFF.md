@@ -33,6 +33,106 @@
 
 ## 2026-08-06
 
+**移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic + invest-ui
+
+**任务**：6.4 外部审查修复（kimi REV-1：🔴 6 + 🟡 7 + 精选 Quick Wins）
+
+**角色分工**：
+- architect + invest-logic：数据/事务/校验层（6.4.1/6.4.2/6.4.3）
+- invest-ui：弹窗与 UI（6.4.4/6.4.5）
+
+**6.4.1 投资账户回退查询串账本/崩溃（🔴#1）**
+- 文件：lib/data/repositories/local/local_investment_repository.dart _resolveInvestmentAccount
+- 现状：回退查询只按 type 过滤、未按 ledgerId，且 getSingleOrNull() 多行抛 StateError
+- 要求：加 ledgerId 过滤 + limit(1)/first 取首条；补「多账本各有投资账户」测试
+
+**6.4.2 通用删除投资交易后不重算持仓（🔴#2）**
+- 文件：lib/data/repositories/local/local_transaction_repository.dart deleteTransaction / deleteTransactionsBatchBySyncIds
+- 现状：搜索页/分类详情/标签页删除 investType!=null 的交易后，持仓份额/成本/市值与账户市值留旧值
+- 要求：删除后触发投资重算（份额/成本/市值 + 投资账户市值联动）；新增删除 buy/sell 交易的重算测试；若跨仓库注入不便，可由 UI 层短期禁止删除投资交易（记录取舍）
+
+**6.4.3 投资校验/事务/孤儿/备注（invest-logic + invest-ui 弹窗配合）**
+- convert_dialog build 副作用（🔴#3）：加载逻辑移到 initState 或加防重入，await 后 mounted 检查
+- wheel_date_picker 悬空冒号（🔴#4）：删除分钟后的多余 ':'（6.3 遗留）
+- 编辑交易弹窗份额/金额校验（🔴#6）：holding_detail_page 编辑弹窗份额必填 >0（sell/redeem 内部转负）、金额/净值/手续费必填且范围合法，禁止 tryParse ?? 0 静默写 0
+- sell_dialog / convert_dialog（🟡）：净值必填 >0、手续费 >=0、转入份额/净值必填 >0；service.validateSell / validateConvert 同步补校验
+- updateNav 包事务（🟡）：与 buy/sell/convert 一致
+- buy 指定不存在的 holdingId 时抛错（🟡）：避免孤儿交易
+- 转换 batch 交易单边编辑防护（🟡）：holding_detail_page 编辑带 batchId 的转换交易时禁止单边保存或强制双侧校验
+- 编辑弹窗备注清空（🟡）：updateTransaction 用 sentinel（empty → 清空）区分「不更新」
+
+**6.4.4 排序菜单分隔线暗黑不可见 + 控制器 dispose（invest-ui）**
+- 排序菜单分隔线（🟡/Q3）：替换手写 Colors.black ColoredBox，用随主题适配的分隔（亮色黑、暗色可见），可用 PopupMenuDivider 或同效实现
+- 控制器 dispose（🟡）：wheel_date_picker 滚轮控制器、holdings_list_page 分组弹窗 TextEditingController
+
+**6.4.5 首页统计刷新 + 美化速赢（invest-ui）**
+- homePeriodStatsProvider 不随记账刷新（🔴#5）：home_page.dart 加 ref.watch(statsRefreshProvider)（与 netWorthBreakdownProvider 一致）
+- Q1：BeeTokens.border() 亮色 transparent → 实色（black 8%），恢复 48+ 处可见边框；改动前确认受影响页面无明显回归（跑全量 widget 测试）
+- Q2：首页净资产 30pt 白底金字对比度不足 → 改 BeeTokens.textPrimary
+
+**范围外（登记 backlog，本轮不做）**：🔵 系统性项（l10n 硬编码、Decimal 存储层、净值数据源、分组查重/归属校验）、Quick Wins Q4-Q7、长期项 L1-L5
+
+**约束**：
+- flutter analyze 新增代码零 error/warning
+- 全量测试保持 603 passed / 1 skipped / 1 failed（既存 bill_creation_service_test 除外）
+- 相关测试补充
+- 完成后更新 TEAM.md 任务板 + HANDOFF.md 追加完成记录，git 状态待提交交 PM 审查
+- HANDOFF 铁律：只 prepend 追加，不整文件重写、不用模糊正则范围替换
+
+---
+
+## 2026-08-06
+
+**移交角色**：外部审查员 kimi
+**接收角色**：项目经理（PM）
+
+**任务**：投资模块全量代码审查 + 前端美化分析（只读审查，未改任何代码）
+
+**完成工作**：
+- 审查范围：①逻辑层 —— db.dart 投资表与 v32-v36 迁移、investment_repository、local_investment_repository、investment_service、investment_providers；②UI 层 —— holdings_list_page、holding_detail_page、5 个投资弹窗、home_page（6.3 改动）、wheel_date_picker（6.3 改动）；③设计系统 —— tokens.dart、主题、关键页面一致性
+- 全量 flutter analyze 复核：0 error、20 条 warning（均为 unused import/variable、unnecessary cast，无实质问题），与 6.3 交接记录一致，基线干净
+- 产出：下方问题清单（均经代码逐条确认，存疑处标注「待确认」）+ 美化建议方案，递交 PM 分派
+
+**🔴 严重问题（6 条，建议优先修复）**：
+1. **投资账户回退查询可崩溃/串账本** —— lib/data/repositories/local/local_investment_repository.dart:72-76：回退查询只按 type 过滤、未按 ledgerId 过滤，且 getSingleOrNull() 多行抛 StateError。≥2 个账本时买入直接崩溃；单行时也可能把持仓挂到他账本账户。修法：加 ledgerId 过滤 + limit(1) 取首条
+2. **通用删除路径删投资交易后不重算持仓（最可能真实爆雷）** —— lib/data/repositories/local/local_transaction_repository.dart:580-592（含批量删除 :1489-1513）：搜索页/分类详情/标签页删除买入记录后，持仓份额/成本/账户市值全部留旧值且无纠正机制。修法：删除后触发 _recomputeHolding + 账户市值同步；短期可在 UI 禁止删除 investType != null 的交易
+3. **转换弹窗 build 副作用可无限循环** —— lib/widgets/investment/convert_dialog.dart:122-124：build() 里判 _holdings.isEmpty 触发加载、加载完无条件 setState，只有一只基金时恒为空 → 每帧循环请求数据库；且 await 后未检查 mounted。修法：移到 initState + mounted 检查
+4. **时间选择器遗留悬空冒号** —— lib/widgets/ui/wheel_date_picker.dart:631：6.3 删秒列时留下了分隔符，现显示 HH : MM :。删 1 行
+5. **首页周期统计不随记账刷新** —— lib/pages/main/home_page.dart:16-41：homePeriodStatsProvider 漏了 ref.watch(statsRefreshProvider)（同文件 netWorthBreakdownProvider 有）。记账回首页后今日/本周收支不更新，同屏两卡口径不一致。加 1 行
+6. **编辑交易弹窗份额可静默写 0** —— lib/pages/investment/holding_detail_page.dart:586-594：份额无 validator，tryParse ?? 0，清空误输 → 份额写 0 入库 → 重算后持仓被错误扣减；金额 validator 也放行 0 和负数
+
+**🟡 中等问题（摘要）**：
+- 卖出/转换校验缺口：sell_dialog.dart:76 净值留空按 0 提交 → 市值清零、proceeds 可为负；convert_dialog.dart:92-94 转入份额/净值留空按 0；手续费无负值校验。validateSell/validateConvert（investment_service.dart）与 UI 双层都需补 nav>0、fee>=0
+- updateNav 不在事务内 —— local_investment_repository.dart:527-541（buy/sell/convert 均包事务，唯独它没包）
+- buy 指定不存在的 holdingId 时静默产生孤儿交易 —— local_investment_repository.dart:295-301（sell/convert 都会抛错）
+- 转换对交易可被单边编辑 —— holding_detail_page.dart:577-598：带 batchId 的转换无防护，只改单侧且只重算单侧持仓
+- 排序菜单分隔线写死 Colors.black —— holdings_list_page.dart:407，暗黑模式下不可见
+- 编辑弹窗无法清空备注 —— null 被 updateTransaction 当「不更新」，需 sentinel 区分
+- 控制器未 dispose —— wheel_date_picker 两个 State 类的滚轮控制器、holdings_list_page 分组弹窗的 TextEditingController
+
+**🔵 系统性/技术债**：
+- 投资模块 7 个文件完全绕开 l10n（项目本身有 zh/zh_TW/en/ko 四套 arb），全部硬编码中文
+- 「Decimal 精度改造」只到内存层，存储仍是 RealColumn（double），db.dart:207-217
+- 净值刷新 updateNav/batchUpdateNav 无任何调用方（无净值数据源接入），属功能缺口
+- createGroup 不查重名；分组接口不校验持仓归属账本；注释中的 redeem 类型实现里不存在
+
+**前端美化建议（均已核实证据）**：
+- Quick Wins：Q1 BeeTokens.border() 亮色返回 transparent 被 48+ 处当可见边框用（tokens.dart:237-240），排序按钮/分组 chip 亮色下只剩悬浮文字 → 亮色分支改返回 black 8% 实色，一处改全局生效；Q2 首页净资产 30pt 白底金字对比度仅 1.6:1（home_page.dart:218-221）→ 改 textPrimary；Q3 排序菜单手写纯黑分隔条（holdings_list_page.dart:405-408）→ 换 PopupMenuDivider；Q4 我的页头像装饰在同色金底上隐身（mine_page.dart:774-784）→ 改半透明白底；Q5 交易卡水波纹圆角 8 与卡片 12 不匹配（holding_detail_page.dart:416-419）；Q6 统计页版心 padding 16 与其余页 12 不一致（analytics_page.dart:710）；Q7 持仓摘要卡三行等宽无主次（holdings_list_page.dart:254-268）→ 总市值 26pt + 盈亏行加粗
+- 长期项：L1 圆角统一（8/10/12/14/16/20 六套并存 → 卡片 12 / 弹窗 16，一致性收益最大）；L2 514 处手写 fontSize 收进约 8 级文字 token；L3 PrimaryHeader 文字色不随自定义主题色深浅自适应（primary_header.dart:67，textOnHeader 定义了却没用）；L4 统计页摘要把收支都显示成主题色、投资盈亏借用收入/支出色（建议独立 profit/loss token）；L5 折线图暗色辅助线不可见（line_chart.dart:290/415/425）
+- 若只做三件事：Q1 → Q2 → L1
+
+**下一个任务需要知道的**：
+- 本次审查全程只读，未修改任何代码文件；上述每条均在当前 main 代码中确认行号
+- 建议修复顺序：🔴 6 条（多为 1-10 行小改动，但直接影响数据正确性）→ 🟡 校验/事务/暗黑分隔线 → Q1-Q3 美化速赢 → 其余排期
+- 做得好的一面：迁移幂等、核心写操作均包事务、成本重算双路径自洽、Provider 失效链路正确、测试有覆盖；问题集中在边界防守和与存量系统的接缝处
+
+**git 状态**：当前分支 main，代码零改动，仅本文档新增本条目 + TEAM.md 登记（待 PM 审查）
+
+---
+
+## 2026-08-06
+
 **移交角色**：invest-ui
 **接收角色**：项目经理（PM）
 
