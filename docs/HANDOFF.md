@@ -34,6 +34,53 @@
 ## 2026-08-07
 
 **移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic
+
+**任务**：6.9 账本账户隔离（测试账本不污染真实账本）
+
+**背景**：用户真实记账与模拟测试并行，账户跨账本共享会污染真实账本。本轮将账户相关选择器、统计、AI 匹配统一按当前账本隔离；「全部账本汇总」暂不做，以后需要再加切换。
+
+**6.9.1 账户选择器按账本过滤（architect）**
+- 文件：lib/data/repositories/local/local_account_repository.dart getAvailableAccountsForLedger
+- 现状：只按币种过滤，投资弹窗（买入扣款/卖出回款/转换退回）会列出其他账本同币种账户
+- 要求：加 ledgerId 过滤（a.ledgerId.equals(ledgerId) & a.currency.equals(ledger.currency)）
+
+**6.9.2 首页/资产/洞察统计按账本（architect + invest-logic）**
+- 现状：getNetWorthBreakdown / getAssetCompositionByType / getAllAccountStats / getAllAccountsTotalStats / getNetWorthBreakdownByCurrency 用 getAllAccounts() 跨账本汇总；allAccountsStreamProvider（资产页列表）也跨账本
+- 要求：
+  a) Repository 层为上述统计新增/改造为按 ledgerId 过滤（新增参数或 per-ledger 方法，旧全局方法如仍有调用需审计）
+  b) Provider 层（netWorthBreakdownProvider / assetCompositionProvider / allAccountStatsProvider / allAccountsTotalStatsProvider / netWorthBreakdownByCurrencyProvider / allAccountsStreamProvider 等）统一 watch currentLedgerIdProvider，首页/资产页/洞察只显示当前账本数据
+  c) 净值趋势（getNetWorthDailyBalances / netWorthTrendSeriesProvider）同样按当前账本
+- 注意：改动影响面大，先审计 getAllAccounts() 的全部调用方，逐处确认是否应 per-ledger
+
+**6.9.3 AI 智能记账账户匹配按账本（invest-logic）**
+- 文件：lib/services/billing/bill_creation_service.dart _matchAccountByName
+- 现状：pool 只按 currency + !hidden 过滤
+- 要求：加 a.ledgerId == ledgerId 过滤
+
+**6.9.4 账户名唯一改为「同账本内唯一」（architect）**
+- 文件：lib/data/repositories/local/local_account_repository.dart createAccount
+- 现状：name 全局唯一，跨账本不能同名
+- 要求：改为一账本内唯一（where name == x & ledgerId == ledgerId）；同步检查 upsertAccount 等其他建账路径与 DuplicateNameException 语义
+
+**6.9.5 多账本隔离测试（architect + invest-logic）**
+- 新增/更新测试：
+  a) 投资弹窗账户下拉只列当前账本账户
+  b) 两个账本各自净资产/资产构成/账户统计不混
+  c) 两个账本可创建同名账户
+  d) AI 记账只匹配当前账本账户
+
+**约束**：
+- flutter analyze 新增代码零 error/warning
+- 全量测试保持 625 passed / 1 skipped / 1 failed（既存 bill_creation_service_test 除外）
+- 完成后更新 TEAM.md 任务板 + HANDOFF.md 追加完成记录，git 状态待提交交 PM 审查
+- HANDOFF 铁律：只 prepend 追加，不整文件重写、不用模糊正则范围替换
+
+---
+
+## 2026-08-07
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-ui
 
 **任务**：6.8 转换页确认固定底部 + 间距放宽（纯 UI）

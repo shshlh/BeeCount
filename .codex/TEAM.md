@@ -42,6 +42,16 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 
 ## 任务板
 
+### 阶段 6.9：账本账户隔离（测试不污染真实账本）
+
+| 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
+|---|---|---|---|---|
+| 6.9.1 账户选择器按账本过滤 | ⏳ | architect | getAvailableAccountsForLedger + 测试 | — |
+| 6.9.2 首页/资产/洞察统计按账本 | ⏳ | architect + invest-logic | repo/provider per-ledger | — |
+| 6.9.3 AI 账户匹配按账本 | ⏳ | invest-logic | _matchAccountByName + 测试 | — |
+| 6.9.4 账户名同账本内唯一 | ⏳ | architect | createAccount 校验 + 测试 | — |
+| 6.9.5 多账本隔离测试 | ⏳ | architect + invest-logic | 选择器/统计/同名/AI 隔离 | — |
+
 ### 阶段 6.8：转换页确认固定底部 + 间距放宽
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
