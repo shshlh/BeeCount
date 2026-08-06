@@ -33,6 +33,34 @@
 
 ## 2026-08-07
 
+**移交角色**：项目经理（PM）
+**接收角色**：invest-ui
+
+**任务**：6.8 转换页确认固定底部 + 间距放宽（纯 UI）
+
+**6.8.1 确认按钮固定页面底部**
+- 文件：lib/widgets/investment/convert_dialog.dart
+- 现状：D 确认卡在滚动区内，随内容滚出屏幕
+- 要求：把「确认」按钮从滚动区移出，固定到底部（Scaffold.bottomNavigationBar 或等价的固定底部栏，含安全区），页面滚动时始终可见；保留校验、提交 loading、错误提示
+
+**6.8.2 卡片间距与卡内行距放宽**
+- 现状：A/B/C 三卡之间、卡内字段之间偏紧凑
+- 要求：
+  a) A/B/C 卡之间间距加大（当前 p12 → 建议 16-20）
+  b) 卡内行距放宽：A1 与 A2/A3 之间、B1 与 B2/B3 之间、C 三行之间（当前 12 → 建议 16-20）
+  c) 小格内 label 与输入框之间（当前 4 → 建议 6-8），卡片内边距适当加大
+- 注意：只调间距，不改字段/逻辑；确认按钮移出后，滚动区保留 A/B/C 三卡
+
+**约束**：
+- flutter analyze 新增代码零 error/warning
+- 全量测试保持 625 passed / 1 skipped / 1 failed（既存 bill_creation_service_test 除外）
+- 更新 convert_dialog_layout_test（确认按钮仍可找到、布局结构不变）
+- 完成后更新 TEAM.md 任务板 + HANDOFF.md 追加完成记录，git 状态待提交交 PM 审查
+
+---
+
+## 2026-08-07
+
 **移交角色**：invest-ui
 **接收角色**：项目经理（PM）
 
