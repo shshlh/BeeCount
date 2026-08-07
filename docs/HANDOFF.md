@@ -34,6 +34,27 @@
 ## 2026-08-07
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-ui
+
+**任务**：6.7 返工 2（转换提交必填校验误报）
+
+**问题（P1）**：convert_dialog._submit 调 service.validateConvert 时漏传 toHoldingId / fundCode / fundName
+- 现象：无论选择已有持仓还是手填目标基金代码/名称，点确认都报「目标基金代码和名称必填 / Invalid argument(s)」
+- 根因：validateConvert 新增的目标基金校验依赖这些参数，但 UI 只在 service.convert 传了，validateConvert 没传 → 永远命中空值抛错，转换无法提交
+- 要求：
+  a) _submit 的 validateConvert 调用同步传 toHoldingId: _toHolding?.id、fundCode/fundName（与 service.convert 完全一致）
+  b) 补回归测试：选择已有持仓提交成功 + 手填代码/名称提交成功（convert_dialog_layout_test 用真实内存库跑通确认流程，避免再漏）
+
+**约束**：
+- flutter analyze 新增代码零 error/warning
+- 全量测试保持 625 passed / 1 skipped / 1 failed（既存 bill_creation_service_test 除外）
+- 完成后更新 TEAM.md 任务板 + HANDOFF.md 追加完成记录，git 状态待提交交 PM 复审
+
+---
+
+## 2026-08-07
+
+**移交角色**：项目经理（PM）
 **接收角色**：全团队
 
 **决策**：6.9 账本账户隔离已取消
