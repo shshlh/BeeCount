@@ -33,6 +33,28 @@
 
 ## 2026-08-07
 
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.7.5 返工（转换提交校验传参）+ 6.8（固定底部确认 + 间距放宽）
+
+**完成工作**：
+- lib/widgets/investment/convert_dialog.dart — 6.7.5：_submit 的 validateConvert 调用补传 toHoldingId/fundCode/fundName（与 service.convert 一致），修复「目标基金代码和名称必填」误报
+- convert_dialog — 6.8.1：确认按钮从滚动区移出，改为 Scaffold.bottomNavigationBar 固定底部栏（SafeArea + 顶部分隔线），滚动时始终可见，校验/loading/错误提示不变
+- convert_dialog — 6.8.2：A/B/C 卡间距 p12 → 16，卡内行距 12 → 16，小格 label 与输入框间距 4 → 6，卡片内边距统一 16
+- test/widgets/convert_dialog_layout_test.dart — 新增「选择已有持仓提交成功」「手填代码/名称提交成功并创建新持仓」两条真实内存库提交回归测试；现有布局/校验测试适配固定底部按钮（去掉 ensureVisible）
+
+**下一个任务需要知道的**：
+- 6.7.5 回归测试走真实内存库 + runAsync 跑通确认流程，覆盖已有持仓与手填新基金两条路径
+- 6.8 只调间距与底部栏，字段/校验/提交逻辑不变
+- 全量 analyze 零 error；全量测试 627 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交（工作区含 invest-logic 并行改动，交 PM 复审）
+
+---
+
+## 2026-08-07
+
 **移交角色**：项目经理（PM）
 **接收角色**：invest-ui
 

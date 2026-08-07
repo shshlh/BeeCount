@@ -213,6 +213,9 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
       await service.validateConvert(
         widget.fromHolding.id,
         fromShares,
+        toHoldingId: _toHolding?.id,
+        fundCode: _toHolding == null ? _toCodeCtrl.text.trim() : null,
+        fundName: _toHolding == null ? _toNameCtrl.text.trim() : null,
         fromNav: fromNav,
         toShares: toShares,
         toNav: toNav,
@@ -256,6 +259,19 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
         title: Text('转换 - ${h.fundName}'),
         backgroundColor: BeeTokens.surface(context),
       ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+          decoration: BoxDecoration(
+            color: BeeTokens.surface(context),
+            border: Border(
+              top: BorderSide(color: BeeTokens.divider(context)),
+            ),
+          ),
+          child: _buildConfirmButton(context),
+        ),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(BeeDimens.p16),
         child: Form(
@@ -264,12 +280,10 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _buildFromCard(context, h),
-              const SizedBox(height: BeeDimens.p12),
+              const SizedBox(height: 16),
               _buildToCard(context),
-              const SizedBox(height: BeeDimens.p12),
+              const SizedBox(height: 16),
               _buildFeeRefundCard(context),
-              const SizedBox(height: BeeDimens.p12),
-              _buildConfirmCard(context),
             ],
           ),
         ),
@@ -281,6 +295,7 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
 
   Widget _buildFromCard(BuildContext context, InvestmentHolding h) {
     return SectionCard(
+      padding: const EdgeInsets.all(BeeDimens.p16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -293,7 +308,7 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
           Text('可转份额 ${h.totalShares.toStringAsFixed(2)} 份',
               style: TextStyle(
                   fontSize: 12, color: BeeTokens.textTertiary(context))),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -334,6 +349,7 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
 
   Widget _buildToCard(BuildContext context) {
     return SectionCard(
+      padding: const EdgeInsets.all(BeeDimens.p16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -361,7 +377,7 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
               ],
             ),
           if (_toHolding == null) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _toCodeCtrl,
               decoration: const InputDecoration(
@@ -372,7 +388,7 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
                 return null;
               },
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             TextFormField(
               controller: _toNameCtrl,
               decoration: const InputDecoration(
@@ -384,7 +400,7 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
               },
             ),
           ],
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -451,6 +467,7 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
   Widget _buildFeeRefundCard(BuildContext context) {
     final refund = double.tryParse(_refundCtrl.text) ?? 0;
     return SectionCard(
+      padding: const EdgeInsets.all(BeeDimens.p16),
       child: Column(
         children: [
           _buildLabeledInputRow(
@@ -465,7 +482,7 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
               return null;
             },
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           _buildLabeledInputRow(
             context,
             label: '退回金额',
@@ -491,7 +508,7 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
               ],
             )
           else if (_refundAccounts.isNotEmpty && refund > 0) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             _buildLabeledDropdownRow(context),
           ],
         ],
@@ -531,25 +548,23 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
     );
   }
 
-  // ───── D 确认组件 ─────
+  // ───── D 确认按钮（固定底部栏）─────
 
-  Widget _buildConfirmCard(BuildContext context) {
-    return SectionCard(
-      child: SizedBox(
-        width: double.infinity,
-        child: FilledButton(
-          onPressed: _submitting ? null : _submit,
-          style: FilledButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 14),
-          ),
-          child: _submitting
-              ? const SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('确认'),
+  Widget _buildConfirmButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: FilledButton(
+        onPressed: _submitting ? null : _submit,
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 14),
         ),
+        child: _submitting
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Text('确认'),
       ),
     );
   }
@@ -568,7 +583,7 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
           Text(label,
               style: TextStyle(
                   fontSize: 12, color: BeeTokens.textSecondary(context))),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           TextFormField(
             controller: controller,
             decoration: InputDecoration(

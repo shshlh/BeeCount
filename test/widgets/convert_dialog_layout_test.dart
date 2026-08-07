@@ -71,6 +71,31 @@ void main() {
     );
   }
 
+  Widget hostWithLauncher() {
+    return ProviderScope(
+      overrides: [
+        investmentRepositoryProvider.overrideWithValue(investmentRepo),
+        repositoryProvider.overrideWithValue(repo),
+      ],
+      child: MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => Center(
+              child: ElevatedButton(
+                onPressed: () => showConvertDialog(
+                  context,
+                  ledgerId: 1,
+                  fromHolding: fromHolding,
+                ),
+                child: const Text('打开转换'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   testWidgets('1x4 组件化布局：A/B/C/D 卡片与目标基金下拉', (tester) async {
     await tester.runAsync(() async {
       await tester.pumpWidget(host());
@@ -120,12 +145,63 @@ void main() {
 
     expect(find.text('目标基金代码'), findsOneWidget);
     expect(find.text('目标基金名称'), findsOneWidget);
-    await tester.ensureVisible(find.widgetWithText(FilledButton, '确认'));
-    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(FilledButton, '确认'));
     await tester.pumpAndSettle();
 
     expect(find.text('请输入目标基金代码'), findsOneWidget);
     expect(find.text('请输入目标基金名称'), findsOneWidget);
+  });
+
+  testWidgets('选择已有持仓提交成功', (tester) async {
+    await tester.runAsync(() async {
+      await tester.pumpWidget(hostWithLauncher());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('打开转换'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(DropdownButtonFormField<int>));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.widgetWithText(DropdownMenuItem<int>, '基金B'),
+        warnIfMissed: false,
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).at(0), '100');
+      await tester.enterText(find.byType(TextFormField).at(1), '1.0');
+      await tester.enterText(find.byType(TextFormField).at(2), '100');
+      await tester.enterText(find.byType(TextFormField).at(3), '1.2');
+      await tester.enterText(find.byType(TextFormField).at(4), '0');
+
+      await tester.tap(find.widgetWithText(FilledButton, '确认'));
+      await tester.pumpAndSettle();
+    });
+
+    expect(find.text('转换 - 基金A'), findsNothing);
+  });
+
+  testWidgets('手填代码/名称提交成功并创建新持仓', (tester) async {
+    List<InvestmentHolding>? holdings;
+    await tester.runAsync(() async {
+      await tester.pumpWidget(hostWithLauncher());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('打开转换'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).at(0), '100');
+      await tester.enterText(find.byType(TextFormField).at(1), '1.0');
+      await tester.enterText(find.byType(TextFormField).at(2), '999999');
+      await tester.enterText(find.byType(TextFormField).at(3), '基金C');
+      await tester.enterText(find.byType(TextFormField).at(4), '100');
+      await tester.enterText(find.byType(TextFormField).at(5), '1.2');
+      await tester.enterText(find.byType(TextFormField).at(6), '0');
+
+      await tester.tap(find.widgetWithText(FilledButton, '确认'));
+      await tester.pumpAndSettle();
+
+      holdings = await investmentRepo.watchHoldings(ledgerId: 1).first;
+    });
+
+    expect(holdings!.any((h) => h.fundCode == '999999'), isTrue);
   });
 }
