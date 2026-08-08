@@ -34,6 +34,38 @@
 ## 2026-08-08
 
 **移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic（6.13.1）/ invest-ui（6.13.2）
+
+**任务**：6.13 持仓基金代码修复与防错
+
+**背景**：用户登记初始持仓时把 `110017` 误录为 `11017`。当前初始持仓/买入弹窗只校验“非空”，5 位代码会被 NavFetchService 静默过滤，导致该持仓无法刷新净值。
+
+**6.13.1 数据层（architect + invest-logic）**
+- InvestmentRepository 新增 `updateHoldingInfo(int holdingId, {required String fundCode, String? fundName})`
+- 校验：基金代码必须 `^\d{6}$`；同账本+账户下已存在相同代码时拒绝（避免静默合并持仓）
+- 更新后保留 totalShares / totalCost / currentNav / navDate / marketValue，不重算市值
+- Service 层透传 + 测试：改代码后可正常刷新；重复代码拒绝；非法代码拒绝
+
+**6.13.2 UI 层（invest-ui）**
+- 持仓明细页增加「编辑基金代码/名称」入口，弹窗调用 service.updateHoldingInfo，成功后 invalidate 持仓并刷新
+- 初始持仓导入弹窗 / 买入弹窗：基金代码校验为 6 位数字
+- 转换弹窗手填目标基金代码同样校验 6 位数字
+- widget 测试：编辑入口 + 校验提示
+
+**6.13.3 刷新失败反馈（P2，等 6.13.1/6.13.2 落地后派工）**
+- 刷新时被跳过的基金（代码无效/无日期/失败）给出非阻塞提示，列出具体基金代码，避免静默失效
+
+**约束**：
+- HANDOFF 只增不减；flutter analyze 新增代码零 error/warning
+- 完成后更新 TEAM.md 任务板 + HANDOFF 追加完成记录，git 状态待提交交 PM 审查
+
+**git 状态**：当前分支 main，HEAD b130d87
+
+---
+
+## 2026-08-08
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-ui
 
 **任务**：6.12.2 PM 审查通过
