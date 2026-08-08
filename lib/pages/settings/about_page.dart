@@ -1,7 +1,6 @@
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:beecount/widgets/biz/bee_icon.dart';
@@ -14,8 +13,8 @@ import '../../services/system/update_service.dart';
 import '../../services/system/logger_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../utils/ui_scale_extensions.dart';
-import '../../utils/website_urls.dart';
-import 'help_center_page.dart';
+import '../../utils/fork_links.dart';
+import 'changelog_page.dart';
 import 'log_center_page.dart';
 import 'privacy_policy_page.dart';
 
@@ -50,40 +49,10 @@ class _AboutPageState extends ConsumerState<AboutPage> {
     });
   }
 
-  void _showDeveloperStory(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.aboutDeveloperStoryTitle),
-        content: SingleChildScrollView(
-          child: Text(
-            l10n.aboutDeveloperStory,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: BeeTokens.textSecondary(context),
-                  height: 1.7,
-                ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.commonConfirm),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final primary = ref.watch(primaryColorProvider);
-    final locale = Localizations.localeOf(context);
-    final isSimplifiedZh =
-        locale.languageCode == 'zh' && locale.countryCode != 'TW';
-    // Telegram 群面向国际用户;简体中文(大陆)访问 Telegram 受限,故仅非简体中文显示。
-    final showTelegram = !isSimplifiedZh;
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
@@ -117,29 +86,15 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                           size: 80.0.scaled(context, ref),
                         ),
                         SizedBox(height: 16.0.scaled(context, ref)),
-                        GestureDetector(
-                          onTap: () => _showDeveloperStory(context),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                l10n.appName,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: BeeTokens.textPrimary(context),
-                                    ),
+                        Text(
+                          l10n.appName,
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: BeeTokens.textPrimary(context),
                               ),
-                              SizedBox(width: 4.0.scaled(context, ref)),
-                              Icon(
-                                Icons.auto_stories_outlined,
-                                size: 18.0.scaled(context, ref),
-                                color: BeeTokens.textTertiary(context),
-                              ),
-                            ],
-                          ),
                         ),
                         SizedBox(height: 8.0.scaled(context, ref)),
                         Text(
@@ -154,53 +109,33 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                       ],
                     ),
                   ),
-                  // ===== 圆形图标按钮行(真实品牌 logo)=====
-                  Padding(
-                    padding: EdgeInsets.only(bottom: 20.0.scaled(context, ref)),
-                    child: Wrap(
-                      alignment: WrapAlignment.center,
-                      spacing: 22.0.scaled(context, ref),
-                      runSpacing: 14.0.scaled(context, ref),
+                  // ===== 自用说明 =====
+                  SectionCard(
+                    margin: EdgeInsets.zero,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _socialButton(
-                          context,
-                          icon: Icons.language_rounded,
-                          label: l10n.aboutWebsite,
-                          onTap: () =>
-                              _tryOpenUrl(Uri.parse(WebsiteUrls.home(locale))),
-                        ),
-                        _socialButton(
-                          context,
-                          svgAsset: 'assets/icons/social/github.svg',
-                          label: 'GitHub',
-                          onTap: () => _tryOpenUrl(Uri.parse(
-                              'https://github.com/TNT-Likely/BeeCount')),
-                        ),
-                        if (showTelegram)
-                          _socialButton(
-                            context,
-                            svgAsset: 'assets/icons/social/telegram.svg',
-                            label: l10n.aboutTelegram,
-                            onTap: () =>
-                                _tryOpenUrl(Uri.parse('https://t.me/beecount')),
+                        Text(
+                          l10n.aboutSelfUseTitle,
+                          style: TextStyle(
+                            fontSize: 15.0.scaled(context, ref),
+                            fontWeight: FontWeight.w600,
+                            color: BeeTokens.textPrimary(context),
                           ),
-                        _socialButton(
-                          context,
-                          svgAsset: 'assets/icons/social/xiaohongshu.svg',
-                          label: l10n.aboutXiaohongshu,
-                          onTap: () => _tryOpenUrl(
-                              Uri.parse('https://xhslink.com/m/8K1ekg7EFOq')),
                         ),
-                        _socialButton(
-                          context,
-                          svgAsset: 'assets/icons/social/douyin.svg',
-                          label: l10n.aboutDouyin,
-                          onTap: () => _tryOpenUrl(
-                              Uri.parse('https://v.douyin.com/YG7tUweYYyQ/')),
+                        SizedBox(height: 8.0.scaled(context, ref)),
+                        Text(
+                          l10n.aboutSelfUse,
+                          style: TextStyle(
+                            fontSize: 13.0.scaled(context, ref),
+                            height: 1.6,
+                            color: BeeTokens.textSecondary(context),
+                          ),
                         ),
                       ],
                     ),
                   ),
+                  SizedBox(height: 20.0.scaled(context, ref)),
                   // ===== 功能卡 =====
                   SectionCard(
                     margin: EdgeInsets.zero,
@@ -287,24 +222,11 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                           }),
                         ],
                         AppListTile(
-                          leading: Icons.favorite_border,
-                          title: l10n.aboutSupportDevelopment,
-                          subtitle: l10n.aboutSupportDevelopmentSubtitle,
-                          onTap: () async {
-                            final lc = locale.languageCode;
-                            final docUrl = lc == 'zh'
-                                ? 'https://github.com/TNT-Likely/BeeCount/blob/main/docs/donate/README_ZH.md'
-                                : 'https://github.com/TNT-Likely/BeeCount/blob/main/docs/donate/README_EN.md';
-                            await _tryOpenUrl(Uri.parse(docUrl));
-                          },
-                        ),
-                        BeeTokens.cardDivider(context),
-                        AppListTile(
                           leading: Icons.feedback_outlined,
                           title: l10n.mineFeedback,
                           subtitle: l10n.mineFeedbackSubtitle,
-                          onTap: () => _tryOpenUrl(Uri.parse(
-                              'https://github.com/TNT-Likely/BeeCount/issues')),
+                          onTap: () =>
+                              _tryOpenUrl(Uri.parse(ForkLinks.gitHubIssues)),
                         ),
                         BeeTokens.cardDivider(context),
                         AppListTile(
@@ -335,14 +257,7 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => HelpCenterPage(
-                                title: l10n.aboutChangelog,
-                                initialUrl: WebsiteUrls.changelogEmbed(
-                                  locale,
-                                  dark: BeeTokens.isDark(context),
-                                  primaryHex: _hex(primary),
-                                ),
-                              ),
+                              builder: (_) => const ChangelogPage(),
                             ),
                           );
                         },
@@ -371,69 +286,9 @@ class _AboutPageState extends ConsumerState<AboutPage> {
                       ),
                     ],
                   ),
-                  if (isSimplifiedZh) ...[
-                    SizedBox(height: 12.0.scaled(context, ref)),
-                    Center(
-                      child: Text(
-                        '浙ICP备2025214907号-2A',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: BeeTokens.textTertiary(context),
-                              fontSize: 11,
-                            ),
-                      ),
-                    ),
-                  ],
                   SizedBox(height: 8.0.scaled(context, ref)),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 圆形图标社媒按钮 — 传 [svgAsset](品牌 logo)或 [icon](通用图标)之一。
-  /// 图标统一用主题色(logo 形状本身已能辨识平台),和 app 整体视觉呼应。
-  Widget _socialButton(
-    BuildContext context, {
-    String? svgAsset,
-    IconData? icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    final tint = ref.watch(primaryColorProvider);
-    final size = 46.0.scaled(context, ref);
-    final glyph = 22.0.scaled(context, ref);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(size / 2),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: size,
-            height: size,
-            decoration: BoxDecoration(
-              color: tint.withValues(alpha: 0.14),
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: svgAsset != null
-                ? SvgPicture.asset(
-                    svgAsset,
-                    width: glyph,
-                    height: glyph,
-                    colorFilter: ColorFilter.mode(tint, BlendMode.srcIn),
-                  )
-                : Icon(icon, color: tint, size: glyph),
-          ),
-          SizedBox(height: 6.0.scaled(context, ref)),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10.5.scaled(context, ref),
-              color: BeeTokens.textTertiary(context),
             ),
           ),
         ],
@@ -461,11 +316,6 @@ class _AboutPageState extends ConsumerState<AboutPage> {
     );
   }
 
-  /// 主题色转 6 位 hex(用于文档 embed 链接的 primary 参数),与帮助中心 / 隐私
-  /// 政策页同款实现。
-  static String _hex(Color c) => [c.r, c.g, c.b]
-      .map((v) => ((v * 255).round() & 0xff).toRadixString(16).padLeft(2, '0'))
-      .join();
 }
 
 // -------- 工具方法：关于与更新 --------

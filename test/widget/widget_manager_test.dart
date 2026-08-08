@@ -7,12 +7,40 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
 
 import 'package:beecount/widget/widget_manager.dart';
 import 'package:beecount/widget/widget_spec.dart';
 
 void main() {
+  group('resolveWidgetDarkMode', () {
+    test('system 跟随系统明暗', () {
+      expect(
+        resolveWidgetDarkMode(ThemeMode.system, Brightness.light),
+        isFalse,
+      );
+      expect(
+        resolveWidgetDarkMode(ThemeMode.system, Brightness.dark),
+        isTrue,
+      );
+    });
+
+    test('light 固定浅色,不随系统', () {
+      expect(
+        resolveWidgetDarkMode(ThemeMode.light, Brightness.dark),
+        isFalse,
+      );
+    });
+
+    test('dark 固定深色,不随系统', () {
+      expect(
+        resolveWidgetDarkMode(ThemeMode.dark, Brightness.light),
+        isTrue,
+      );
+    });
+  });
+
   group('selectSpecsToRender', () {
     test('installed 为 null(拿不到列表)时退化为默认集', () {
       expect(selectSpecsToRender(null), WidgetSpec.defaultSet);

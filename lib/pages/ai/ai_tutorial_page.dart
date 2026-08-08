@@ -7,15 +7,9 @@ import '../../utils/ui_scale_extensions.dart';
 import '../../widgets/biz/biz.dart';
 import '../../widgets/ui/ui.dart';
 
-/// 本地静态帮助中心。
-///
-/// 7.0.4 起不再通过 WebView 打开原官网 beejz.com，改为内置自用说明，
-/// 覆盖基础记账 / 投资 / 导入导出 / 云同步 / 小组件 / AI 记账等模块。
-class HelpCenterPage extends ConsumerWidget {
-  const HelpCenterPage({super.key, this.title});
-
-  /// 可选自定义页面标题，不传用「使用帮助」。
-  final String? title;
+/// 本地 AI 设置与使用说明页。
+class AiTutorialPage extends ConsumerWidget {
+  const AiTutorialPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,8 +19,8 @@ class HelpCenterPage extends ConsumerWidget {
       body: Column(
         children: [
           PrimaryHeader(
-            title: title ?? l10n.mineHelp,
-            subtitle: '本地使用说明',
+            title: l10n.aiSettingsTitle,
+            subtitle: 'AI 设置与使用',
             showBack: true,
             compact: true,
           ),
@@ -42,57 +36,49 @@ class HelpCenterPage extends ConsumerWidget {
                 _section(
                   context,
                   ref,
-                  title: '基础记账',
-                  body: '支出 / 收入 / 转账独立填写，支持标签、备注、附件与多币种。'
-                      '首页底部「+」可快速新建，长按可展开拍照、相册、语音记账。',
+                  title: '服务商配置',
+                  body: '在「我的 → AI 设置 → 服务商管理」添加服务商并填写 API Key，'
+                      '常见服务商可点击「获取 Key」进入官网申请。',
                 ),
                 SizedBox(height: 12.0.scaled(context, ref)),
                 _section(
                   context,
                   ref,
-                  title: '投资模块',
-                  body: '资产 Tab 进入持仓列表，可买入、卖出、转换基金；'
-                      '支持净值自动刷新、持仓编辑与删除、交易明细快速记账。',
+                  title: l10n.aiCapabilitySelectTitle,
+                  body: '文本、视觉、语音三种能力分别绑定已配置的服务商；'
+                      '未绑定的能力在对应记账入口会提示先去设置。',
                 ),
                 SizedBox(height: 12.0.scaled(context, ref)),
                 _section(
                   context,
                   ref,
-                  title: '导入导出',
-                  body: '数据管理页支持 CSV / Excel 导入，支付宝、微信账单可自动识别；'
-                      '同时支持完整备份导出，方便迁移或归档。',
+                  title: '图片 / 拍照记账',
+                  body: '首页长按底部「+」选择「相册」或「拍照」，'
+                      'AI 视觉模型会自动识别金额、商家、时间等信息。',
                 ),
                 SizedBox(height: 12.0.scaled(context, ref)),
                 _section(
                   context,
                   ref,
-                  title: '云同步',
-                  body: '支持本地存储、Supabase、WebDAV、S3 与 BeeCount Cloud。'
-                      '在云服务页选择服务商并按说明填写地址与账号即可开启同步。',
+                  title: '语音记账',
+                  body: '首页长按底部「+」选择「语音」，说出记账内容即可；'
+                      '需先绑定语音服务商。',
                 ),
                 SizedBox(height: 12.0.scaled(context, ref)),
                 _section(
                   context,
                   ref,
-                  title: '小组件',
-                  body: '桌面小组件提供收支速览、净资产、快速记账、预算、最近交易与综合仪表盘。'
-                      '记账或切换账本 / 主题后会自动刷新，点击组件可快速跳转。',
+                  title: '截图自动识别',
+                  body: '在智能记账设置中开启截图识别，支付截图会自动进入识别流程；'
+                      '识别结果可在通知中确认。',
                 ),
                 SizedBox(height: 12.0.scaled(context, ref)),
                 _section(
                   context,
                   ref,
-                  title: 'AI 记账',
-                  body: '先在「我的 → AI 设置」配置服务商并完成能力绑定，'
-                      '即可使用图片 / 拍照 / 语音 / 截图自动识别记账，也可在 AI 小助手内对话分析。',
-                ),
-                SizedBox(height: 12.0.scaled(context, ref)),
-                _section(
-                  context,
-                  ref,
-                  title: '数据与隐私',
-                  body: '账本数据默认仅保存在本机；只有主动使用 AI 或云同步时，'
-                      '才会把所需内容发送到你选择的服务。',
+                  title: l10n.aiChatTitle,
+                  body: 'AI 小助手支持对话分析、财务健康检查、月度总结、'
+                      '分类占比与预算规划等快捷指令。',
                 ),
               ],
             ),

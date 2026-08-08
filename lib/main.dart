@@ -191,6 +191,10 @@ class _WidgetUpdateObserver extends ProviderObserver {
       // 没有 BuildContext,靠 languageProvider 还原当前 App 语言(见
       // widget_manager.dart resolveWidgetLocalizations 文档)。
       final locale = container.read(languageProvider);
+      final dark = WidgetManager.resolveDarkMode(
+        container.read(themeModeProvider),
+        PlatformDispatcher.instance.platformBrightness,
+      );
 
       final widgetManager = WidgetManager();
       await widgetManager.updateAllWidgetsLocalized(
@@ -198,6 +202,7 @@ class _WidgetUpdateObserver extends ProviderObserver {
         ledgerId,
         primaryColor,
         explicitLocale: locale,
+        dark: dark,
         redForIncome: redForIncome,
         baseCurrency: baseCurrency,
         // 预热:启动 / 切账本时把全部类型×尺寸的图渲染齐,这样用户随后往桌面

@@ -7,11 +7,11 @@ import '../../utils/ui_scale_extensions.dart';
 import '../../widgets/biz/biz.dart';
 import '../../widgets/ui/ui.dart';
 
-/// 本地静态隐私政策页。
+/// 本地云同步设置说明页。
 ///
-/// 自用版不再通过 WebView 打开原官网，仅展示本机数据与第三方 AI 使用说明。
-class PrivacyPolicyPage extends ConsumerWidget {
-  const PrivacyPolicyPage({super.key});
+/// 登录页「注册指引」改为打开本页，不再跳转原官网文档。
+class CloudSyncGuidePage extends ConsumerWidget {
+  const CloudSyncGuidePage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -21,7 +21,8 @@ class PrivacyPolicyPage extends ConsumerWidget {
       body: Column(
         children: [
           PrimaryHeader(
-            title: l10n.aboutPrivacyPolicy,
+            title: l10n.cloudTutorialTitle,
+            subtitle: '云同步设置说明',
             showBack: true,
             compact: true,
           ),
@@ -34,25 +35,36 @@ class PrivacyPolicyPage extends ConsumerWidget {
                 24.0.scaled(context, ref),
               ),
               children: [
-                _sectionCard(
+                _section(
                   context,
                   ref,
-                  title: l10n.privacyLocalStorageTitle,
-                  body: l10n.privacyLocalStorageBody,
+                  title: l10n.cloudCustomSupabaseTitle,
+                  body: '在云服务页选择「自定义 Supabase」，填入 Supabase 项目 URL 与 anon key。'
+                      '适合已有 Supabase 账号、希望使用官方托管服务的用户。',
                 ),
                 SizedBox(height: 12.0.scaled(context, ref)),
-                _sectionCard(
+                _section(
                   context,
                   ref,
-                  title: l10n.privacyLocalAiTitle,
-                  body: l10n.privacyLocalAiBody,
+                  title: l10n.cloudCustomWebdavTitle,
+                  body: '选择 WebDAV 后填写服务器地址、用户名与密码（建议使用应用专用密码），'
+                      '并指定远程路径，例如坚果云 / Nextcloud / NAS。',
                 ),
                 SizedBox(height: 12.0.scaled(context, ref)),
-                _sectionCard(
+                _section(
                   context,
                   ref,
-                  title: l10n.privacyLocalNoCollectionTitle,
-                  body: l10n.privacyLocalNoCollectionBody,
+                  title: l10n.cloudBeeCountCloudTitle,
+                  body: '自建服务器可使用 Docker 一行命令部署，首次启动日志中会打印管理员账号；'
+                      '加入他人服务器时，让管理员在 Web 后台为你添加账号，然后填写服务器地址登录。',
+                ),
+                SizedBox(height: 12.0.scaled(context, ref)),
+                _section(
+                  context,
+                  ref,
+                  title: l10n.cloudCustomS3Title,
+                  body: '支持 AWS S3 / Cloudflare R2 / MinIO 等 S3 协议存储，'
+                      '在云服务页配置 Endpoint、Access Key 与 Bucket 即可。',
                 ),
               ],
             ),
@@ -62,7 +74,7 @@ class PrivacyPolicyPage extends ConsumerWidget {
     );
   }
 
-  Widget _sectionCard(
+  Widget _section(
     BuildContext context,
     WidgetRef ref, {
     required String title,

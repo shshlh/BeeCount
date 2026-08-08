@@ -2703,7 +2703,7 @@ abstract class AppLocalizations {
   /// No description provided for @shareGuidanceCopyText.
   ///
   /// In en, this message translates to:
-  /// **'Track my expenses with BeeCount - open source, free & ad-free! 🐝 Download: https://github.com/TNT-Likely/BeeCount'**
+  /// **'Track my expenses with BeeCount - open source, free & ad-free! 🐝 Download: https://github.com/shshlh/BeeCount'**
   String get shareGuidanceCopyText;
 
   /// No description provided for @shareGuidanceCopied.
@@ -5820,7 +5820,7 @@ abstract class AppLocalizations {
   /// No description provided for @updateManualVisit.
   ///
   /// In en, this message translates to:
-  /// **'Please manually visit in browser:\\nhttps://github.com/TNT-Likely/BeeCount/releases'**
+  /// **'Please manually visit in browser:\\nhttps://github.com/shshlh/BeeCount/releases'**
   String get updateManualVisit;
 
   /// No description provided for @updateNoLocalApkTitle.
@@ -9007,7 +9007,7 @@ abstract class AppLocalizations {
   /// No description provided for @aboutPageTitle.
   ///
   /// In en, this message translates to:
-  /// **'About'**
+  /// **'About This App'**
   String get aboutPageTitle;
 
   /// No description provided for @aboutPageSubtitle.
@@ -9015,6 +9015,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'App information and help'**
   String get aboutPageSubtitle;
+
+  /// No description provided for @aboutSelfUseTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Personal Use Notice'**
+  String get aboutSelfUseTitle;
+
+  /// No description provided for @aboutSelfUse.
+  ///
+  /// In en, this message translates to:
+  /// **'This app is based on the original BeeCount project by TNT-Likely (https://github.com/TNT-Likely/BeeCount), with extensive functional adaptations for personal use. It is for personal and small-circle use only, with no commercial purpose.'**
+  String get aboutSelfUse;
+
+  /// No description provided for @changelogIntro.
+  ///
+  /// In en, this message translates to:
+  /// **'Notable changes in this personal build.'**
+  String get changelogIntro;
+
+  /// No description provided for @changelogV70Title.
+  ///
+  /// In en, this message translates to:
+  /// **'7.0 Personal Build'**
+  String get changelogV70Title;
+
+  /// No description provided for @changelogV70Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed original developer branding, social and donation links; changelog and privacy policy are now local pages; widget refresh chain fixed.'**
+  String get changelogV70Body;
+
+  /// No description provided for @changelogV613Title.
+  ///
+  /// In en, this message translates to:
+  /// **'6.13 Holding Info Fixes'**
+  String get changelogV613Title;
+
+  /// No description provided for @changelogV613Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Holding fund codes can be edited with 6-digit validation; detail page gains delete and quick-add entries; refresh failures show specific fund codes.'**
+  String get changelogV613Body;
+
+  /// No description provided for @changelogV60Title.
+  ///
+  /// In en, this message translates to:
+  /// **'6.0 Booking & Navigation'**
+  String get changelogV60Title;
+
+  /// No description provided for @changelogV60Body.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking returns to bottom navigation; home page gets a net worth focus; asset page chart and account cards polished.'**
+  String get changelogV60Body;
+
+  /// No description provided for @privacyLocalStorageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Data Storage'**
+  String get privacyLocalStorageTitle;
+
+  /// No description provided for @privacyLocalStorageBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Ledger data is stored only on this device. Data is synced to a cloud service you choose only when you configure cloud sync yourself.'**
+  String get privacyLocalStorageBody;
+
+  /// No description provided for @privacyLocalAiTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Third-Party AI'**
+  String get privacyLocalAiTitle;
+
+  /// No description provided for @privacyLocalAiBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Only when you actively use AI bookkeeping or chat features, the content needed to complete the task is sent to the AI provider you selected. This app does not store that content.'**
+  String get privacyLocalAiBody;
+
+  /// No description provided for @privacyLocalNoCollectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No Collection, No Monetization'**
+  String get privacyLocalNoCollectionTitle;
+
+  /// No description provided for @privacyLocalNoCollectionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This app does not collect your usage data, show ads, or serve any commercial purpose.'**
+  String get privacyLocalNoCollectionBody;
 
   /// No description provided for @aboutPageLoadingVersion.
   ///

@@ -1411,7 +1411,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get shareGuidanceCopyText =>
-      '用蜜蜂记账记录生活，开源免费无广告！🐝 下载地址：https://github.com/TNT-Likely/BeeCount';
+      '用蜜蜂记账记录生活，开源免费无广告！🐝 下载地址：https://github.com/shshlh/BeeCount';
 
   @override
   String get shareGuidanceCopied => '文案已复制';
@@ -3069,7 +3069,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get updateManualVisit =>
-      '请手动在浏览器中访问：\\nhttps://github.com/TNT-Likely/BeeCount/releases';
+      '请手动在浏览器中访问：\\nhttps://github.com/shshlh/BeeCount/releases';
 
   @override
   String get updateNoLocalApkTitle => '未找到更新包';
@@ -4749,10 +4749,59 @@ class AppLocalizationsZh extends AppLocalizations {
   String get mineRateAppSubtitle => '在App Store上为我们打分';
 
   @override
-  String get aboutPageTitle => '关于';
+  String get aboutPageTitle => '关于本应用';
 
   @override
   String get aboutPageSubtitle => '应用信息和帮助';
+
+  @override
+  String get aboutSelfUseTitle => '自用说明';
+
+  @override
+  String get aboutSelfUse =>
+      '本应用基于原作者 TNT-Likely 的 GitHub 项目 BeeCount（https://github.com/TNT-Likely/BeeCount）做了大量适配本人的功能性改动，仅用于个人及少量周边人员使用，不做盈利。';
+
+  @override
+  String get changelogIntro => '记录自用版的重要变化。';
+
+  @override
+  String get changelogV70Title => '7.0 自用化';
+
+  @override
+  String get changelogV70Body => '移除原开发者品牌、社交与捐赠入口；更新日志与隐私政策改为本地静态页；小组件刷新链路修复。';
+
+  @override
+  String get changelogV613Title => '6.13 持仓信息修正';
+
+  @override
+  String get changelogV613Body =>
+      '持仓基金代码支持编辑与 6 位校验；明细页新增删除与快速记一笔入口；净值刷新失败给出具体代码提示。';
+
+  @override
+  String get changelogV60Title => '6.0 记账与导航';
+
+  @override
+  String get changelogV60Body => '记账页回归底部导航；首页改为净资产主视觉；资产页图表与账户卡片视觉修正。';
+
+  @override
+  String get privacyLocalStorageTitle => '数据存储';
+
+  @override
+  String get privacyLocalStorageBody =>
+      '账本数据仅保存在本机设备中。只有在你自己配置云同步后，数据才会同步到你选择的云服务。';
+
+  @override
+  String get privacyLocalAiTitle => '第三方 AI';
+
+  @override
+  String get privacyLocalAiBody =>
+      '仅在你主动使用 AI 记账或对话功能时，将完成任务所需的内容发送给你选择的 AI 服务商；本应用不存储这些内容。';
+
+  @override
+  String get privacyLocalNoCollectionTitle => '无收集、无盈利';
+
+  @override
+  String get privacyLocalNoCollectionBody => '本应用不收集你的使用数据，不展示广告，不用于任何商业用途。';
 
   @override
   String get aboutPageLoadingVersion => '加载版本号中...';
@@ -8921,7 +8970,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get shareGuidanceCopyText =>
-      '用蜜蜂記帳記錄生活，開源免費無廣告！🐝 下載地址：https://github.com/TNT-Likely/BeeCount';
+      '用蜜蜂記帳記錄生活，開源免費無廣告！🐝 下載地址：https://github.com/shshlh/BeeCount';
 
   @override
   String get shareGuidanceCopied => '文案已複製';
@@ -10579,7 +10628,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get updateManualVisit =>
-      '請手動在瀏覽器中存取：\\nhttps://github.com/TNT-Likely/BeeCount/releases';
+      '請手動在瀏覽器中存取：\\nhttps://github.com/shshlh/BeeCount/releases';
 
   @override
   String get updateNoLocalApkTitle => '未找到更新包';
@@ -12241,10 +12290,59 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get mineRateAppSubtitle => '在App Store上為我們打分';
 
   @override
-  String get aboutPageTitle => '關於';
+  String get aboutPageTitle => '關於本應用';
 
   @override
   String get aboutPageSubtitle => '應用程式資訊和說明';
+
+  @override
+  String get aboutSelfUseTitle => '自用說明';
+
+  @override
+  String get aboutSelfUse =>
+      '本應用基於原作者 TNT-Likely 的 GitHub 專案 BeeCount（https://github.com/TNT-Likely/BeeCount）做了大量適配本人的功能性改動，僅用於個人及少量周邊人員使用，不做盈利。';
+
+  @override
+  String get changelogIntro => '記錄自用版的重要變化。';
+
+  @override
+  String get changelogV70Title => '7.0 自用化';
+
+  @override
+  String get changelogV70Body => '移除原開發者品牌、社交與捐贈入口；更新日誌與隱私政策改為本地靜態頁；小組件刷新鏈路修復。';
+
+  @override
+  String get changelogV613Title => '6.13 持倉資訊修正';
+
+  @override
+  String get changelogV613Body =>
+      '持倉基金代碼支援編輯與 6 位校驗；明細頁新增刪除與快速記一筆入口；淨值刷新失敗給出具體代碼提示。';
+
+  @override
+  String get changelogV60Title => '6.0 記帳與導航';
+
+  @override
+  String get changelogV60Body => '記帳頁回歸底部導航；首頁改為淨資產主視覺；資產頁圖表與帳戶卡片視覺修正。';
+
+  @override
+  String get privacyLocalStorageTitle => '資料儲存';
+
+  @override
+  String get privacyLocalStorageBody =>
+      '帳本資料僅保存在本機裝置中。只有在你自行配置雲端同步後，資料才會同步到你選擇的雲端服務。';
+
+  @override
+  String get privacyLocalAiTitle => '第三方 AI';
+
+  @override
+  String get privacyLocalAiBody =>
+      '僅在你主動使用 AI 記帳或對話功能時，將完成任務所需內容發送給你選擇的 AI 服務商；本應用不儲存這些內容。';
+
+  @override
+  String get privacyLocalNoCollectionTitle => '無收集、無盈利';
+
+  @override
+  String get privacyLocalNoCollectionBody => '本應用不收集你的使用資料，不展示廣告，不用於任何商業用途。';
 
   @override
   String get aboutPageLoadingVersion => '載入版本號中...';

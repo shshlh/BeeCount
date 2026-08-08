@@ -422,8 +422,8 @@ final ledgerSyncStatusProvider = FutureProvider.family<SyncStatus, int>(
 
 ## 联系方式
 
-- **GitHub**: https://github.com/TNT-Likely/BeeCount
-- **Issues**: https://github.com/TNT-Likely/BeeCount/issues
+- **GitHub**: https://github.com/shshlh/BeeCount
+- **Issues**: https://github.com/shshlh/BeeCount/issues
 
 ---
 

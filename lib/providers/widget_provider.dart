@@ -19,12 +19,14 @@ Future<void> updateAppWidget(WidgetRef ref, BuildContext context) async {
     final primaryColor = ref.read(primaryColorProvider);
     final redForIncome = ref.read(incomeExpenseColorSchemeProvider);
     final baseCurrency = ref.read(baseCurrencyProvider);
+    final dark = Theme.of(context).brightness == Brightness.dark;
 
     final widgetManager = ref.read(widgetManagerProvider);
     await widgetManager.updateAllWidgets(
       repository,
       currentLedgerId,
       primaryColor,
+      dark: dark,
       redForIncome: redForIncome,
       glanceTitleLabel: l10n.widgetGalleryGlanceTitle,
       quickAddTitleLabel: l10n.widgetGalleryQuickAddTitle,

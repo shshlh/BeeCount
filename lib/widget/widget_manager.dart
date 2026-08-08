@@ -124,10 +124,32 @@ AppLocalizations resolveWidgetLocalizations(Locale? explicitLocale) {
   return lookupAppLocalizations(AppLocalizations.supportedLocales.first);
 }
 
+/// 按 App 主题模式 + 系统明暗计算小组件应使用的暗色标记。
+///
+/// App 手动选择 light/dark 时小组件跟随 App；`system` 时跟随系统，行为与
+/// 旧版一致。
+bool resolveWidgetDarkMode(ThemeMode themeMode, Brightness platformBrightness) {
+  switch (themeMode) {
+    case ThemeMode.light:
+      return false;
+    case ThemeMode.dark:
+      return true;
+    case ThemeMode.system:
+      return platformBrightness == Brightness.dark;
+  }
+}
+
 class WidgetManager {
   static final WidgetManager _instance = WidgetManager._internal();
   factory WidgetManager() => _instance;
   WidgetManager._internal();
+
+  /// 静态入口,委托顶层 [resolveWidgetDarkMode],供无测试依赖的调用点使用。
+  static bool resolveDarkMode(
+    ThemeMode themeMode,
+    Brightness platformBrightness,
+  ) =>
+      resolveWidgetDarkMode(themeMode, platformBrightness);
 
   /// 渲染批次串行门:任意时刻只允许一个 [updateAllWidgets] 批次在跑。
   ///
@@ -160,6 +182,7 @@ class WidgetManager {
     BaseRepository repository,
     int ledgerId,
     Color themeColor, {
+    bool? dark,
     bool redForIncome = true,
     // 六款组件统一内容标签(2026-07 A 方案):glance 中号从「App 名 header」
     // 改为内容标签(iOS HIG:widget 内不放 App 名),其余三款新增标签。
@@ -247,10 +270,9 @@ class WidgetManager {
       );
 
       // 图片渲染方案不会随系统明暗切换自动重绘(见 widget_view_style.dart
-      // 顶部注释);这里在一次渲染批次开始时取一次当前系统明暗,批次内所有
-      // spec 共用同一个值,避免逐个 spec 重复读取平台通道。"更及时跟随系统
-      // 切换"的触发时机留 Phase C。
-      final dark =
+      // 顶部注释);这里在一次渲染批次开始时取一次明暗,批次内所有 spec 共用
+      // 同一个值。优先用调用方传入的 App 主题模式结果,缺省回退系统明暗。
+      final isDark = dark ??
           PlatformDispatcher.instance.platformBrightness == Brightness.dark;
 
       for (final spec in specs) {
@@ -260,7 +282,7 @@ class WidgetManager {
             batch: batch,
             themeColor: themeColor,
             redForIncome: redForIncome,
-            dark: dark,
+            dark: isDark,
             glanceTitleLabel: glanceTitleLabel,
             quickAddTitleLabel: quickAddTitleLabel,
             recentTitleLabel: recentTitleLabel,
@@ -340,6 +362,7 @@ class WidgetManager {
     int ledgerId,
     Color themeColor, {
     required Locale? explicitLocale,
+    bool? dark,
     bool redForIncome = true,
     String baseCurrency = 'CNY',
     bool warmUpAllSpecs = false,
@@ -349,6 +372,7 @@ class WidgetManager {
       repository,
       ledgerId,
       themeColor,
+      dark: dark,
       redForIncome: redForIncome,
       warmUpAllSpecs: warmUpAllSpecs,
       glanceTitleLabel: l10n.widgetGalleryGlanceTitle,

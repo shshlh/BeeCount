@@ -8,6 +8,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../services/export/share_poster_types.dart';
 import '../../services/data/category_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../../utils/fork_links.dart';
 
 /// 账本总结海报
 class LedgerSummaryPoster extends StatelessWidget {
@@ -176,7 +177,7 @@ class LedgerSummaryPoster extends StatelessWidget {
               ],
             ),
             child: QrImageView(
-              data: 'https://github.com/TNT-Likely/BeeCount',
+              data: ForkLinks.gitHubBase,
               version: QrVersions.auto,
               size: 98,
               backgroundColor: Colors.white,

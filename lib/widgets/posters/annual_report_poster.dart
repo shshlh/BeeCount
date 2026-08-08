@@ -9,6 +9,7 @@ import 'dart:math' as math;
 import '../../pages/report/annual_report_page.dart';
 import '../../services/data/category_service.dart';
 import '../../l10n/app_localizations.dart';
+import '../../utils/fork_links.dart';
 
 /// 年度账单长图海报
 /// 将多个页面内容合并成一张长图用于分享
@@ -339,7 +340,7 @@ class AnnualReportPoster extends StatelessWidget {
               ],
             ),
             child: QrImageView(
-              data: 'https://github.com/TNT-Likely/BeeCount',
+              data: ForkLinks.gitHubBase,
               version: QrVersions.auto,
               size: 80,
               padding: EdgeInsets.zero,

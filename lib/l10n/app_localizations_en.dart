@@ -1431,7 +1431,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shareGuidanceCopyText =>
-      'Track my expenses with BeeCount - open source, free & ad-free! 🐝 Download: https://github.com/TNT-Likely/BeeCount';
+      'Track my expenses with BeeCount - open source, free & ad-free! 🐝 Download: https://github.com/shshlh/BeeCount';
 
   @override
   String get shareGuidanceCopied => 'Text copied';
@@ -3163,7 +3163,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get updateManualVisit =>
-      'Please manually visit in browser:\\nhttps://github.com/TNT-Likely/BeeCount/releases';
+      'Please manually visit in browser:\\nhttps://github.com/shshlh/BeeCount/releases';
 
   @override
   String get updateNoLocalApkTitle => 'No Update Package Found';
@@ -4958,10 +4958,62 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mineRateAppSubtitle => 'Rate us on the App Store';
 
   @override
-  String get aboutPageTitle => 'About';
+  String get aboutPageTitle => 'About This App';
 
   @override
   String get aboutPageSubtitle => 'App information and help';
+
+  @override
+  String get aboutSelfUseTitle => 'Personal Use Notice';
+
+  @override
+  String get aboutSelfUse =>
+      'This app is based on the original BeeCount project by TNT-Likely (https://github.com/TNT-Likely/BeeCount), with extensive functional adaptations for personal use. It is for personal and small-circle use only, with no commercial purpose.';
+
+  @override
+  String get changelogIntro => 'Notable changes in this personal build.';
+
+  @override
+  String get changelogV70Title => '7.0 Personal Build';
+
+  @override
+  String get changelogV70Body =>
+      'Removed original developer branding, social and donation links; changelog and privacy policy are now local pages; widget refresh chain fixed.';
+
+  @override
+  String get changelogV613Title => '6.13 Holding Info Fixes';
+
+  @override
+  String get changelogV613Body =>
+      'Holding fund codes can be edited with 6-digit validation; detail page gains delete and quick-add entries; refresh failures show specific fund codes.';
+
+  @override
+  String get changelogV60Title => '6.0 Booking & Navigation';
+
+  @override
+  String get changelogV60Body =>
+      'Booking returns to bottom navigation; home page gets a net worth focus; asset page chart and account cards polished.';
+
+  @override
+  String get privacyLocalStorageTitle => 'Data Storage';
+
+  @override
+  String get privacyLocalStorageBody =>
+      'Ledger data is stored only on this device. Data is synced to a cloud service you choose only when you configure cloud sync yourself.';
+
+  @override
+  String get privacyLocalAiTitle => 'Third-Party AI';
+
+  @override
+  String get privacyLocalAiBody =>
+      'Only when you actively use AI bookkeeping or chat features, the content needed to complete the task is sent to the AI provider you selected. This app does not store that content.';
+
+  @override
+  String get privacyLocalNoCollectionTitle => 'No Collection, No Monetization';
+
+  @override
+  String get privacyLocalNoCollectionBody =>
+      'This app does not collect your usage data, show ads, or serve any commercial purpose.';
 
   @override
   String get aboutPageLoadingVersion => 'Loading version...';

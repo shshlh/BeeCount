@@ -445,6 +445,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       });
       // 从数据库重新加载最新数据并执行搜索
       await _performSearchFromDb();
+      if (!mounted) return;
+      updateAppWidget(ref, context);
     }
   }
 

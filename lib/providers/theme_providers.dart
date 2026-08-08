@@ -9,6 +9,9 @@ import '../theme.dart';
 import '../widget/widget_manager.dart';
 import '../providers.dart';
 
+Brightness _platformBrightness() =>
+    WidgetsBinding.instance.platformDispatcher.platformBrightness;
+
 // 主题模式Provider（默认跟随系统）
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.system);
 
@@ -41,6 +44,29 @@ final themeModeInitProvider = FutureProvider<void>((ref) async {
         value = 'system';
     }
     await prefs.setString('themeMode', value);
+    try {
+      final repository = ref.read(repositoryProvider);
+      final currentLedgerId = ref.read(currentLedgerIdProvider);
+      final primaryColor = ref.read(primaryColorProvider);
+      final redForIncome = ref.read(incomeExpenseColorSchemeProvider);
+      final baseCurrency = ref.read(baseCurrencyProvider);
+      final locale = ref.read(languageProvider);
+      final dark = WidgetManager.resolveDarkMode(
+        next,
+        _platformBrightness(),
+      );
+      await WidgetManager().updateAllWidgetsLocalized(
+        repository,
+        currentLedgerId,
+        primaryColor,
+        explicitLocale: locale,
+        dark: dark,
+        redForIncome: redForIncome,
+        baseCurrency: baseCurrency,
+      );
+    } catch (e) {
+      // Silently fail
+    }
   });
 });
 
@@ -73,12 +99,17 @@ final primaryColorInitProvider = FutureProvider<void>((ref) async {
       // 没有 BuildContext,靠 languageProvider 还原当前 App 语言(见
       // widget_manager.dart resolveWidgetLocalizations 文档)。
       final locale = ref.read(languageProvider);
+      final dark = WidgetManager.resolveDarkMode(
+        ref.read(themeModeProvider),
+        _platformBrightness(),
+      );
       final widgetManager = WidgetManager();
       await widgetManager.updateAllWidgetsLocalized(
         repository,
         currentLedgerId,
         next,
         explicitLocale: locale,
+        dark: dark,
         redForIncome: redForIncome,
         baseCurrency: baseCurrency,
       );
@@ -382,12 +413,17 @@ final incomeExpenseColorSchemeInitProvider = FutureProvider<void>((ref) async {
       // 没有 BuildContext,靠 languageProvider 还原当前 App 语言(见
       // widget_manager.dart resolveWidgetLocalizations 文档)。
       final locale = ref.read(languageProvider);
+      final dark = WidgetManager.resolveDarkMode(
+        ref.read(themeModeProvider),
+        _platformBrightness(),
+      );
       final widgetManager = WidgetManager();
       await widgetManager.updateAllWidgetsLocalized(
         repository,
         currentLedgerId,
         primaryColor,
         explicitLocale: locale,
+        dark: dark,
         redForIncome: next,
         baseCurrency: baseCurrency,
       );

@@ -13,9 +13,9 @@ body:
     attributes:
       label: Pre-flight checks
       options:
-        - label: I read the [documentation](https://count.beejz.com/docs/intro) — this feature doesn't exist yet
+        - label: I read the [documentation](https://github.com/shshlh/BeeCount#readme) — this feature doesn't exist yet
           required: true
-        - label: I searched [existing issues / discussions](https://github.com/TNT-Likely/BeeCount/issues?q=is%3Aissue) — no duplicate
+        - label: I searched [existing issues / discussions](https://github.com/shshlh/BeeCount/issues?q=is%3Aissue) — no duplicate
           required: true
         - label: This request covers **one independent feature**, not a bundle of unrelated modules
           required: true

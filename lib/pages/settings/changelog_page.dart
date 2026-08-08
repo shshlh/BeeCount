@@ -7,11 +7,11 @@ import '../../utils/ui_scale_extensions.dart';
 import '../../widgets/biz/biz.dart';
 import '../../widgets/ui/ui.dart';
 
-/// 本地静态隐私政策页。
+/// 本地静态更新日志页。
 ///
-/// 自用版不再通过 WebView 打开原官网，仅展示本机数据与第三方 AI 使用说明。
-class PrivacyPolicyPage extends ConsumerWidget {
-  const PrivacyPolicyPage({super.key});
+/// 自用版不再打开原官网 beejz.com，历史与新增版本记录直接以内置文案展示。
+class ChangelogPage extends ConsumerWidget {
+  const ChangelogPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -21,7 +21,8 @@ class PrivacyPolicyPage extends ConsumerWidget {
       body: Column(
         children: [
           PrimaryHeader(
-            title: l10n.aboutPrivacyPolicy,
+            title: l10n.aboutChangelog,
+            subtitle: l10n.changelogIntro,
             showBack: true,
             compact: true,
           ),
@@ -34,25 +35,25 @@ class PrivacyPolicyPage extends ConsumerWidget {
                 24.0.scaled(context, ref),
               ),
               children: [
-                _sectionCard(
+                _versionCard(
                   context,
                   ref,
-                  title: l10n.privacyLocalStorageTitle,
-                  body: l10n.privacyLocalStorageBody,
+                  title: l10n.changelogV70Title,
+                  body: l10n.changelogV70Body,
                 ),
                 SizedBox(height: 12.0.scaled(context, ref)),
-                _sectionCard(
+                _versionCard(
                   context,
                   ref,
-                  title: l10n.privacyLocalAiTitle,
-                  body: l10n.privacyLocalAiBody,
+                  title: l10n.changelogV613Title,
+                  body: l10n.changelogV613Body,
                 ),
                 SizedBox(height: 12.0.scaled(context, ref)),
-                _sectionCard(
+                _versionCard(
                   context,
                   ref,
-                  title: l10n.privacyLocalNoCollectionTitle,
-                  body: l10n.privacyLocalNoCollectionBody,
+                  title: l10n.changelogV60Title,
+                  body: l10n.changelogV60Body,
                 ),
               ],
             ),
@@ -62,7 +63,7 @@ class PrivacyPolicyPage extends ConsumerWidget {
     );
   }
 
-  Widget _sectionCard(
+  Widget _versionCard(
     BuildContext context,
     WidgetRef ref, {
     required String title,

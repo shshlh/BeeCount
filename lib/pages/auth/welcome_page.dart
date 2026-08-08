@@ -5,6 +5,7 @@ import '../../widgets/biz/bee_icon.dart';
 import 'dart:io';
 import '../../l10n/app_localizations.dart';
 import '../../utils/file_picker_helper.dart';
+import '../../utils/fork_links.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/ui_state_providers.dart';
 import '../../providers/language_provider.dart';
@@ -697,7 +698,7 @@ class _WelcomePageState extends ConsumerState<WelcomePage> {
 
   /// 打开GitHub链接
   Future<void> _launchGitHub(BuildContext context) async {
-    final url = Uri.parse('https://github.com/TNT-Likely/BeeCount');
+    final url = Uri.parse(ForkLinks.gitHubBase);
     try {
       if (await canLaunchUrl(url)) {
         await launchUrl(url, mode: LaunchMode.externalApplication);

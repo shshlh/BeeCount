@@ -12,7 +12,7 @@ import '../../ai/providers/ai_provider_manager.dart';
 import '../../ai/providers/ai_provider_factory.dart';
 import '../../ai/providers/ai_constants.dart';
 import '../../l10n/app_localizations.dart';
-import '../../utils/website_urls.dart';
+import 'ai_tutorial_page.dart';
 
 /// AI 服务商管理刷新 Provider
 final aiProviderListRefreshProvider = StateProvider<int>((ref) => 0);
@@ -1035,12 +1035,10 @@ class _AIProviderEditPageState extends ConsumerState<AIProviderEditPage> {
     }
   }
 
-  /// 打开教程
+  /// 打开本地 AI 设置与使用说明页。
   Future<void> _openTutorial() async {
-    final locale = Localizations.localeOf(context);
-    final uri = Uri.parse(WebsiteUrls.docsAi('overview', locale));
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const AiTutorialPage()),
+    );
   }
 }

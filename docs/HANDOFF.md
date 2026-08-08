@@ -34,6 +34,69 @@
 ## 2026-08-09
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-ui / invest-logic / qa
+
+**任务**：7.0 PM 审查通过 + 合入
+
+**审查结果**：7.0.1 - 7.0.4 全部通过，合入。
+- 关于页自用声明、本地更新日志/隐私页、社交/捐赠入口删除符合要求
+- 更新链路、欢迎页、云同步 wiki、海报等原仓库链接全部改指自身 fork；beejz.com 官网文档入口已本地化并清理死代码
+- 小组件主题模式跟随与刷新链路修复已覆盖转账/搜索/导入等触发点
+- 验证：相关测试全过；全量 695 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）；改动文件 analyze 无新增 error/warning
+- 遗留：本地教程页 en/ko/zh_TW 完整翻译后续可补，不影响本次合入
+
+**git 状态**：当前分支 main，合入后提交
+
+---
+
+## 2026-08-09
+
+**移交角色**：invest-logic（7.0.4 收尾）
+**接收角色**：PM（审查合入）
+
+**任务**：7.0.4 教程类内容本地化收尾（beejz.com 残留清理 + 扫描测试）
+
+**完成工作**：
+- 删除 `lib/utils/website_urls.dart` + `test/utils/website_urls_test.dart`：lib 已无调用点，教程本地页完成后属于死代码
+- 删除 `lib/services/marketing/product_promos.dart`：无调用点且含 `assets.beejz.com` / `dns.beejz.com` 资产链接
+- `original_repo_link_cleanup_test.dart` 新增 beejz.com 扫描：lib 非 l10n 下无用户可见官网链接（跳过历史注释）
+- 确认 lib 中仅剩帮助页/更新日志的历史注释提及 beejz.com，无用户可见链接
+
+**下一个任务需要知道的**：
+- 全量 `flutter test`：695 passed / 1 skipped / 1 failed（唯一失败为既存 `bill_creation_service_test`）
+- `flutter analyze` 无 error；仓库既有 + 并行 issue 856 条，7.0.4 改动无新增
+- `product_promo_card.dart` 仍是无调用点的遗留组件（不含 beejz.com 链接），本次按范围未删
+- 本地教程页正文以中文为主，en/ko/zh_TW 完整翻译后续可补
+
+**git 状态**：当前分支 main，7.0.1-7.0.4 全部改动在未提交工作区，待 PM 审查合入
+
+---
+
+## 2026-08-09
+
+**移交角色**：invest-ui（7.0.4 前半）
+**接收角色**：invest-logic（7.0.4 收尾）/ PM（审查合入）
+
+**任务**：教程类内容本地化（beejz.com）
+
+**完成工作**：
+- `help_center_page.dart` 重写为本地静态帮助页，覆盖基础记账 / 投资 / 导入导出 / 云同步 / 小组件 / AI 记账 / 数据隐私，不再使用 WebView
+- 新增 `CloudSyncGuidePage`（Supabase / WebDAV / BeeCount Cloud / S3 设置说明），登录页「注册指引」改指本地页
+- 新增 `AiTutorialPage`（服务商配置 / 能力绑定 / 图片 / 语音 / 截图 / AI 对话），AI 服务商管理「详细教程」改指本地页
+- `mine_page`「使用帮助」去掉 WebView / 官网兜底，直接打开本地帮助页；移除 WebsiteUrls 与 url_launcher 相关死代码
+- 新增 `help_center_local_test.dart` 3 例
+
+**下一个任务需要知道的**：
+- 未改 `lib/utils/website_urls.dart` 与 `product_promos.dart`，按执行顺序留给 invest-logic 清理
+- 本地页正文以中文为主，标题沿用现有 l10n；en/ko/zh_TW 完整翻译后续可补
+
+**git 状态**：当前分支 main，工作区含 7.0.1-7.0.3 + invest-ui 7.0.4 前半改动，待 PM 审查合入
+
+---
+
+## 2026-08-09
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-ui + invest-logic
 
 **任务**：7.0.4 教程类内容本地化（beejz.com）

@@ -762,6 +762,10 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
         ledger.id,
         ref.read(primaryColorProvider),
         explicitLocale: ref.read(languageProvider),
+        dark: WidgetManager.resolveDarkMode(
+          ref.read(themeModeProvider),
+          WidgetsBinding.instance.platformDispatcher.platformBrightness,
+        ),
         redForIncome: redForIncome,
         baseCurrency: ref.read(baseCurrencyProvider),
       );

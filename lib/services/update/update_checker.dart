@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../system/logger_service.dart';
+import '../../utils/fork_links.dart';
 import 'update_result.dart';
 
 /// 更新检查管理类
@@ -103,7 +104,7 @@ class UpdateChecker {
         try {
           logger.info('UpdateChecker', '尝试第$attempts次请求GitHub API...');
           resp = await _dio.get(
-            'https://api.github.com/repos/TNT-Likely/BeeCount/releases/latest',
+            ForkLinks.gitHubApiReleasesLatest,
             options: Options(
               headers: {
                 'Accept': 'application/vnd.github+json',

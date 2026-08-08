@@ -11,7 +11,7 @@
 
 ### 1.1 定位
 
-一款自用 Android 个人记账 App，以 [BeeCount](https://github.com/TNT-Likely/BeeCount) 为技术基座进行二次开发。继承其成熟的记账基础设施（Riverpod 状态管理、Drift ORM、云端同步框架、AI OCR 自动记账、桌面小组件），叠加自有的**投资管理模块**（基金买卖/转换/赎回/净值跟踪）。
+一款自用 Android 个人记账 App，以 [BeeCount](https://github.com/shshlh/BeeCount) 为技术基座进行二次开发。继承其成熟的记账基础设施（Riverpod 状态管理、Drift ORM、云端同步框架、AI OCR 自动记账、桌面小组件），叠加自有的**投资管理模块**（基金买卖/转换/赎回/净值跟踪）。
 
 ### 1.2 核心目标
 

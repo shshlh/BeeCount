@@ -7,6 +7,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/export/share_poster_types.dart';
+import '../../utils/fork_links.dart';
 
 /// 用户档案海报
 class UserProfilePoster extends StatelessWidget {
@@ -223,7 +224,7 @@ class UserProfilePoster extends StatelessWidget {
               ],
             ),
             child: QrImageView(
-              data: 'https://github.com/TNT-Likely/BeeCount?utm_source=share_poster&utm_medium=qr_code&utm_campaign=user_profile',
+              data: '${ForkLinks.gitHubBase}?utm_source=share_poster&utm_medium=qr_code&utm_campaign=user_profile',
               version: QrVersions.auto,
               size: 98,
               backgroundColor: Colors.white,

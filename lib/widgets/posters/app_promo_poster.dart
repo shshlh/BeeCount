@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../utils/fork_links.dart';
 
 /// 应用推广海报
 class AppPromoPoster extends StatelessWidget {
@@ -294,7 +295,7 @@ class AppPromoPoster extends StatelessWidget {
               ],
             ),
             child: QrImageView(
-              data: 'https://github.com/TNT-Likely/BeeCount?utm_source=share_poster&utm_medium=qr_code&utm_campaign=app_share',
+              data: '${ForkLinks.gitHubBase}?utm_source=share_poster&utm_medium=qr_code&utm_campaign=app_share',
               version: QrVersions.auto,
               size: 120,
               backgroundColor: Colors.white,
@@ -316,7 +317,7 @@ class AppPromoPoster extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'github.com/TNT-Likely/BeeCount',
+                  'github.com/shshlh/BeeCount',
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.white.withValues(alpha: 0.8),

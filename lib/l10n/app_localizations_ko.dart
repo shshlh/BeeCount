@@ -1415,7 +1415,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get shareGuidanceCopyText =>
-      'BeeCount로 지출을 기록하세요 - 오픈소스, 무료, 광고 없음! 🐝 다운로드: https://github.com/TNT-Likely/BeeCount';
+      'BeeCount로 지출을 기록하세요 - 오픈소스, 무료, 광고 없음! 🐝 다운로드: https://github.com/shshlh/BeeCount';
 
   @override
   String get shareGuidanceCopied => '텍스트가 복사되었습니다';
@@ -3083,7 +3083,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get updateManualVisit =>
-      '브라우저에서 직접 방문해 주세요:\\nhttps://github.com/TNT-Likely/BeeCount/releases';
+      '브라우저에서 직접 방문해 주세요:\\nhttps://github.com/shshlh/BeeCount/releases';
 
   @override
   String get updateNoLocalApkTitle => '업데이트 패키지를 찾을 수 없습니다';
@@ -4804,10 +4804,62 @@ class AppLocalizationsKo extends AppLocalizations {
   String get mineRateAppSubtitle => '앱스토어에서 평가해 주세요';
 
   @override
-  String get aboutPageTitle => '정보';
+  String get aboutPageTitle => '앱 정보';
 
   @override
   String get aboutPageSubtitle => '앱 정보 및 도움말';
+
+  @override
+  String get aboutSelfUseTitle => '개인 사용 안내';
+
+  @override
+  String get aboutSelfUse =>
+      '이 앱은 원저자 TNT-Likely의 GitHub 프로젝트 BeeCount(https://github.com/TNT-Likely/BeeCount)를 기반으로 개인 용도에 맞게 기능을 대폭 수정했습니다. 개인 및 주변 소수 사용자만을 위해 제공되며 영리를 목적으로 하지 않습니다.';
+
+  @override
+  String get changelogIntro => '이 개인 빌드의 주요 변경 사항입니다.';
+
+  @override
+  String get changelogV70Title => '7.0 개인 빌드';
+
+  @override
+  String get changelogV70Body =>
+      '원저자 브랜드, 소셜 및 후원 링크를 제거했습니다. 업데이트 내역과 개인정보 처리방침을 로컬 페이지로 전환했고, 위젯 새로고침 경로를 수정했습니다.';
+
+  @override
+  String get changelogV613Title => '6.13 보유 정보 수정';
+
+  @override
+  String get changelogV613Body =>
+      '보유 펀드 코드 편집과 6자리 검증을 지원하고, 상세 페이지에 삭제와 빠른 입력을 추가했으며, NAV 새로고침 실패 시 구체적인 코드를 표시합니다.';
+
+  @override
+  String get changelogV60Title => '6.0 가계부 및 내비게이션';
+
+  @override
+  String get changelogV60Body =>
+      '가계부 입력이 하단 내비게이션으로 돌아왔고, 홈은 순자산 중심으로, 자산 페이지 차트와 계좌 카드를 정리했습니다.';
+
+  @override
+  String get privacyLocalStorageTitle => '데이터 저장';
+
+  @override
+  String get privacyLocalStorageBody =>
+      '가계부 데이터는 이 기기에만 저장됩니다. 직접 클라우드 동기화를 설정한 경우에만 선택한 클라우드 서비스로 동기화됩니다.';
+
+  @override
+  String get privacyLocalAiTitle => '제3자 AI';
+
+  @override
+  String get privacyLocalAiBody =>
+      'AI 가계부 또는 대화 기능을 직접 사용할 때만 작업에 필요한 내용을 선택한 AI 제공업체로 보냅니다. 본 앱은 해당 내용을 저장하지 않습니다.';
+
+  @override
+  String get privacyLocalNoCollectionTitle => '수집 없음, 영리 목적 없음';
+
+  @override
+  String get privacyLocalNoCollectionBody =>
+      '본 앱은 사용 데이터를 수집하지 않고, 광고를 표시하지 않으며, 영리 목적으로 사용되지 않습니다.';
 
   @override
   String get aboutPageLoadingVersion => '버전 정보를 불러오는 중...';

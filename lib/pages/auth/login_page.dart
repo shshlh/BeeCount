@@ -7,8 +7,7 @@ import '../../widgets/ui/ui.dart';
 import '../../styles/tokens.dart';
 import '../../services/system/logger_service.dart';
 import '../../l10n/app_localizations.dart';
-import '../../utils/website_urls.dart';
-import '../settings/help_center_page.dart';
+import '../settings/cloud_sync_guide_page.dart';
 
 class AuthPage extends ConsumerStatefulWidget {
   const AuthPage({super.key});
@@ -169,35 +168,10 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     return AppLocalizations.of(context).authErrorLoginFailed;
   }
 
-  /// 按当前云后端选注册指引文档的 topic:Supabase / BeeCount Cloud 各跳自己的
-  /// 配置文档,其它(含加载中)兜底到云同步概览。
-  static String _registerDocTopic(CloudBackendType? type) {
-    switch (type) {
-      case CloudBackendType.supabase:
-        return 'supabase';
-      case CloudBackendType.beecountCloud:
-        return 'beecount-cloud';
-      default:
-        return 'overview';
-    }
-  }
-
-  static String _hex(Color c) => [c.r, c.g, c.b]
-      .map((v) => ((v * 255).round() & 0xff).toRadixString(16).padLeft(2, '0'))
-      .join();
-
-  /// 打开「注册指引」:按当前云后端拼 embed 文档 URL,复用帮助中心内嵌 WebView
-  /// 打开(隐藏外链、跟随暗黑与主题色、域名白名单、离线兜底)。
+  /// 打开「注册指引」:7.0.4 起改为本地云同步设置说明页。
   void _openRegisterGuide() {
-    final type = ref.read(activeCloudConfigProvider).value?.type;
-    final url = WebsiteUrls.docsCloudSyncEmbed(
-      _registerDocTopic(type),
-      Localizations.localeOf(context),
-      dark: BeeTokens.isDark(context),
-      primaryHex: _hex(ref.read(primaryColorProvider)),
-    );
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => HelpCenterPage(initialUrl: url)),
+      MaterialPageRoute(builder: (_) => const CloudSyncGuidePage()),
     );
   }
 

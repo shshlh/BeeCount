@@ -82,7 +82,7 @@ services:
 - **Data location**: SQLite + attachments + JWT secret all live in `./data/`. Migrate / back up the whole directory.
 - **Public deployment**: Front with nginx / caddy for HTTPS + domain.
 
-[📖 BeeCount-Cloud repo + backup system + audit reports →](https://github.com/TNT-Likely/BeeCount-Cloud)
+[📖 BeeCount-Cloud repo + backup system + audit reports →](https://github.com/shshlh/BeeCount-Cloud)
 
 ---
 
@@ -315,4 +315,4 @@ Aliyun OSS (S3-compatible):
 - 📦 Dropbox
 - 📦 OneDrive
 
-If you want to prioritize a service, please raise an [Issue](https://github.com/TNT-Likely/BeeCount/issues)!
+If you want to prioritize a service, please raise an [Issue](https://github.com/shshlh/BeeCount/issues)!

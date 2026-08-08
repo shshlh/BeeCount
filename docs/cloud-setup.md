@@ -82,7 +82,7 @@ services:
 - **数据位置**:SQLite 数据库 + 附件 + JWT 密钥全部在 `./data/` 目录,迁移/备份整个目录就行
 - **公网部署**:建议在前面套一层 nginx / caddy 做 HTTPS + 域名
 
-[📖 BeeCount-Cloud 仓库 + 备份系统 + 代码审查报告 →](https://github.com/TNT-Likely/BeeCount-Cloud)
+[📖 BeeCount-Cloud 仓库 + 备份系统 + 代码审查报告 →](https://github.com/shshlh/BeeCount-Cloud)
 
 ---
 
@@ -319,4 +319,4 @@ MinIO(自建):
 - 📦 Dropbox
 - 📦 OneDrive
 
-如果你希望优先支持某个云服务,欢迎在 [Issues](https://github.com/TNT-Likely/BeeCount/issues) 中提出需求!
+如果你希望优先支持某个云服务,欢迎在 [Issues](https://github.com/shshlh/BeeCount/issues) 中提出需求!

@@ -423,6 +423,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
       ref.read(statsRefreshProvider.notifier).state++;
 
       if (!mounted) return;
+      updateAppWidget(ref, context);
       if (exitAfterSave) {
         if (sheetContext != null &&
             sheetContext.mounted &&

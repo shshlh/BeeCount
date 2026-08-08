@@ -15,6 +15,7 @@ import '../../services/billing/post_processor.dart';
 import '../../services/data_import_service.dart';
 import '../../utils/date_parser.dart';
 import '../../styles/tokens.dart';
+import '../../widget/widget_manager.dart';
 import 'import_page.dart';
 
 class ImportConfirmPage extends ConsumerStatefulWidget {
@@ -529,6 +530,23 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
         PostProcessor.syncC(container, ledgerId: ledgerId);
       } catch (_) {
         // 忽略同步触发错误,导入本身已经成功
+      }
+      // 导入会批量改变收支/净资产数据,完成后即时刷新桌面小组件。
+      try {
+        await WidgetManager().updateAllWidgetsLocalized(
+          repo,
+          ledgerId,
+          container.read(primaryColorProvider),
+          explicitLocale: container.read(languageProvider),
+          dark: WidgetManager.resolveDarkMode(
+            container.read(themeModeProvider),
+            WidgetsBinding.instance.platformDispatcher.platformBrightness,
+          ),
+          redForIncome: container.read(incomeExpenseColorSchemeProvider),
+          baseCurrency: container.read(baseCurrencyProvider),
+        );
+      } catch (_) {
+        // 小组件刷新失败不阻断导入完成流程。
       }
     } catch (e) {
       // 导入失败

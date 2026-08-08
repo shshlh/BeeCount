@@ -18,11 +18,9 @@ import '../../providers/sync_providers.dart' as sp;
 import '../../l10n/app_localizations.dart';
 import '../cloud/cloud_sync_page.dart';
 import '../cloud/beecount_cloud_sync_page.dart';
-import '../../utils/website_urls.dart';
 import '../settings/appearance_settings_page.dart';
 import '../settings/about_page.dart';
 import '../report/annual_report_page.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../utils/ui_scale_extensions.dart';
 
 class MinePage extends ConsumerWidget {
@@ -331,21 +329,14 @@ class MinePage extends ConsumerWidget {
                         },
                       ),
                       BeeTokens.cardDivider(context),
-                      // 使用帮助:默认 App 内嵌 WebView(embed 模式)。
-                      // 审核兜底:kHelpCenterInApp 改 false 重新打包即回退外部浏览器
+                      // 使用帮助:7.0.4 起为本地静态帮助页。
                       AppListTile(
                         leading: Icons.help_outline,
                         title: AppLocalizations.of(context).mineHelp,
                         subtitle: AppLocalizations.of(context).mineHelpSubtitle,
                         onTap: () async {
-                          if (kHelpCenterInApp) {
-                            await Navigator.of(context).push(MaterialPageRoute(
-                                builder: (_) => const HelpCenterPage()));
-                          } else {
-                            final locale = Localizations.localeOf(context);
-                            await _tryOpenUrl(
-                                Uri.parse(WebsiteUrls.docs(locale)));
-                          }
+                          await Navigator.of(context).push(MaterialPageRoute(
+                              builder: (_) => const HelpCenterPage()));
                         },
                       ),
                     ],
@@ -415,35 +406,6 @@ class _StatCell extends ConsumerWidget {
 }
 
 // 导入完成后的短暂动画提示：线性进度条从 0 -> 100%
-
-/// 尝试使用多种方式打开URL，提供更好的兼容性
-Future<bool> _tryOpenUrl(Uri url) async {
-  try {
-    // 方式1: 默认外部应用打开
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-      return true;
-    }
-
-    // 方式2: 浏览器内打开
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalNonBrowserApplication);
-      return true;
-    }
-
-    // 方式3: 平台默认方式
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.platformDefault);
-      return true;
-    }
-
-    logger.error('MinePage', '无法打开URL: $url');
-    return false;
-  } catch (e) {
-    logger.error('MinePage', '打开URL失败: $url', e);
-    return false;
-  }
-}
 
 /// 昵称编辑弹窗。独立 StatefulWidget 自己持有 controller、在 dispose() 释放,
 /// 把 controller 的生命周期绑到弹窗本身 —— 弹窗(含 TextField)整棵子树卸载后

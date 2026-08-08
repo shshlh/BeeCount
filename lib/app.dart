@@ -777,6 +777,10 @@ class _BeeAppState extends ConsumerState<BeeApp>
       final primaryColor = ref.read(primaryColorProvider);
       final redForIncome = ref.read(incomeExpenseColorSchemeProvider);
       final baseCurrency = ref.read(baseCurrencyProvider);
+      final dark = WidgetManager.resolveDarkMode(
+        ref.read(themeModeProvider),
+        WidgetsBinding.instance.platformDispatcher.platformBrightness,
+      );
 
       final widgetManager = WidgetManager();
       // 前台恢复路径也走本地化封装,让小组件文案跟随 App 语言(与
@@ -787,6 +791,7 @@ class _BeeAppState extends ConsumerState<BeeApp>
         ledgerId,
         primaryColor,
         explicitLocale: ref.read(languageProvider),
+        dark: dark,
         redForIncome: redForIncome,
         baseCurrency: baseCurrency,
       );

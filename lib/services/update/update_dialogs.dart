@@ -4,6 +4,7 @@ import '../../l10n/app_localizations.dart';
 import '../../widgets/ui/ui.dart';
 import '../../styles/tokens.dart';
 import '../system/logger_service.dart';
+import '../../utils/fork_links.dart';
 import 'github_mirror_service.dart';
 
 /// 更新对话框管理类
@@ -240,7 +241,7 @@ class UpdateDialogs {
 
   /// 启动GitHub Releases页面
   static Future<void> launchGitHubReleases(BuildContext context) async {
-    const url = 'https://github.com/TNT-Likely/BeeCount/releases';
+    const url = ForkLinks.gitHubReleases;
     try {
       if (await canLaunchUrl(Uri.parse(url))) {
         await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);

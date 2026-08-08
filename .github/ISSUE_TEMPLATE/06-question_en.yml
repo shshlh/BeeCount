@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        > ⚠️ **Questions are better in [Discussions](https://github.com/TNT-Likely/BeeCount/discussions)** — issues are for bugs / features.
+        > ⚠️ **Questions are better in [Discussions](https://github.com/shshlh/BeeCount/discussions)** — issues are for bugs / features.
         >
         > If you do open an issue, please fill in details below.
 
@@ -15,9 +15,9 @@ body:
     attributes:
       label: Pre-flight checks
       options:
-        - label: I read the [documentation](https://count.beejz.com/docs/intro) — no answer
+        - label: I read the [documentation](https://github.com/shshlh/BeeCount#readme) — no answer
           required: true
-        - label: I searched [Issues](https://github.com/TNT-Likely/BeeCount/issues) and [Discussions](https://github.com/TNT-Likely/BeeCount/discussions) — no similar question
+        - label: I searched [Issues](https://github.com/shshlh/BeeCount/issues) and [Discussions](https://github.com/shshlh/BeeCount/discussions) — no similar question
           required: true
 
   - type: textarea
