@@ -45,6 +45,17 @@ class HoldingReturn {
   const HoldingReturn({required this.unrealizedPnL, required this.returnRate});
 }
 
+/// 一次净值刷新结果（6.13.3）。
+class NavRefreshResult {
+  final int updatedCount;
+  final List<String> skippedCodes;
+
+  const NavRefreshResult({
+    required this.updatedCount,
+    required this.skippedCodes,
+  });
+}
+
 class InvestmentService {
   final InvestmentRepository _repo;
   NavFetchService? _navFetch;
@@ -61,24 +72,43 @@ class InvestmentService {
   /// 返回成功更新的持仓数；15 分钟内不重复请求（[force]=true 忽略节流，
   /// 供下拉刷新使用）。整批失败抛 [StateError]，单只失败跳过不影响其余。
   Future<int> refreshNavsForLedger(int ledgerId, {bool force = false}) async {
+    final result = await refreshNavsForLedgerDetailed(ledgerId, force: force);
+    if (result.updatedCount == 0 && result.skippedCodes.isNotEmpty) {
+      throw StateError('净值刷新失败');
+    }
+    return result.updatedCount;
+  }
+
+  /// 拉取天天基金最新净值并返回详细刷新结果（6.13.3）。
+  ///
+  /// [skippedCodes] 为当前账本持仓代码中未抓取成功的集合（无效代码/无日期/
+  /// 单只失败）；整批失败时返回 `updatedCount=0` 与全部 skipped，不抛异常。
+  Future<NavRefreshResult> refreshNavsForLedgerDetailed(
+    int ledgerId, {
+    bool force = false,
+  }) async {
     if (!force) {
       final prefs = await SharedPreferences.getInstance();
       final last = prefs.getInt('investment_nav_refresh_at_$ledgerId');
       if (last != null) {
         final elapsed = DateTime.now()
             .difference(DateTime.fromMillisecondsSinceEpoch(last));
-        if (elapsed < _navRefreshThrottle) return 0;
+        if (elapsed < _navRefreshThrottle) {
+          return const NavRefreshResult(updatedCount: 0, skippedCodes: []);
+        }
       }
     }
 
     final holdings = await _repo.watchHoldings(ledgerId: ledgerId).first;
-    if (holdings.isEmpty) return 0;
+    if (holdings.isEmpty) {
+      return const NavRefreshResult(updatedCount: 0, skippedCodes: []);
+    }
 
     final codes = holdings.map((h) => h.fundCode).toSet().toList();
     final navs = await _navFetchService.fetchLatestNavs(codes);
-    if (navs.isEmpty) {
-      throw StateError('净值刷新失败');
-    }
+    final successCodes = navs.keys.toSet();
+    final skippedCodes = codes.toSet().difference(successCodes).toList()
+      ..sort();
 
     final navMap = <int, FundNavQuote>{};
     for (final h in holdings) {
@@ -86,7 +116,7 @@ class InvestmentService {
       if (quote != null) navMap[h.id] = quote;
     }
     if (navMap.isEmpty) {
-      throw StateError('净值刷新失败');
+      return NavRefreshResult(updatedCount: 0, skippedCodes: skippedCodes);
     }
 
     await batchUpdateNav(navMap);
@@ -96,7 +126,10 @@ class InvestmentService {
       'investment_nav_refresh_at_$ledgerId',
       DateTime.now().millisecondsSinceEpoch,
     );
-    return navMap.length;
+    return NavRefreshResult(
+      updatedCount: navMap.length,
+      skippedCodes: skippedCodes,
+    );
   }
 
   // ---- 组合摘要 ----

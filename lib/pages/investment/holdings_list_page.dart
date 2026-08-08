@@ -47,11 +47,11 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
   Future<void> _refreshOnEnter() async {
     final ledgerId = ref.read(currentLedgerIdProvider);
     try {
-      final updated =
-          await ref.read(investmentServiceProvider).refreshNavsForLedger(
-                ledgerId,
-              );
-      if (updated > 0 && mounted) _invalidateHoldings();
+      final result = await ref
+          .read(investmentServiceProvider)
+          .refreshNavsForLedgerDetailed(ledgerId);
+      _showSkippedCodes(result.skippedCodes);
+      if (result.updatedCount > 0 && mounted) _invalidateHoldings();
     } catch (_) {
       // 进入页面自动刷新失败静默，不打断列表
     }
@@ -60,11 +60,11 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
   Future<void> _refreshByPull() async {
     final ledgerId = ref.read(currentLedgerIdProvider);
     try {
-      await ref.read(investmentServiceProvider).refreshNavsForLedger(
-            ledgerId,
-            force: true,
-          );
+      final result = await ref
+          .read(investmentServiceProvider)
+          .refreshNavsForLedgerDetailed(ledgerId, force: true);
       _invalidateHoldings();
+      _showSkippedCodes(result.skippedCodes);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -72,6 +72,13 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
         );
       }
     }
+  }
+
+  void _showSkippedCodes(List<String> skippedCodes) {
+    if (!mounted || skippedCodes.isEmpty) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('以下基金未更新：${skippedCodes.join('、')}')),
+    );
   }
 
   void _invalidateHoldings() {

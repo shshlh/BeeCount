@@ -48,7 +48,7 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 |---|---|---|---|---|
 | 6.13.1 持仓信息编辑数据层 | ✅ | architect + invest-logic | updateHoldingInfo + 6位校验 + 测试 | 2026-08-08 |
 | 6.13.2 基金代码校验 + 编辑入口 | ✅ | invest-ui | 明细编辑入口 + 6位校验 + 测试 | 2026-08-08 |
-| 6.13.3 刷新失败反馈 | 🔄 已派工 | invest-logic + invest-ui | 刷新跳过/失败基金提示 + 测试 | — |
+| 6.13.3 刷新失败反馈 | ✅ | invest-logic + invest-ui | NavRefreshResult + skippedCodes + SnackBar 提示 | 2026-08-09 |
 | 6.13.4 删除初始登记/持仓入口 | ✅ | architect + invest-logic + invest-ui | deleteHolding + 删除流水/持仓入口 + 测试 | 2026-08-08 |
 | 6.13.5 明细页记一笔快速入口 | ✅ | invest-ui | PrimaryHeader + 跳转编辑器 + 测试 | 2026-08-08 |
 | 6.13.6 审查返工：批次流水删除防护 + 附件清理 | ✅ | invest-ui + architect/invest-logic | batch 删除拦截 + deleteHolding 附件清理 + 测试 | 2026-08-08 |

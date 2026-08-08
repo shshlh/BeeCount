@@ -255,4 +255,91 @@ void main() {
     expect(h!.fundCode, '110017');
     expect(h.currentNav, 1.8);
   });
+
+  test('详细刷新：部分成功返回 skipped 列表', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '基金B',
+        amount: 500,
+        shares: 500,
+        nav: 1.0);
+
+    final fake = _FakeNavFetchService({
+      '000001': FundNavQuote(nav: 1.5, navDate: DateTime(2026, 8, 7)),
+    });
+    final service = InvestmentService(repo, navFetch: fake);
+
+    final result = await service.refreshNavsForLedgerDetailed(1);
+
+    expect(result.updatedCount, 1);
+    expect(result.skippedCodes, ['000002']);
+  });
+
+  test('详细刷新：非法代码持仓出现在 skipped', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '11017',
+        fundName: '误录基金',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 500,
+        shares: 500,
+        nav: 1.0);
+
+    final fake = _FakeNavFetchService({
+      '000001': FundNavQuote(nav: 1.5, navDate: DateTime(2026, 8, 7)),
+    });
+    final service = InvestmentService(repo, navFetch: fake);
+
+    final result = await service.refreshNavsForLedgerDetailed(1);
+
+    expect(result.updatedCount, 1);
+    expect(result.skippedCodes, ['11017']);
+  });
+
+  test('详细刷新：整批失败不抛错且 skipped 全量返回', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '基金B',
+        amount: 500,
+        shares: 500,
+        nav: 1.0);
+
+    final fake = _FakeNavFetchService({}, failAll: true);
+    final service = InvestmentService(repo, navFetch: fake);
+
+    final result = await service.refreshNavsForLedgerDetailed(1);
+
+    expect(result.updatedCount, 0);
+    expect(result.skippedCodes.toSet(), {'000001', '000002'});
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getInt('investment_nav_refresh_at_1'), isNull);
+  });
 }

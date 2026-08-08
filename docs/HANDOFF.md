@@ -34,6 +34,63 @@
 ## 2026-08-09
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-logic / invest-ui
+
+**任务**：6.13.3 PM 审查通过 + 合入
+
+**审查结果**：6.13.3 通过，合入。
+- 数据层：NavRefreshResult / refreshNavsForLedgerDetailed，整批失败不抛错并返回全部 skippedCodes，旧方法兼容
+- UI：进入资产页与下拉刷新均接入详细结果，skippedCodes 非空时 SnackBar「以下基金未更新：11017」
+- 验证：相关测试全过；全量 670 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）；改动文件 analyze 无新增 issue
+
+**git 状态**：当前分支 main，合入后提交
+
+---
+
+## 2026-08-09
+
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.13.3 刷新失败反馈（UI）
+
+**完成工作**：
+- lib/pages/investment/holdings_list_page.dart — 进入自动刷新与下拉刷新改用 refreshNavsForLedgerDetailed；skippedCodes 非空时 SnackBar「以下基金未更新：11017」；下拉刷新保留异常兜底「净值刷新失败」；进入路径 updatedCount>0 才 invalidate、下拉成功即 invalidate
+- test/widgets/holdings_list_page_layout_test.dart — spy detailedResult 返回 skippedCodes=['11017']，断言 SnackBar 展示具体代码；tab 切换测试同步改为计数 detailed 调用
+
+**下一个任务需要知道的**：
+- invest-logic 数据层 NavRefreshResult/refreshNavsForLedgerDetailed 已落地；节流命中返回 updatedCount=0 + skipped 空，不弹提示
+- 全量 analyze 零 error；全量测试 670 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交（工作区含 invest-logic 并行改动，交 PM 审查合入）
+
+---
+
+## 2026-08-09
+
+**移交角色**：architect + invest-logic
+**接收角色**：项目经理（PM）/ invest-ui（6.13.3 UI）
+
+**任务**：6.13.3 刷新失败反馈（数据层）
+
+**完成工作**：
+- lib/services/data/investment_service.dart — 新增 NavRefreshResult(updatedCount, skippedCodes)；新增 refreshNavsForLedgerDetailed(ledgerId, {force})：skippedCodes = 当前账本持仓代码集合 − 实际抓取成功代码集合（覆盖无效代码/无日期/单只失败）；整批失败返回 updatedCount=0 + 全部 skipped，不抛异常、不记录节流时间
+- 保留 refreshNavsForLedger 返回 int 不动（内部委托 detailed，整批失败仍抛 StateError 保持旧行为）
+- 测试 +3：部分成功返回 skipped 列表、非法代码持仓出现在 skipped、整批失败不抛错且 skipped 全量返回
+
+**下一个任务需要知道的**：
+- UI 层将按接口切换到 refreshNavsForLedgerDetailed，skippedCodes.isNotEmpty 时显示非阻塞 SnackBar
+- 节流命中时 detailed 返回 updatedCount=0、skippedCodes 空
+
+**验证**：flutter analyze 855 个 issue、零 error（我的文件零新增）；全量测试 669 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，工作区含 invest-logic 数据层改动，待 UI 完成后一并交 PM 审查
+
+---
+
+## 2026-08-09
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-logic（数据层）/ invest-ui（UI）
 
 **任务**：6.13.3 刷新失败反馈

@@ -306,18 +306,65 @@ void main() {
 
     expect(spy.deleteHoldingCalls, 1);
   });
+
+  testWidgets('刷新跳过基金时提示具体代码', (tester) async {
+    final spy = _SpyInvestmentService(investmentRepo)
+      ..detailedResult = const NavRefreshResult(
+        updatedCount: 1,
+        skippedCodes: ['11017'],
+      );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          investmentRepositoryProvider.overrideWithValue(investmentRepo),
+          repositoryProvider.overrideWithValue(repo),
+          investmentServiceProvider.overrideWithValue(spy),
+          currentHoldingsProvider.overrideWith(
+            (ref) => Stream<List<InvestmentHolding>>.value(const []),
+          ),
+          groupsProvider.overrideWith(
+            (ref) => Stream<List<InvestmentGroup>>.value(const []),
+          ),
+          portfolioSummaryProvider.overrideWith(
+            (ref) async => const PortfolioSummary(
+              totalMarketValue: 0,
+              totalCost: 0,
+              unrealizedPnL: 0,
+              returnRate: 0,
+              holdingCount: 0,
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: const HoldingsListPage(asTab: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('以下基金未更新：11017'), findsOneWidget);
+  });
 }
 
 class _SpyInvestmentService extends InvestmentService {
   int refreshCalls = 0;
   int deleteHoldingCalls = 0;
+  NavRefreshResult detailedResult =
+      const NavRefreshResult(updatedCount: 0, skippedCodes: []);
 
   _SpyInvestmentService(super.repo);
 
   @override
-  Future<int> refreshNavsForLedger(int ledgerId, {bool force = false}) async {
+  Future<NavRefreshResult> refreshNavsForLedgerDetailed(
+    int ledgerId, {
+    bool force = false,
+  }) async {
     refreshCalls++;
-    return 0;
+    return detailedResult;
   }
 
   @override
