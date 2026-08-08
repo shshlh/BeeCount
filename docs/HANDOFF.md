@@ -33,6 +33,27 @@
 
 ## 2026-08-08
 
+**移交角色**：项目经理（PM）
+**接收角色**：invest-logic / invest-ui（后续维护）
+
+**任务**：P0 修复 — 净值抓取数据源切换（fundgz 失效）
+
+**完成工作**：
+- lib/services/data/nav_fetch_service.dart — 主数据源由 fundgz JSONP 切换为腾讯行情 `qt.gtimg.cn/q=jj{code}`，解析 `~` 分隔字段取单位净值、累计净值兜底；主源失败回退天天基金 `pingzhongdata`，解析 `Data_netWorthTrend` 最后一个 y；HTML/异常响应干净跳过，不再抛 FormatException
+- test/services/nav_fetch_service_test.dart — 更新为腾讯格式，新增主源失败回退、双源 HTML 干净跳过用例
+- 验证：文件级 analyze 零 issue；全量测试 642 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**下一个任务需要知道的**：
+- `https://fundgz.1234567.com.cn/js/{code}.js` 已对所有基金返回「页面未找到」HTML（诊断时间 2026-08-08），不要切回
+- 腾讯字段顺序：代码~名称~预留~预留~空~单位净值~累计净值~日增长率~日期；pingzhongdata 响应约 600KB，仅作兜底
+- 本次修复由 PM 直接处理（当前会话无跨线程派发工具），无需再派 invest-logic
+
+**git 状态**：当前分支 main，待提交
+
+---
+
+## 2026-08-08
+
 **移交角色**：invest-ui
 **接收角色**：项目经理（PM）
 

@@ -16,7 +16,7 @@ android {
     namespace = "com.tntlikely.beecount"
     compileSdk = 36
     // Keep in sync with plugins' required NDK to avoid build warnings/errors.
-    ndkVersion = "27.0.12077973"
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
