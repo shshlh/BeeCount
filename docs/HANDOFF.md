@@ -34,6 +34,98 @@
 ## 2026-08-09
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-ui + invest-logic
+
+**任务**：7.0.4 原官网文档入口清理（beejz.com）
+
+**背景**：7.0.1/7.0.2 已把 GitHub 原仓库链接全部替换为自身 fork，但 `lib/utils/website_urls.dart` 仍指向原开发者官网 `count.beejz.com`，并被帮助中心、我的页使用帮助、登录页云同步注册指引、AI 教程等入口使用，用户仍会看到原开发者内容。
+
+**要求**：
+- 帮助中心：改为本地静态帮助页（可参考 ChangelogPage 风格），不再 WebView 打开 beejz.com
+- 登录页云同步注册指引 / AI 教程入口：删除外链或改为本地说明，不指向原官网
+- 我的页「使用帮助」：改为本地帮助页或删除入口
+- `lib/services/marketing/product_promos.dart` 等残留 beejz.com 资产链接：删除或置空（当前 UI 未使用，可清理）
+- 新增/更新扫描测试：`lib` 下（除 l10n 历史文案）不再出现 `beejz.com` 用户可见链接
+
+**约束**：HANDOFF 只增不减；flutter analyze 新增代码零 error/warning；完成后更新 TEAM.md 任务板 + HANDOFF 追加完成记录，交 PM 审查
+
+**git 状态**：当前分支 main，工作区含 7.0.1-7.0.3 待合入
+
+---
+
+## 2026-08-09
+
+**移交角色**：invest-ui（7.0.1 + 7.0.3）
+**接收角色**：PM（审查合入）
+
+**任务**：关于页自用化 + 小组件 Bug 排查修复
+
+**完成工作**：
+- 7.0.1：about_page 删除社媒/支持开发/开发者的话/官网链接/ICP，标题改「关于本应用」，新增自用说明；更新日志与隐私政策改为本地静态页（ChangelogPage / PrivacyPolicyPage）；4 语言 ARB + gen-l10n
+- 7.0.3 修复小组件刷新缺口：
+  - 转账保存（transfer_form）后补 updateAppWidget
+  - 搜索批量删除/备注/分类（search_page）后补 updateAppWidget
+  - CSV 导入完成后补 WidgetManager.updateAllWidgetsLocalized（container 级，页面销毁也可刷新）
+  - WidgetManager 新增 dark 透传；主题模式（light/dark/system）切换监听并重渲小组件，启动/前台恢复/主题色/收支配色/账本起始日调用点同步传入 effective dark
+- 测试：新增 about_page_self_use_test（4 例）、resolveWidgetDarkMode 3 例；相关 widget 测试全过；全量 694 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**下一个任务需要知道的**：
+- 7.0.2 并行线程已完成并已写 HANDOFF；about_page 中反馈链接指向 ForkLinks 属 7.0.2 改动，7.0.1 未动
+- Android 多尺寸 provider 刷新链路审计通过：matchInstalledAll 已返回全尺寸 spec，updateAllWidgets 按 androidAllClassNames 全量触发原生刷新，无新增修复
+- 点击跳转深链链路审计通过：原生 PendingIntent 携带 beecount://，app_links 冷启动/onNewIntent 均能收到并打开
+
+**git 状态**：当前分支 main，工作区含 invest-ui（7.0.1+7.0.3）+ invest-logic（7.0.2）并行改动，待 PM 审查合入
+
+---
+
+## 2026-08-09
+
+**移交角色**：invest-logic（7.0 收尾）
+**接收角色**：PM（审查合入）
+
+**完成工作**：
+- invest-ui 7.0.1 已合入工作区，7.0.2 重新全仓扫描确认无功能性原仓库链接
+- 追加清理：`.github` issue 模板与 FUNDING 改指 fork / 留空；`docs/contributing` 主仓库链接改指 fork（`upstream remote` 保留原仓库）
+- 扫描测试扩展覆盖 `.github`；l10n 生成文件与当前 ARB 同步
+- 全量 `flutter test`：695 passed / 1 skipped / 1 failed（唯一失败为既存 `bill_creation_service_test`）
+
+**下一个任务需要知道的**：
+- `WebsiteUrls`（count.beejz.com）仍用于帮助中心 / 云同步注册指引 / AI 教程的内嵌文档，属于上游技术文档引用，建议 PM 决定是否本地化
+- `flutter analyze` 无 error；仓库既有 + 并行 issue 共 856 条，7.0.2 改动文件无新增
+- 工作区含 7.0.1 + 7.0.2 全部改动，未提交，待 PM 审查合入
+
+**git 状态**：当前分支 main，7.0.1 + 7.0.2 改动均在未提交工作区
+
+---
+
+## 2026-08-09
+
+**移交角色**：invest-logic（7.0.2）
+**接收角色**：PM（审查合入）
+
+**任务**：更新链路 + 全仓原仓库链接替换
+
+**完成工作**：
+- 新增 `lib/utils/fork_links.dart` 统一管理 fork 链接常量
+- 更新链路全部改指自身 fork：`update_checker.dart` 的 GitHub API、`update_downloader.dart` 的下载 Referer、`update_dialogs.dart` 的手动访问地址
+- 其余入口改指 fork：欢迎页 GitHub、关于页反馈/捐赠、云同步页 Supabase/WebDAV wiki 指南、6 个海报 QR（app_promo/user_profile/month/ledger/year/annual）
+- l10n：4 语言 `shareGuidanceCopyText` / `updateManualVisit` 替换 URL，重新 `flutter gen-l10n`（顺带同步了 invest-ui 7.0.1 新加的 `aboutSelfUse` 系列生成文件）
+- README / README_EN 重写为「个人自用 fork」说明；PRIVACY.md、PROJECT_PLAN、cloud-setup、packages 主仓库链接替换
+- 新增测试：`fork_links_test.dart` + `original_repo_link_cleanup_test.dart`（更新链路断言 + 全仓扫描）；相关测试 21 passed
+
+**下一个任务需要知道的**：
+- 保留 TNT-Likely 的位置均属有意：HANDOFF 历史、LICENSE 系列/CONTRIBUTING（法律归属）、docs/contributing（上游贡献指南）、l10n `aboutSelfUse`（7.0.1 要求保留原作者归属）
+- `WebsiteUrls`（count.beejz.com）未动，属于官网清理范畴，建议由 7.0.1/PM 统一处理
+- about_page 含 invest-ui 并行改动，invest-logic 在该文件只改了反馈链接指向 fork
+- 若 invest-ui 后续继续修改 ARB，需自行重新 gen-l10n（本次生成文件已与当前 ARB 同步）
+
+**git 状态**：当前分支 main，工作区含 invest-logic（7.0.2）+ invest-ui（7.0.1）并行改动，待 PM 审查合入
+
+---
+
+## 2026-08-09
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-ui（7.0.1）/ invest-logic（7.0.2）/ qa + invest-ui（7.0.3）
 
 **任务**：7.0 原开发者内容清理 + 小组件排查
