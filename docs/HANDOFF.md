@@ -34,6 +34,38 @@
 ## 2026-08-09
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-ui（7.0.1）/ invest-logic（7.0.2）/ qa + invest-ui（7.0.3）
+
+**任务**：7.0 原开发者内容清理 + 小组件排查
+
+**背景**：App 已转为个人/小范围自用版本，需删除原开发者品牌与链接，改为自用声明；小组件功能疑似存在 bug，需先定位再修。
+
+**7.0.1 归属/品牌清理（invest-ui）**
+- lib/pages/settings/about_page.dart：删除「开发者的话」原文，改为自用说明（基于原作者 TNT-Likely 的 GitHub 项目 https://github.com/TNT-Likely/BeeCount 做了大量适配本人的功能性改动，仅用于个人及少量周边人员使用，不做盈利）；标题改为「关于本应用」
+- 删除社交入口：GitHub / Telegram / 小红书 / 抖音 / 官方网站
+- 删除「支持开发」入口
+- 「更新日志」改为本地静态页（不再打开原官网 beejz.com）
+- 「隐私政策」改为本地静态页（说明数据仅存本机、按需发送第三方 AI、无收集无盈利），不再 WebView 打开原官网
+- l10n：zh / en / ko / zh_TW 同步新增或替换文案；删除无用 key 不阻塞，可保留未引用
+
+**7.0.2 更新链路 + 全仓原仓库链接替换（invest-logic）**
+- 更新检测 API / 下载 Referer / 手动访问地址 / 问题反馈 / 捐赠链接：全部由 TNT-Likely/BeeCount 改为 https://github.com/shshlh/BeeCount（自身 fork）
+- 扫描并替换剩余 TNT-Likely 链接：分享文案、欢迎页 GitHub、云同步 wiki 指南、海报二维码等；无法本地化的二维码删除或改为「个人自用」说明
+- 测试：更新链接断言 / 扫描结果
+
+**7.0.3 小组件 Bug 排查（qa + invest-ui）**
+- 用户反馈「小组件功能好像有 bug」，先复现并定位：添加后是否空白/占位、点击跳转、记账后刷新、切换账本/主题后更新、Android 多尺寸 provider 是否都刷新
+- 修复定位到的 bug，补测试；完成后交 PM 审查
+
+**约束**：HANDOFF 只增不减；flutter analyze 新增代码零 error/warning；完成后更新 TEAM.md 任务板 + HANDOFF 追加完成记录，交 PM 审查
+
+**git 状态**：当前分支 main，HEAD e1e5e1a
+
+---
+
+## 2026-08-09
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-logic / invest-ui
 
 **任务**：6.13.3 PM 审查通过 + 合入
