@@ -34,6 +34,72 @@
 ## 2026-08-08
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-ui / architect + invest-logic
+
+**任务**：6.13 审查结论 + 6.13.6 返工派工
+
+**审查结果**：6.13.1/6.13.2/6.13.4/6.13.5 主体功能通过，但存在 1 个必须修复的问题，暂不合入。
+
+**P1（必须修）**：转换批次流水可被单笔删除。
+- 文件：lib/pages/investment/holding_detail_page.dart `_confirmDeleteTransaction`
+- 问题：转换记录（batchId != null）的删除入口会直接调 deleteTransaction 删单边，导致 A 卖出但 B 未买入等数据不一致；编辑入口已禁止批次单边编辑，删除入口漏了同样的防护
+- 要求：batchId != null 时拦截并提示（如「请删除完整的转换记录」），或实现批次级原子删除；补测试
+
+**P2（建议修）**：deleteHolding 只删附件 DB 行，未清理附件实体文件。
+- 文件：lib/data/repositories/local/local_investment_repository.dart `deleteHolding`
+- 建议复用 LocalTransactionRepository 的附件文件清理逻辑，避免孤儿文件
+
+**验证**：相关测试全过；全量 665 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）；改动文件 analyze 无新增 issue
+
+**git 状态**：当前分支 main，工作区改动未提交，待 6.13.6 完成后再合入
+
+---
+
+## 2026-08-08
+
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.13.5 明细页记一笔快速入口
+
+**完成工作**：
+- lib/pages/main/transaction_list_page.dart — PrimaryHeader actions 最右端新增 IconButton(Icons.add, tooltip「记一笔」)，点击 push TransactionEditorPage(initialKind: 'expense', quickAdd: true)；保存后走编辑器既有 invalidate 机制刷新明细
+- test/widgets/transaction_list_quick_add_test.dart — 新增 widget 测试：明细页存在「+」入口，点击进入 TransactionEditorPage（spy 仓库返回普通空流避免 Drift 流定时器干扰收尾）
+
+**下一个任务需要知道的**：
+- 明细页为首页 tab0 push 的全屏页，返回按钮已存在，新入口在其 actions 最右端
+- 测试用 _StaticTxRepo.transactionsWithCategoryAll 覆盖为 Stream.value([])，避免 Drift 订阅 pending timer 导致测试无法收尾
+- 全量 analyze 零 error；全量测试 665 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交（工作区含 architect/invest-logic 并行改动，交 PM 审查合入）
+
+---
+
+## 2026-08-08
+
+**移交角色**：architect + invest-logic
+**接收角色**：项目经理（PM）/ invest-ui（6.13.4 UI）
+
+**任务**：6.13.4 删除初始登记/持仓入口（数据层）
+
+**完成工作**：
+- lib/data/repositories/investment_repository.dart + local 实现 — 新增 deleteHolding(holdingId)：同一事务内删除关联交易（含 transaction_tags / transaction_attachments 关联行）、分组关联、持仓行，并同步投资账户市值（按剩余持仓合计），避免 0 份额历史行残留；持仓不存在抛 StateError
+- lib/services/data/investment_service.dart — deleteHolding 透传仓库
+- 测试 +3：删除持仓清理流水/分组关联并联动账户市值、不存在抛错、service 透传
+
+**下一个任务需要知道的**：
+- 6.13.4 UI（明细/列表删除入口）已由 invest-ui 并行落地并调用 deleteHolding / deleteTransaction
+- 当前工作区全量测试有 2 个失败：既存 bill_creation_service_test + invest-ui 并行新增的 transaction_list_quick_add_test（Timer pending，属 6.13.5 新测试，非本次数据层）
+
+**验证**：flutter analyze 855 个 issue、零 error（我的文件零新增）；数据层相关 65 个测试全部通过
+
+**git 状态**：当前分支 main，工作区含 architect/invest-logic + invest-ui 并行改动，待提交交 PM 审查
+
+---
+
+## 2026-08-08
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-ui
 
 **任务**：6.13.5 明细页记一笔快速入口
