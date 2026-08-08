@@ -31,6 +31,29 @@
 
 ---
 
+## 2026-08-08
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-ui
+
+**任务**：6.10 洞察页排行金额精度（实际金额）
+
+**问题**：洞察页支出/收入分类排行金额用 AmountText(decimals: 0)，显示个位取整，与总结余/图表金额口径割裂
+
+**要求**：
+- 文件：lib/widgets/analytics/category_rank_row.dart（一级/二级行金额）
+- 排行金额 decimals 0 → 2，显示实际金额（如 1234.56），百分比保留 1 位不变
+- 核对 lib/widgets/analytics/analytics_summary.dart 的收入/支出/结余金额已是 2 位小数；若不是统一为 2 位
+- 说明：结余视角当前不显示分类排行（既有逻辑，不改）；如需结余排行另行确认
+
+**约束**：
+- flutter analyze 新增代码零 error/warning
+- 全量测试保持 627 passed / 1 skipped / 1 failed（既存 bill_creation_service_test 除外）
+- 更新相关 widget 测试（排行金额 2 位断言）
+- 完成后更新 TEAM.md 任务板 + HANDOFF.md 追加完成记录，git 状态待提交交 PM 审查
+
+---
+
 ## 2026-08-07
 
 **移交角色**：invest-ui
