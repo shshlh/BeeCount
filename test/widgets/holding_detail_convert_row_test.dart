@@ -24,6 +24,7 @@ void main() {
       marketValue: 600,
       holdingType: 'fund',
       createdAt: DateTime(2026),
+      navDate: DateTime(2026, 8, 7),
     );
     final convertTx = Transaction(
       id: 1,
@@ -63,6 +64,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('转换'), findsOneWidget);
+    expect(find.text('净值（2026.8.7）'), findsOneWidget);
     expect(find.text('净值 1.2'), findsOneWidget);
     final amountTexts = tester.widgetList<AmountText>(find.byType(AmountText));
     expect(amountTexts.any((w) => w.value == 600), isTrue);

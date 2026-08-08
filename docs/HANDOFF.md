@@ -34,6 +34,45 @@
 ## 2026-08-08
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-ui
+
+**任务**：6.12.2 PM 审查通过
+
+**审查结果**：6.12.2 通过，合入。
+- 持仓卡片与持仓明细均按「净值（2026.8.7）」标签 + 数值独立展示；旧数据无 navDate 时只显示「净值」
+- 导入初始持仓无需改 UI：仓库已默认把净值日期写为导入/发生日期
+- 验证：相关 widget 测试全过；全量 649 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）；改动文件 analyze 无新增 issue
+
+**git 状态**：当前分支 main，合入后提交
+
+---
+
+## 2026-08-08
+
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.12.2 净值日期 UI 展示
+
+**完成工作**：
+- lib/widgets/investment/holding_card.dart — 第二行左侧新增「净值（2026.8.7）」chip（数值 1.2345 独立展示），旧数据无 navDate 时仅显示「净值」；左侧改 Wrap 防窄屏溢出
+- lib/pages/investment/holding_detail_page.dart — 净值统计格标签改为「净值（2026.8.7）」，无日期时保持「净值」
+- 导入初始持仓弹窗无需改 UI：createInitialHolding 未传 navDate 时由仓库默认取发生日期（happenedAt）
+- test/widgets/holding_card_nav_date_test.dart — 新增 2 个用例：有日期显示标签+数值、无日期不显示括号
+- test/widgets/holding_detail_convert_row_test.dart — 持仓带 navDate，断言明细页「净值（2026.8.7）」
+
+**下一个任务需要知道的**：
+- InvestmentHolding 新增 navDate（DateTime?），schema v37 已由 6.12.1 落地
+- 日期格式统一为 year.month.day（如 2026.8.7），不补零
+- 全量 analyze 零 error；全量测试 649 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交交 PM 审查
+
+---
+
+## 2026-08-08
+
+**移交角色**：项目经理（PM）
 **接收角色**：architect + invest-logic / invest-ui
 
 **任务**：6.12.1 PM 审查通过 + 6.12.2 派工

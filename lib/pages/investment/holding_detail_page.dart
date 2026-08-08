@@ -161,7 +161,14 @@ class HoldingDetailPage extends ConsumerWidget {
                 color: BeeTokens.divider(context),
               ),
               Expanded(
-                child: _statCell('净值', holding.currentNav.toStringAsFixed(4)),
+                child: _statCell(
+                  holding.navDate == null
+                      ? '净值'
+                      : '净值（${holding.navDate!.year}.'
+                          '${holding.navDate!.month}.'
+                          '${holding.navDate!.day}）',
+                  holding.currentNav.toStringAsFixed(4),
+                ),
               ),
             ],
           ),

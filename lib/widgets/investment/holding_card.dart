@@ -31,6 +31,13 @@ class HoldingCard extends ConsumerWidget {
     return '${_isProfit ? '+' : ''}${rate.toStringAsFixed(2)}%';
   }
 
+  String get _navLabel {
+    final date = holding.navDate;
+    return date == null
+        ? '净值'
+        : '净值（${date.year}.${date.month}.${date.day}）';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pnlColor = _isProfit
@@ -97,12 +104,23 @@ class HoldingCard extends ConsumerWidget {
             const SizedBox(height: BeeDimens.p8),
             // 第二行：份额/净值 | 盈亏/收益率
             Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                // 左侧：份额 | 成本
-                _infoChip('份额', holding.totalShares.toStringAsFixed(2)),
+                // 左侧：份额 | 成本 | 净值（日期）
+                Expanded(
+                  child: Wrap(
+                    spacing: BeeDimens.p8,
+                    runSpacing: 4,
+                    children: [
+                      _infoChip(
+                          '份额', holding.totalShares.toStringAsFixed(2)),
+                      _infoChip('成本', holding.totalCost.toStringAsFixed(2)),
+                      _infoChip(
+                          _navLabel, holding.currentNav.toStringAsFixed(4)),
+                    ],
+                  ),
+                ),
                 const SizedBox(width: BeeDimens.p8),
-                _infoChip('成本', holding.totalCost.toStringAsFixed(2)),
-                const Spacer(),
                 // 右侧：盈亏 + 收益率
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
