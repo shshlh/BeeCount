@@ -46,9 +46,10 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
 |---|---|---|---|---|
-| 6.11.1 NavFetchService | ⏳ | invest-logic | 天天基金解析 + 测试 | — |
-| 6.11.2 刷新节流 + 接线 | ⏳ | invest-logic | refreshNavsForLedger + 15min | — |
-| 6.11.3 持仓页刷新入口 | ⏳ | invest-ui | 下拉/进入自动刷新 + 提示 | — |
+| 6.11.1 NavFetchService | ✅ | invest-logic | 天天基金解析 + 测试 | 2026-08-08 |
+| 6.11.2 刷新节流 + 接线 | ✅ | invest-logic | refreshNavsForLedger + 15min | 2026-08-08 |
+| 6.11.3 持仓页刷新入口 | ✅ | invest-ui | 下拉/进入自动刷新 + 提示 | 2026-08-08 |
+| 6.11.4 进入持仓页刷新时机 | ⏳ | invest-ui | tab 切换触发 + 测试 | — |
 
 ### 阶段 6.10：洞察页排行金额精度
 

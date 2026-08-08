@@ -34,6 +34,70 @@
 ## 2026-08-08
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-ui
+
+**任务**：6.11 返工（进入持仓页自动刷新时机）
+
+**问题（P2）**：资产页在底部导航 IndexedStack 常驻，initState 在 App 启动即执行，当前「进入持仓页自动刷新」实际只在启动时触发一次；之后切回资产 tab（即使超过 15 分钟节流）不会再次刷新
+- 文件：lib/pages/investment/holdings_list_page.dart
+- 要求：
+  a) 监听 bottomTabIndexProvider：切换为 2（资产 tab）时调用 refreshNavsForLedger(ledgerId)（保持 service 层 15 分钟节流，updated>0 才刷新列表，失败静默）
+  b) 保留 initState 首次刷新（启动即刷）
+  c) 补测试：切到资产 tab 触发刷新；15 分钟节流内不重复请求
+
+**约束**：
+- flutter analyze 新增代码零 error/warning
+- 全量测试保持 639 passed / 1 skipped / 1 failed（既存 bill_creation_service_test 除外）
+- 完成后更新 TEAM.md 任务板 + HANDOFF.md 追加完成记录，git 状态待提交交 PM 复审
+
+---
+
+## 2026-08-08
+
+**移交角色**：invest-logic
+**接收角色**：项目经理（PM）
+
+**任务**：6.11.1 + 6.11.2 数据层
+
+**完成工作**：
+- 6.11.1 — 新增 lib/services/data/nav_fetch_service.dart：天天基金 JSONP 解析，dwjz 优先、gsz 兜底；只接受 6 位数字代码；并发上限 8；单只失败/无净值跳过并记日志，不抛整批
+- 6.11.2 — InvestmentService.refreshNavsForLedger(ledgerId, {force})：读账本持仓 → fetchLatestNavs → batchUpdateNav（事务 + 市值联动）；15 分钟节流用 SharedPreferences 持久化（key 含 ledgerId，多账本隔离）；force 忽略节流；整批失败抛 StateError，部分成功返回更新数
+- 测试 +11：NavFetchService JSONP/gsz 兜底/无效代码过滤/单只失败跳过/并发 ≤8；refresh 成功联动市值/节流命中与 force 绕过/超时允许/整批失败不记录节流/多账本 key 隔离/部分成功
+
+**下一个任务需要知道的**：
+- 6.11.3 UI（下拉/进入自动刷新 + SnackBar）已由 invest-ui 并行落地并按其签名接线
+- 节流时间在成功后写入；整批失败不写，可立即重试
+
+**验证**：flutter analyze 零 error（我的文件零新增 issue；并行 invest-ui 测试文件有 1 条 dangling doc info）；全量测试 639 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，工作区含 invest-logic + invest-ui 并行改动，待提交交 PM 审查
+
+---
+
+## 2026-08-08
+
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.11.3 持仓页刷新入口
+
+**完成工作**：
+- lib/pages/investment/holdings_list_page.dart — 由 ConsumerWidget 改为 ConsumerStatefulWidget；进入页面 initState postFrame 调 refreshNavsForLedger(ledgerId)（15 分钟节流，内部静默跳过，updated>0 才刷新列表）
+- 下拉刷新 RefreshIndicator.onRefresh 改调 refreshNavsForLedger(ledgerId, force: true)，成功后 invalidate currentHoldingsProvider / portfolioSummaryProvider / filteredHoldingsProvider；失败 SnackBar「净值刷新失败」，部分成功不打断
+- test/widgets/holdings_list_page_layout_test.dart — 补内存库 + investmentRepositoryProvider/repositoryProvider override 与 SharedPreferences mock，适配进入页面自动刷新路径
+
+**下一个任务需要知道的**：
+- invest-logic 6.11.1/6.11.2 已落地（NavFetchService + refreshNavsForLedger 节流/force + 测试），UI 已按其签名对齐
+- 自动刷新只在首次进入页面实例时触发；15 分钟节流在 service 层，重复进入不会重复请求
+- 全量 analyze 零 error；全量测试 639 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交（工作区含 invest-logic 并行改动，交 PM 审查合入）
+
+---
+
+## 2026-08-08
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-logic + invest-ui
 
 **任务**：6.11 天天基金净值自动刷新（数据源已确认）
