@@ -34,6 +34,51 @@
 ## 2026-08-08
 
 **移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic（数据层）/ invest-ui（UI）
+
+**任务**：6.13.4 删除初始登记/持仓入口（补充）
+
+**背景**：6.13.2 已补「编辑基金信息」，但用户发现没有任何删除入口，误录的初始登记无法直接删除；仓库底层已有 `deleteTransaction`（含投资重算），UI 未接线，也没有删除整个持仓的方法。
+
+**数据层要求（architect + invest-logic）**：
+- 新增 `deleteHolding(int holdingId)`：删除持仓及关联交易、分组关联，并同步投资账户市值；避免 0 份额历史行残留
+- 测试：删除持仓后流水/分组关联清理 + 账户市值联动
+
+**UI 要求（invest-ui）**：
+- 持仓明细交易记录支持「删除该笔流水」（含确认弹窗），初始登记可直接删除
+- 持仓明细/列表提供「删除整个持仓」入口，误录代码后可清掉重新导入
+
+**约束**：HANDOFF 只增不减；完成后更新 TEAM.md 任务板 + HANDOFF 追加完成记录，交 PM 审查
+
+**git 状态**：当前分支 main，工作区含 6.13.1/6.13.2 待审查
+
+---
+
+## 2026-08-08
+
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.13.2 基金代码校验 + 编辑入口
+
+**完成工作**：
+- lib/pages/investment/holding_detail_page.dart — PrimaryHeader 新增「编辑基金信息」入口；弹窗可改基金代码/名称，代码 6 位数字校验，保存调 service.updateHoldingInfo，成功后 invalidate holding/currentHoldings/portfolioSummary/filteredHoldings 并关闭
+- lib/widgets/investment/buy_dialog.dart / initial_holding_dialog.dart — 基金代码校验从「非空」升级为 6 位数字
+- lib/widgets/investment/convert_dialog.dart — 手填目标基金代码（无）追加 6 位数字校验
+- 测试 +5：明细编辑入口与 6 位校验（spy updateHoldingInfo）、买入弹窗校验、导入弹窗校验、转换手填代码校验（含既有布局回归）
+
+**下一个任务需要知道的**：
+- invest-logic 6.13.1 updateHoldingInfo 已并行落地（6 位校验 + 同代码拒绝 + 测试），UI 已按其签名对齐
+- 校验提示统一为「基金代码必须为6位数字」
+- 全量 analyze 零 error；全量测试 658 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交（工作区含 architect/invest-logic 并行改动，交 PM 审查合入）
+
+---
+
+## 2026-08-08
+
+**移交角色**：项目经理（PM）
 **接收角色**：architect + invest-logic（6.13.1）/ invest-ui（6.13.2）
 
 **任务**：6.13 持仓基金代码修复与防错
