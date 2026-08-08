@@ -34,6 +34,69 @@
 ## 2026-08-08
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-ui
+
+**任务**：6.13.5 明细页记一笔快速入口
+
+**需求**：用户在明细页无法直接记账，需返回首页再进入记账页；在明细页首行菜单栏最右端增加「+」入口。
+
+**要求**：
+- lib/pages/main/transaction_list_page.dart — PrimaryHeader 的 actions 最右端加 IconButton（Icons.add），点击打开 `TransactionEditorPage(initialKind: 'expense', quickAdd: true)`（与首页/中间按钮一致）
+- 保存后按编辑器现有 invalidate 机制刷新明细
+- widget 测试：明细页存在「+」入口，点击进入记账页
+
+**约束**：HANDOFF 只增不减；flutter analyze 新增代码零 error/warning；完成后更新 TEAM.md 任务板 + HANDOFF 追加完成记录，交 PM 审查
+
+**git 状态**：当前分支 main，工作区含 6.13.1/6.13.2/6.13.4 待审查
+
+---
+
+## 2026-08-08
+
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.13.4 删除初始登记/持仓入口（UI）
+
+**完成工作**：
+- lib/pages/investment/holding_detail_page.dart — 交易行新增删除图标（tooltip「删除流水」），确认弹窗后调 repositoryProvider.deleteTransaction(tx.id) 并 invalidate 持仓/摘要/过滤；PrimaryHeader 新增「删除持仓」入口，确认后调 service.deleteHolding 并返回上一页
+- lib/pages/investment/holdings_list_page.dart — 持仓卡长按弹出「删除持仓」确认，确认后调 service.deleteHolding 并刷新列表
+- 测试 +3：明细单笔流水删除确认（spy LocalRepository）、明细删除整个持仓（spy service）、列表长按删除确认（spy service）
+
+**下一个任务需要知道的**：
+- architect/invest-logic 已落地 deleteHolding（删除持仓+流水+分组关联+账户市值联动）与既有 deleteTransaction 投资重算，UI 已按其签名对齐
+- 转换 batch 交易允许单侧删除（删除后重算对应持仓）；如需双向删除由用户分别删除两侧
+- 全量 analyze 零 error；全量测试 664 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交（工作区含 architect/invest-logic 并行改动，交 PM 审查合入）
+
+---
+
+## 2026-08-08
+
+**移交角色**：architect + invest-logic
+**接收角色**：项目经理（PM）/ invest-ui（6.13.2）
+
+**任务**：6.13.1 持仓信息编辑数据层
+
+**完成工作**：
+- lib/data/repositories/investment_repository.dart + local 实现 — 新增 updateHoldingInfo(holdingId, {fundCode, fundName})：基金代码必须 6 位数字，否则 ArgumentError；同账本+账户下已存在相同代码时抛 StateError（避免静默合并持仓），改回自身代码允许；只更新 fundCode/fundName，保留 totalShares/totalCost/currentNav/navDate/marketValue
+- lib/services/data/investment_service.dart — updateHoldingInfo 透传仓库
+- 测试 +5：仓库改码/名称保留统计字段、非法代码拒绝、同账户重复拒绝/自身允许；service 非法/重复拒绝与合法透传；修正误录代码（11017 → 110017）后 refreshNavsForLedger 可命中新代码刷新
+
+**下一个任务需要知道的**：
+- 6.13.2 UI（明细编辑入口 + 各弹窗 6 位校验）已由 invest-ui 并行落地并调用新接口
+- 6.13.4 删除初始登记/持仓为新派工任务，数据层（deleteHolding 等）不在本次范围
+
+**验证**：flutter analyze 855 个 issue、零 error（我的文件零新增）；全量测试 658 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，工作区含 architect/invest-logic + invest-ui 并行改动，待提交交 PM 审查
+
+---
+
+## 2026-08-08
+
+**移交角色**：项目经理（PM）
 **接收角色**：architect + invest-logic（数据层）/ invest-ui（UI）
 
 **任务**：6.13.4 删除初始登记/持仓入口（补充）
