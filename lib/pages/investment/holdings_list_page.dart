@@ -159,13 +159,17 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
                           return Padding(
                             padding:
                                 const EdgeInsets.only(bottom: BeeDimens.p8),
-                            child: HoldingCard(
-                              holding: holding,
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      HoldingDetailPage(holdingId: holding.id),
+                            child: GestureDetector(
+                              onLongPress: () =>
+                                  _confirmDeleteHolding(context, holding),
+                              child: HoldingCard(
+                                holding: holding,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => HoldingDetailPage(
+                                        holdingId: holding.id),
+                                  ),
                                 ),
                               ),
                             ),
@@ -211,6 +215,49 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
     if (result == true) {
       ref.invalidate(currentHoldingsProvider);
       ref.invalidate(portfolioSummaryProvider);
+    }
+  }
+
+  /// 长按删除整个持仓（v6.13.4）
+  Future<void> _confirmDeleteHolding(
+    BuildContext context,
+    InvestmentHolding holding,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除持仓'),
+        content: Text(
+            '删除持仓「${holding.fundName}」？将同时删除该持仓的全部交易记录，此操作不可恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: BeeTokens.error(context),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await ref
+          .read(investmentServiceProvider)
+          .deleteHolding(holding.id);
+      _invalidateHoldings();
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('删除持仓失败：$e')),
+        );
+      }
     }
   }
 

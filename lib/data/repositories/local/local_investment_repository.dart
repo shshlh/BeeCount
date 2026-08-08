@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../db.dart';
 import '../../repositories/investment_repository.dart';
 import '../../../utils/account_type_utils.dart';
+import 'local_transaction_repository.dart';
 
 const _uuid = Uuid();
 
@@ -738,6 +739,65 @@ class LocalInvestmentRepository implements InvestmentRepository {
       await _syncInvestmentAccountValue(accountId);
 
       return holdingId;
+    });
+  }
+
+  @override
+  Future<void> updateHoldingInfo(
+    int holdingId, {
+    required String fundCode,
+    String? fundName,
+  }) async {
+    final code = fundCode.trim();
+    if (!RegExp(r'^\d{6}$').hasMatch(code)) {
+      throw ArgumentError('基金代码必须为 6 位数字');
+    }
+
+    await db.transaction(() async {
+      final holding = await getHolding(holdingId);
+      if (holding == null) throw StateError('持仓 $holdingId 不存在');
+
+      final existing =
+          await _findHolding(holding.ledgerId, code, holding.accountId);
+      if (existing != null && existing.id != holdingId) {
+        throw StateError('同账户下已存在基金代码 $code 的持仓');
+      }
+
+      await (db.update(db.investmentHoldings)
+            ..where((h) => h.id.equals(holdingId)))
+          .write(InvestmentHoldingsCompanion(
+        fundCode: d.Value(code),
+        fundName: fundName != null
+            ? d.Value(fundName.trim())
+            : const d.Value.absent(),
+        updatedAt: d.Value(DateTime.now()),
+      ));
+    });
+  }
+
+  @override
+  Future<void> deleteHolding(int holdingId) async {
+    await db.transaction(() async {
+      final holding = await getHolding(holdingId);
+      if (holding == null) throw StateError('持仓 $holdingId 不存在');
+
+      final txs = await (db.select(db.transactions)
+            ..where((t) => t.holdingId.equals(holdingId)))
+          .get();
+      // 复用交易仓库的删除路径：同步清理标签、附件 DB 行与附件实体文件。
+      final txRepo = LocalTransactionRepository(db);
+      for (final tx in txs) {
+        await txRepo.deleteTransaction(tx.id);
+      }
+
+      await (db.delete(db.investmentGroupHoldings)
+            ..where((r) => r.holdingId.equals(holdingId)))
+          .go();
+      await (db.delete(db.investmentHoldings)
+            ..where((h) => h.id.equals(holdingId)))
+          .go();
+
+      await _syncInvestmentAccountValue(holding.accountId);
     });
   }
 

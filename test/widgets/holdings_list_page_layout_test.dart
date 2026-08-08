@@ -245,10 +245,72 @@ void main() {
     await tester.pumpAndSettle();
     expect(spy.refreshCalls, 3);
   });
+
+  testWidgets('长按持仓卡确认删除整个持仓', (tester) async {
+    final spy = _SpyInvestmentService(investmentRepo);
+    final holding = InvestmentHolding(
+      id: 1,
+      ledgerId: 1,
+      fundCode: '000001',
+      fundName: '基金A',
+      accountId: 10,
+      totalShares: 100,
+      totalCost: 100,
+      currentNav: 2.0,
+      marketValue: 200,
+      holdingType: 'fund',
+      createdAt: DateTime(2026),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          investmentRepositoryProvider.overrideWithValue(investmentRepo),
+          repositoryProvider.overrideWithValue(repo),
+          investmentServiceProvider.overrideWithValue(spy),
+          currentHoldingsProvider.overrideWith(
+            (ref) => Stream<List<InvestmentHolding>>.value([holding]),
+          ),
+          filteredHoldingsProvider.overrideWith(
+            (ref) async => [holding],
+          ),
+          groupsProvider.overrideWith(
+            (ref) => Stream<List<InvestmentGroup>>.value(const []),
+          ),
+          portfolioSummaryProvider.overrideWith(
+            (ref) async => const PortfolioSummary(
+              totalMarketValue: 200,
+              totalCost: 100,
+              unrealizedPnL: 100,
+              returnRate: 1,
+              holdingCount: 1,
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: const HoldingsListPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.longPress(find.text('基金A'));
+    await tester.pumpAndSettle();
+    expect(find.text('删除持仓'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, '删除'));
+    await tester.pumpAndSettle();
+
+    expect(spy.deleteHoldingCalls, 1);
+  });
 }
 
 class _SpyInvestmentService extends InvestmentService {
   int refreshCalls = 0;
+  int deleteHoldingCalls = 0;
 
   _SpyInvestmentService(super.repo);
 
@@ -256,5 +318,10 @@ class _SpyInvestmentService extends InvestmentService {
   Future<int> refreshNavsForLedger(int ledgerId, {bool force = false}) async {
     refreshCalls++;
     return 0;
+  }
+
+  @override
+  Future<void> deleteHolding(int holdingId) async {
+    deleteHoldingCalls++;
   }
 }

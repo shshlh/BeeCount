@@ -48,6 +48,20 @@ class HoldingDetailPage extends ConsumerWidget {
                 subtitle: holding.fundCode,
                 showBack: true,
                 compact: true,
+                actions: [
+                  IconButton(
+                    onPressed: () =>
+                        _showEditHoldingInfoDialog(context, ref, holding),
+                    icon: const Icon(Icons.edit_outlined),
+                    tooltip: '编辑基金信息',
+                  ),
+                  IconButton(
+                    onPressed: () =>
+                        _confirmDeleteHolding(context, ref, holding),
+                    icon: const Icon(Icons.delete_outline),
+                    tooltip: '删除持仓',
+                  ),
+                ],
               ),
               Expanded(
                 child: ListView(
@@ -265,6 +279,7 @@ class HoldingDetailPage extends ConsumerWidget {
                   child: _TransactionTile(
                     transaction: tx,
                     onEdit: () => _showEditDialog(context, ref, tx),
+                    onDelete: () => _confirmDeleteTransaction(context, ref, tx),
                   ),
                 );
               }).toList(),
@@ -298,6 +313,121 @@ class HoldingDetailPage extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  /// 弹出基金代码/名称编辑弹窗（v6.13.2）
+  void _showEditHoldingInfoDialog(
+    BuildContext context,
+    WidgetRef ref,
+    InvestmentHolding holding,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => _HoldingInfoEditDialog(
+        holding: holding,
+        onSaved: () {
+          ref.invalidate(holdingProvider(holding.id));
+          ref.invalidate(currentHoldingsProvider);
+          ref.invalidate(portfolioSummaryProvider);
+          ref.invalidate(filteredHoldingsProvider);
+        },
+      ),
+    );
+  }
+
+  /// 确认删除单笔投资流水
+  Future<void> _confirmDeleteTransaction(
+    BuildContext context,
+    WidgetRef ref,
+    Transaction tx,
+  ) async {
+    // v6.13.6 返工：转换批次流水禁止单边删除，与编辑入口防护一致
+    if (tx.batchId != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请删除完整的转换记录')),
+      );
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除流水'),
+        content: Text('确定删除这笔交易记录？删除后将重算持仓，此操作不可恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: BeeTokens.error(context),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(repositoryProvider).deleteTransaction(tx.id);
+      ref.invalidate(currentHoldingsProvider);
+      ref.invalidate(portfolioSummaryProvider);
+      ref.invalidate(filteredHoldingsProvider);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('删除流水失败：$e')),
+        );
+      }
+    }
+  }
+
+  /// 确认删除整个持仓（含全部流水与分组关联）
+  Future<void> _confirmDeleteHolding(
+    BuildContext context,
+    WidgetRef ref,
+    InvestmentHolding holding,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除持仓'),
+        content: Text(
+            '删除持仓「${holding.fundName}」？将同时删除该持仓的全部交易记录，此操作不可恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: BeeTokens.error(context),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await ref.read(investmentServiceProvider).deleteHolding(holding.id);
+      ref.invalidate(currentHoldingsProvider);
+      ref.invalidate(portfolioSummaryProvider);
+      ref.invalidate(filteredHoldingsProvider);
+      if (context.mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('删除持仓失败：$e')),
+        );
+      }
+    }
   }
 
   /// 底部操作栏
@@ -395,8 +525,13 @@ class HoldingDetailPage extends ConsumerWidget {
 class _TransactionTile extends ConsumerWidget {
   final Transaction transaction;
   final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
-  const _TransactionTile({required this.transaction, this.onEdit});
+  const _TransactionTile({
+    required this.transaction,
+    this.onEdit,
+    this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -489,6 +624,17 @@ class _TransactionTile extends ConsumerWidget {
                       color: BeeTokens.textPrimary(context),
                     ),
                   ),
+                  if (onDelete != null)
+                    IconButton(
+                      onPressed: onDelete,
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      tooltip: '删除流水',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
+                    ),
                 ],
               ),
               const SizedBox(height: BeeDimens.p8),
@@ -728,6 +874,121 @@ class _TransactionEditDialogState
               ),
             ],
           ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _saving ? null : () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: _saving ? null : _save,
+          child: _saving
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('保存'),
+        ),
+      ],
+    );
+  }
+}
+
+// ───── 基金信息编辑弹窗（v6.13.2 新增）─────
+
+/// 编辑持仓的基金代码/名称，代码必须为 6 位数字。
+class _HoldingInfoEditDialog extends ConsumerStatefulWidget {
+  final InvestmentHolding holding;
+  final VoidCallback? onSaved;
+
+  const _HoldingInfoEditDialog({
+    required this.holding,
+    this.onSaved,
+  });
+
+  @override
+  ConsumerState<_HoldingInfoEditDialog> createState() =>
+      _HoldingInfoEditDialogState();
+}
+
+class _HoldingInfoEditDialogState
+    extends ConsumerState<_HoldingInfoEditDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _codeCtrl;
+  late final TextEditingController _nameCtrl;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _codeCtrl = TextEditingController(text: widget.holding.fundCode);
+    _nameCtrl = TextEditingController(text: widget.holding.fundName);
+  }
+
+  @override
+  void dispose() {
+    _codeCtrl.dispose();
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _saving = true);
+    try {
+      final code = _codeCtrl.text.trim();
+      final name = _nameCtrl.text.trim();
+      await ref.read(investmentServiceProvider).updateHoldingInfo(
+            widget.holding.id,
+            fundCode: code,
+            fundName: name.isEmpty ? null : name,
+          );
+      widget.onSaved?.call();
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('保存失败：$e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('编辑基金信息'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              controller: _codeCtrl,
+              decoration: const InputDecoration(
+                  labelText: '基金代码', isDense: true),
+              keyboardType: TextInputType.number,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) return '请输入基金代码';
+                if (!RegExp(r'^\d{6}$').hasMatch(v.trim())) {
+                  return '基金代码必须为6位数字';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _nameCtrl,
+              decoration: const InputDecoration(
+                  labelText: '基金名称', isDense: true),
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? '请输入基金名称' : null,
+            ),
+          ],
         ),
       ),
       actions: [

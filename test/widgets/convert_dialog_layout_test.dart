@@ -204,4 +204,19 @@ void main() {
 
     expect(holdings!.any((h) => h.fundCode == '999999'), isTrue);
   });
+
+  testWidgets('手填目标基金代码 6 位校验', (tester) async {
+    await tester.runAsync(() async {
+      await tester.pumpWidget(hostWithLauncher());
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('打开转换'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).at(2), '11017');
+      await tester.tap(find.widgetWithText(FilledButton, '确认'));
+      await tester.pumpAndSettle();
+    });
+
+    expect(find.text('基金代码必须为6位数字'), findsOneWidget);
+  });
 }

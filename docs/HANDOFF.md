@@ -31,6 +31,65 @@
 
 ---
 
+## 2026-08-09
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-ui / architect + invest-logic
+
+**任务**：6.13.6 PM 复审通过 + 6.13 合入
+
+**审查结果**：P1 批次删除防护、P2 附件清理均已修复，复审通过，合入。
+- 转换批次流水删除被拦截（SnackBar「请删除完整的转换记录」），新增测试覆盖，不再产生单边删除
+- deleteHolding 复用 LocalTransactionRepository.deleteTransaction，附件 DB 行与实体文件均清理，新增附件清理断言
+- 验证：相关测试全过；全量 666 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）；改动文件 analyze 无新增 issue
+- 遗留：6.13.3 刷新失败反馈仍为 P2 待办，不在本次合入范围
+
+**git 状态**：当前分支 main，合入后提交
+
+---
+
+## 2026-08-08
+
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.13.6 返工 P1（批次流水删除防护）+ 收尾验证
+
+**完成工作**：
+- lib/pages/investment/holding_detail_page.dart — _confirmDeleteTransaction 开头拦截 batchId != null 的转换流水，SnackBar「请删除完整的转换记录」，与编辑入口防护一致，不再弹确认框/调 deleteTransaction
+- test/widgets/holding_detail_delete_test.dart — 新增「转换批次流水删除被拦截」：点删除图标 → 只出提示、不弹确认框、deleteTransaction 未被调用
+- P2 已由 architect/invest-logic 落地（deleteHolding 复用 LocalTransactionRepository 清理附件实体文件 + 测试），已并入全量验证
+
+**下一个任务需要知道的**：
+- 转换批次删除目前为「拦截 + 提示」，未做批次级原子删除（如需删除整个转换需分别处理两侧或另立入口）
+- 全量 analyze 零 error；全量测试 666 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交（工作区含 architect/invest-logic 并行改动，交 PM 复审）
+
+---
+
+## 2026-08-08
+
+**移交角色**：architect + invest-logic
+**接收角色**：项目经理（PM）/ invest-ui（6.13.6 P1）
+
+**任务**：6.13.6 返工 P2（deleteHolding 附件清理）
+
+**完成工作**：
+- lib/data/repositories/local/local_investment_repository.dart — deleteHolding 改为逐笔复用 LocalTransactionRepository.deleteTransaction：同步清理交易标签、附件 DB 行与附件实体文件（引用计数保留共享文件），再删分组关联与持仓行并同步投资账户市值
+- pubspec.yaml — dev_dependencies 新增 path_provider_platform_interface（测试 mock 附件目录用）
+- test/data/repositories/investment_repository_test.dart — 增加附件 DB 行清理断言，并注入 fake PathProviderPlatform 让附件清理路径可测
+
+**下一个任务需要知道的**：
+- P1（转换批次流水删除拦截）由 invest-ui 继续；本记录仅覆盖 P2 数据层
+- 全量测试当前被并行线程卡住的测试进程阻塞；最近一次全量结果含既存 bill_creation_service_test 与 invest-ui 的 transaction_list_quick_add_test（Timer pending），均非本次数据层
+
+**验证**：flutter analyze 855 个 issue、零 error（我的文件零新增）；数据层相关测试全部通过
+
+**git 状态**：当前分支 main，工作区含 architect/invest-logic + invest-ui 并行改动，待提交交 PM 审查
+
+---
+
 ## 2026-08-08
 
 **移交角色**：项目经理（PM）

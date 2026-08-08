@@ -385,6 +385,9 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
               validator: (v) {
                 if (_toHolding != null) return null;
                 if (v == null || v.trim().isEmpty) return '请输入目标基金代码';
+                if (!RegExp(r'^\d{6}$').hasMatch(v.trim())) {
+                  return '基金代码必须为6位数字';
+                }
                 return null;
               },
             ),

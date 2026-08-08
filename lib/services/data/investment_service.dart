@@ -382,6 +382,24 @@ class InvestmentService {
     );
   }
 
+  /// 更新持仓基金代码/名称（6.13 防错）。
+  Future<void> updateHoldingInfo(
+    int holdingId, {
+    required String fundCode,
+    String? fundName,
+  }) {
+    return _repo.updateHoldingInfo(
+      holdingId,
+      fundCode: fundCode,
+      fundName: fundName,
+    );
+  }
+
+  /// 删除整个持仓（6.13.4）。
+  Future<void> deleteHolding(int holdingId) {
+    return _repo.deleteHolding(holdingId);
+  }
+
   // ---- 基金分组（v6.2）----
 
   Future<int> createGroup({

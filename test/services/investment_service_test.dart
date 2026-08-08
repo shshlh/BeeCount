@@ -426,4 +426,65 @@ void main() {
     expect(holdings.length, 1);
     expect(holdings.single.fundCode, '000001');
   });
+
+  test('updateHoldingInfo：非法/重复拒绝，合法更新透传', () async {
+    await service.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+    await service.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '基金B',
+        amount: 500,
+        shares: 500,
+        nav: 1.0);
+
+    await expectLater(
+      () => service.updateHoldingInfo(1, fundCode: '11017'),
+      throwsArgumentError,
+    );
+    await expectLater(
+      () => service.updateHoldingInfo(1, fundCode: '000002'),
+      throwsA(isA<StateError>()),
+    );
+
+    await service.updateHoldingInfo(
+      1,
+      fundCode: '110017',
+      fundName: '修正基金',
+    );
+    final h = await repo.getHolding(1);
+    expect(h!.fundCode, '110017');
+    expect(h.fundName, '修正基金');
+  });
+
+  test('deleteHolding：委托仓库删除持仓', () async {
+    await service.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+    await service.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '基金B',
+        amount: 500,
+        shares: 500,
+        nav: 1.0);
+
+    await service.deleteHolding(1);
+
+    final holdings = await service.watchHoldings(ledgerId: 1).first;
+    expect(holdings.map((h) => h.fundCode).toList(), ['000002']);
+  });
 }

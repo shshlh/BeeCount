@@ -95,6 +95,7 @@ dev_dependencies:
   mocktail: ^1.0.4
   integration_test:
     sdk: flutter
+  path_provider_platform_interface: ^2.1.2
 
 dependency_overrides:
   # Fix record_linux compatibility issue (we target iOS/Android only)

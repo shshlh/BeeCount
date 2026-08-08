@@ -227,4 +227,32 @@ void main() {
     expect((await repo.getHolding(1))!.navDate, DateTime(2026, 8, 7));
     expect((await repo.getHolding(2))!.currentNav, 2.0);
   });
+
+  test('修正基金代码后刷新可命中新代码', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '11017',
+        fundName: '误录基金',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+
+    final fake = _FakeNavFetchService({
+      '110017': FundNavQuote(nav: 1.8, navDate: DateTime(2026, 8, 7)),
+    });
+    final service = InvestmentService(repo, navFetch: fake);
+
+    await service.updateHoldingInfo(
+      1,
+      fundCode: '110017',
+      fundName: '修正基金',
+    );
+    final updated = await service.refreshNavsForLedger(1);
+
+    expect(updated, 1);
+    final h = await repo.getHolding(1);
+    expect(h!.fundCode, '110017');
+    expect(h.currentNav, 1.8);
+  });
 }

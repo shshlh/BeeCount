@@ -118,6 +118,22 @@ abstract class InvestmentRepository {
     String? note,
   });
 
+  /// 更新持仓的基金代码/名称（6.13 防错）。
+  ///
+  /// [fundCode] 必须为 6 位数字；同账本+账户下已存在相同代码时拒绝，
+  /// 避免误改造成持仓静默合并。只改元信息，保留份额/成本/净值/市值。
+  Future<void> updateHoldingInfo(
+    int holdingId, {
+    required String fundCode,
+    String? fundName,
+  });
+
+  /// 删除整个持仓（6.13.4）。
+  ///
+  /// 在同一事务内删除持仓关联交易、分组关联与持仓行，并同步投资账户市值，
+  /// 避免 0 份额历史行残留。
+  Future<void> deleteHolding(int holdingId);
+
   // ---- 基金分组（v6.2，本地数据，不同步）----
 
   /// 创建自定义分组，返回分组 ID。

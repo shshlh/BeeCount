@@ -1,11 +1,34 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
 import 'package:drift/drift.dart' show Variable;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:beecount/data/db.dart';
 import 'package:beecount/data/repositories/local/local_investment_repository.dart';
 import 'package:beecount/data/repositories/local/local_account_repository.dart';
 
+class _FakePathProviderPlatform extends PathProviderPlatform {
+  final String docsDir;
+  final String cacheDir;
+
+  _FakePathProviderPlatform()
+      : docsDir = Directory.systemTemp.createTempSync('app_docs').path,
+        cacheDir = Directory.systemTemp.createTempSync('app_cache').path;
+
+  @override
+  Future<String?> getApplicationDocumentsPath() async => docsDir;
+
+  @override
+  Future<String?> getTemporaryPath() async => cacheDir;
+}
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  SharedPreferences.setMockInitialValues({});
+  PathProviderPlatform.instance = _FakePathProviderPlatform();
+
   late BeeDatabase db;
   late LocalInvestmentRepository repo;
 
@@ -444,6 +467,141 @@ void main() {
     await repo.updateNav(1, 2.0, navDate: manualDate);
     final updated = await repo.getHolding(1);
     expect(updated!.navDate, manualDate);
+  });
+
+  test('更新持仓信息：改代码/名称保留统计字段', () async {
+    final navDate = DateTime(2026, 8, 7);
+    await repo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000001',
+      fundName: '基金A',
+      amount: 1000,
+      shares: 1000,
+      nav: 1.0,
+      navDate: navDate,
+    );
+    await repo.updateNav(1, 2.0, navDate: navDate);
+
+    await repo.updateHoldingInfo(
+      1,
+      fundCode: '110017',
+      fundName: '新名称',
+    );
+
+    final h = await repo.getHolding(1);
+    expect(h!.fundCode, '110017');
+    expect(h.fundName, '新名称');
+    expect(h.totalShares, 1000);
+    expect(h.totalCost, closeTo(1000, 0.01));
+    expect(h.currentNav, 2.0);
+    expect(h.navDate, navDate);
+    expect(h.marketValue, closeTo(2000, 0.01));
+  });
+
+  test('更新持仓信息：非法代码拒绝', () async {
+    await repo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000001',
+      fundName: '基金A',
+      amount: 1000,
+      shares: 1000,
+      nav: 1.0,
+    );
+
+    await expectLater(
+      () => repo.updateHoldingInfo(1, fundCode: '11017'),
+      throwsArgumentError,
+    );
+    final h = await repo.getHolding(1);
+    expect(h!.fundCode, '000001');
+  });
+
+  test('更新持仓信息：同账户重复代码拒绝，改回自身允许', () async {
+    await repo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000001',
+      fundName: '基金A',
+      amount: 1000,
+      shares: 1000,
+      nav: 1.0,
+    );
+    await repo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000002',
+      fundName: '基金B',
+      amount: 500,
+      shares: 500,
+      nav: 1.0,
+    );
+
+    await expectLater(
+      () => repo.updateHoldingInfo(1, fundCode: '000002'),
+      throwsA(isA<StateError>()),
+    );
+    final a = await repo.getHolding(1);
+    expect(a!.fundCode, '000001');
+
+    await repo.updateHoldingInfo(1, fundCode: '000001');
+  });
+
+  test('删除持仓：清理流水/分组关联并联动账户市值', () async {
+    final buyTx = await repo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000001',
+      fundName: '基金A',
+      amount: 2000,
+      shares: 1000,
+      nav: 2.0,
+    );
+    await repo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000002',
+      fundName: '基金B',
+      amount: 1500,
+      shares: 500,
+      nav: 3.0,
+    );
+    final groupId = await repo.createGroup(ledgerId: 1, name: '组合A');
+    await repo.addHoldingsToGroup(groupId, [1, 2]);
+    await db.into(db.transactionAttachments).insert(
+        TransactionAttachmentsCompanion.insert(
+            transactionId: buyTx, fileName: 'a.jpg'));
+
+    await repo.deleteHolding(1);
+
+    final holdings = await db.select(db.investmentHoldings).get();
+    expect(holdings.map((h) => h.fundCode).toList(), ['000002']);
+
+    final txs = await (db.select(db.transactions)
+          ..where((t) => t.holdingId.equals(1)))
+        .get();
+    expect(txs, isEmpty);
+
+    final members = await (db.select(db.investmentGroupHoldings)
+          ..where((r) => r.groupId.equals(groupId)))
+        .get();
+    expect(members.map((r) => r.holdingId).toList(), [2]);
+
+    final attachments = await db.select(db.transactionAttachments).get();
+    expect(attachments, isEmpty);
+
+    final account = await (db.select(db.accounts)
+          ..where((a) => a.id.equals(10)))
+        .getSingle();
+    expect(account.initialBalance, closeTo(1500, 0.01));
+  });
+
+  test('删除持仓：不存在抛错', () async {
+    await expectLater(
+      () => repo.deleteHolding(999),
+      throwsA(isA<StateError>()),
+    );
   });
 
   test('编辑交易：部分卖出后改买入份额按比例重算成本', () async {

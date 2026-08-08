@@ -16,6 +16,7 @@ import '../../services/system/logger_service.dart';
 import '../../utils/month_range.dart';
 import '../../services/export/share_poster_service.dart';
 import '../report/annual_report_page.dart';
+import '../transaction/transaction_editor_page.dart';
 import '../../widgets/biz/home_budget_summary.dart';
 import '../../providers/shared_ledger_providers.dart';
 
@@ -661,6 +662,21 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
               title: AppLocalizations.of(context).tabHome,
               showBack: true,
               compact: true,
+              actions: [
+                IconButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const TransactionEditorPage(
+                        initialKind: 'expense',
+                        quickAdd: true,
+                      ),
+                    ),
+                  ),
+                  icon: const Icon(Icons.add),
+                  tooltip: '记一笔',
+                ),
+              ],
               content: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
