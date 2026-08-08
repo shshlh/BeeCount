@@ -34,6 +34,35 @@
 ## 2026-08-08
 
 **移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic（6.12.1）→ invest-ui（6.12.2）
+
+**任务**：6.12 净值日期显示（数据层 + UI）
+
+**需求背景**：当前净值只显示数值，用户无法得知该净值对应的日期；腾讯行情和天天基金数据源均带日期，需要把日期随净值一起展示，例如「净值（2026.8.7）」。导入初始持仓 / 基金卡片 / 持仓明细等净值展示点统一带上日期。
+
+**6.12.1 数据层（architect + invest-logic）**
+- NavFetchService：返回值升级为 `nav + navDate`（腾讯行情日期字段 `yyyy-MM-dd`；天天基金 `Data_netWorthTrend` 最后一项的 `x` 时间戳）
+- InvestmentHoldings 增加 nullable `navDate`，schema 36 → 37 + 幂等迁移 `nav_date`
+- Repository：updateNav / buy / sell / convert / createInitialHolding 写入净值日期；`_recomputeHolding` 保留/回填日期
+- InvestmentService.refreshNavsForLedger / batchUpdateNav 传递数据源日期
+- 测试：日期解析、刷新后持久化、迁移 v37
+
+**6.12.2 UI 层（invest-ui，等 6.12.1 接口落地）**
+- 持仓卡片、持仓明细「净值」显示 `1.2345（2026.8.7）`；旧数据无日期时不显示括号
+- 导入初始持仓弹窗：净值日期默认取导入/发生日期
+- widget 测试断言日期展示
+
+**约束**：
+- HANDOFF 只增不减；flutter analyze 新增代码零 error/warning
+- 完成后更新 TEAM.md 任务板 + HANDOFF 追加完成记录，git 状态待提交交 PM 审查
+
+**git 状态**：当前分支 main，HEAD d781560（上轮 P0 已提交）
+
+---
+
+## 2026-08-08
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-logic / invest-ui（后续维护）
 
 **任务**：P0 修复 — 净值抓取数据源切换（fundgz 失效）
