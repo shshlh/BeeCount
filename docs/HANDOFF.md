@@ -34,6 +34,34 @@
 ## 2026-08-09
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-logic（数据层）/ invest-ui（UI）
+
+**任务**：6.13.3 刷新失败反馈
+
+**需求**：净值刷新时被跳过的基金（代码无效 / 无日期 / 抓取失败）目前完全静默，用户无法发现 `11017` 这类误录代码。刷新后应非阻塞提示具体基金代码。
+
+**接口约定（invest-logic 先落地，invest-ui 按此对齐）**：
+- `lib/services/data/investment_service.dart` 新增 `NavRefreshResult`，字段：`int updatedCount`、`List<String> skippedCodes`
+- 新增 `Future<NavRefreshResult> refreshNavsForLedgerDetailed(int ledgerId, {bool force = false})`；保留现有 `refreshNavsForLedger` 返回 `int` 不动
+- `skippedCodes` = 当前账本持仓代码集合 − 实际抓取成功代码集合（覆盖无效代码、无日期、单只失败）
+- 整批全失败时不再让 UI 只能看到泛化异常：详细方法返回 `updatedCount=0` + 全部 skippedCodes，不抛 StateError
+- 测试：部分成功返回 skipped 列表；非法代码持仓出现在 skipped；整批失败不抛错且 skipped 全量返回
+
+**UI 要求（invest-ui）**：
+- 持仓页进入自动刷新与下拉刷新改用 `refreshNavsForLedgerDetailed`
+- `skippedCodes.isNotEmpty` 时显示非阻塞 SnackBar，如「以下基金未更新：11017」
+- 下拉刷新保留失败兜底提示，不打断列表
+- widget 测试：spy service 返回 skippedCodes 后 SnackBar 展示具体代码
+
+**约束**：HANDOFF 只增不减；flutter analyze 新增代码零 error/warning；完成后更新 TEAM.md 任务板 + HANDOFF 追加完成记录，交 PM 审查
+
+**git 状态**：当前分支 main，HEAD 2db12a3
+
+---
+
+## 2026-08-09
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-ui / architect + invest-logic
 
 **任务**：6.13.6 PM 复审通过 + 6.13 合入
