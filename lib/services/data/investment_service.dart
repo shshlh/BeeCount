@@ -7,6 +7,9 @@ library;
 import '../../data/db.dart';
 import '../../data/repositories/investment_repository.dart';
 import 'package:decimal/decimal.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'nav_fetch_service.dart';
 
 Decimal _toDecimal(double value) => Decimal.parse(value.toString());
 
@@ -44,8 +47,57 @@ class HoldingReturn {
 
 class InvestmentService {
   final InvestmentRepository _repo;
+  NavFetchService? _navFetch;
 
-  InvestmentService(this._repo);
+  InvestmentService(this._repo, {NavFetchService? navFetch})
+      : _navFetch = navFetch;
+
+  NavFetchService get _navFetchService => _navFetch ??= NavFetchService();
+
+  static const Duration _navRefreshThrottle = Duration(minutes: 15);
+
+  /// 拉取天天基金最新净值并批量更新账本持仓。
+  ///
+  /// 返回成功更新的持仓数；15 分钟内不重复请求（[force]=true 忽略节流，
+  /// 供下拉刷新使用）。整批失败抛 [StateError]，单只失败跳过不影响其余。
+  Future<int> refreshNavsForLedger(int ledgerId, {bool force = false}) async {
+    if (!force) {
+      final prefs = await SharedPreferences.getInstance();
+      final last = prefs.getInt('investment_nav_refresh_at_$ledgerId');
+      if (last != null) {
+        final elapsed = DateTime.now()
+            .difference(DateTime.fromMillisecondsSinceEpoch(last));
+        if (elapsed < _navRefreshThrottle) return 0;
+      }
+    }
+
+    final holdings = await _repo.watchHoldings(ledgerId: ledgerId).first;
+    if (holdings.isEmpty) return 0;
+
+    final codes = holdings.map((h) => h.fundCode).toSet().toList();
+    final navs = await _navFetchService.fetchLatestNavs(codes);
+    if (navs.isEmpty) {
+      throw StateError('净值刷新失败');
+    }
+
+    final navMap = <int, double>{};
+    for (final h in holdings) {
+      final nav = navs[h.fundCode];
+      if (nav != null) navMap[h.id] = nav;
+    }
+    if (navMap.isEmpty) {
+      throw StateError('净值刷新失败');
+    }
+
+    await batchUpdateNav(navMap);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(
+      'investment_nav_refresh_at_$ledgerId',
+      DateTime.now().millisecondsSinceEpoch,
+    );
+    return navMap.length;
+  }
 
   // ---- 组合摘要 ----
 

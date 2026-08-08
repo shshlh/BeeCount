@@ -33,6 +33,26 @@
 
 ## 2026-08-08
 
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.11 返工（进入持仓页自动刷新时机）
+
+**完成工作**：
+- lib/pages/investment/holdings_list_page.dart — build 中 ref.listen(bottomTabIndexProvider)：next==2（资产 tab）且 prev!=2 时调 refreshNavsForLedger(ledgerId)（service 层 15 分钟节流，updated>0 才刷新列表，失败静默）；保留 initState 首次刷新
+- test/widgets/holdings_list_page_layout_test.dart — 新增「切到资产 tab 触发自动刷新」：spy InvestmentService 计数，initState=1、切到 tab2=2、切走再切回=3；15 分钟节流由 service 层测试覆盖（invest-logic 已含节流命中/force 绕过用例）
+
+**下一个任务需要知道的**：
+- 资产 tab 在 IndexedStack 常驻，刷新时机由「tab 切换监听 + 首次 initState」双入口覆盖
+- 节流去重仍在 InvestmentService.refreshNavsForLedger（SharedPreferences + force），UI 不做二次判断
+- 全量 analyze 零 error；全量测试 640 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交（工作区含 invest-logic 并行改动，交 PM 复审）
+
+---
+
+## 2026-08-08
+
 **移交角色**：项目经理（PM）
 **接收角色**：invest-ui
 

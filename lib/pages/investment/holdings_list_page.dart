@@ -25,13 +25,68 @@ import '../../widgets/investment/initial_holding_dialog.dart';
 /// - 持仓卡片列表（基金名称、代码、份额、市值、盈亏）
 /// - 下拉刷新（刷新净值数据）
 /// - 空状态提示（无持仓时）
-class HoldingsListPage extends ConsumerWidget {
+class HoldingsListPage extends ConsumerStatefulWidget {
   /// 是否作为 Tab 嵌入底部导航（asTab=true 时不显示返回按钮）。
   final bool asTab;
   const HoldingsListPage({super.key, this.asTab = false});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HoldingsListPage> createState() => _HoldingsListPageState();
+}
+
+class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
+  @override
+  void initState() {
+    super.initState();
+    // v6.11.3: 进入页面自动刷新净值（15 分钟节流，内部静默跳过）
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _refreshOnEnter();
+    });
+  }
+
+  Future<void> _refreshOnEnter() async {
+    final ledgerId = ref.read(currentLedgerIdProvider);
+    try {
+      final updated =
+          await ref.read(investmentServiceProvider).refreshNavsForLedger(
+                ledgerId,
+              );
+      if (updated > 0 && mounted) _invalidateHoldings();
+    } catch (_) {
+      // 进入页面自动刷新失败静默，不打断列表
+    }
+  }
+
+  Future<void> _refreshByPull() async {
+    final ledgerId = ref.read(currentLedgerIdProvider);
+    try {
+      await ref.read(investmentServiceProvider).refreshNavsForLedger(
+            ledgerId,
+            force: true,
+          );
+      _invalidateHoldings();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('净值刷新失败')),
+        );
+      }
+    }
+  }
+
+  void _invalidateHoldings() {
+    ref.invalidate(currentHoldingsProvider);
+    ref.invalidate(portfolioSummaryProvider);
+    ref.invalidate(filteredHoldingsProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // v6.11 返工：资产 tab 在 IndexedStack 常驻，切回时再次触发自动刷新
+    ref.listen<int>(bottomTabIndexProvider, (prev, next) {
+      if (next == 2 && prev != 2) _refreshOnEnter();
+    });
+
     final holdingsAsync = ref.watch(currentHoldingsProvider);
     final filteredAsync = ref.watch(filteredHoldingsProvider);
     final groupsAsync = ref.watch(groupsProvider);
@@ -46,7 +101,7 @@ class HoldingsListPage extends ConsumerWidget {
         children: [
           PrimaryHeader(
             title: '投资持仓',
-            showBack: !asTab,
+            showBack: !widget.asTab,
             compact: true,
             actions: [
               IconButton(
@@ -78,11 +133,7 @@ class HoldingsListPage extends ConsumerWidget {
           ],
           Expanded(
             child: RefreshIndicator(
-              onRefresh: () async {
-                ref.invalidate(currentHoldingsProvider);
-                ref.invalidate(portfolioSummaryProvider);
-                await Future.delayed(const Duration(milliseconds: 300));
-              },
+              onRefresh: _refreshByPull,
               child: holdingsAsync.when(
                 skipLoadingOnReload: true,
                 data: (holdings) {

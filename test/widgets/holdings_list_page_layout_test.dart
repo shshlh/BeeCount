@@ -2,8 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:drift/native.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:beecount/data/db.dart';
+import 'package:beecount/data/repositories/local/local_investment_repository.dart';
+import 'package:beecount/data/repositories/local/local_repository.dart';
 import 'package:beecount/l10n/app_localizations.dart';
 import 'package:beecount/pages/investment/holdings_list_page.dart';
 import 'package:beecount/providers.dart';
@@ -11,11 +15,28 @@ import 'package:beecount/services/data/investment_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  SharedPreferences.setMockInitialValues({});
+
+  late BeeDatabase db;
+  late LocalInvestmentRepository investmentRepo;
+  late LocalRepository repo;
+
+  setUp(() async {
+    db = BeeDatabase.forTesting(NativeDatabase.memory());
+    investmentRepo = LocalInvestmentRepository(db);
+    repo = LocalRepository(db);
+    await db.customStatement(
+        "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
+  });
+
+  tearDown(() async => db.close());
 
   testWidgets('组合摘要固定 + 顶部导入按钮 + 空态', (tester) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          investmentRepositoryProvider.overrideWithValue(investmentRepo),
+          repositoryProvider.overrideWithValue(repo),
           currentHoldingsProvider.overrideWith(
             (ref) => Stream<List<InvestmentHolding>>.value(const []),
           ),
@@ -73,6 +94,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          investmentRepositoryProvider.overrideWithValue(investmentRepo),
+          repositoryProvider.overrideWithValue(repo),
           currentHoldingsProvider.overrideWith(
             (ref) => Stream<List<InvestmentHolding>>.value([holding]),
           ),
@@ -134,6 +157,8 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          investmentRepositoryProvider.overrideWithValue(investmentRepo),
+          repositoryProvider.overrideWithValue(repo),
           currentHoldingsProvider.overrideWith(
             (ref) => Stream<List<InvestmentHolding>>.value([holding]),
           ),
@@ -166,4 +191,70 @@ void main() {
     expect(find.text('该分组暂无基金'), findsOneWidget);
     expect(find.text('长按分组可编辑成员'), findsOneWidget);
   });
+
+  testWidgets('切到资产 tab 触发自动刷新', (tester) async {
+    final spy = _SpyInvestmentService(investmentRepo);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          investmentRepositoryProvider.overrideWithValue(investmentRepo),
+          repositoryProvider.overrideWithValue(repo),
+          investmentServiceProvider.overrideWithValue(spy),
+          currentHoldingsProvider.overrideWith(
+            (ref) => Stream<List<InvestmentHolding>>.value(const []),
+          ),
+          groupsProvider.overrideWith(
+            (ref) => Stream<List<InvestmentGroup>>.value(const []),
+          ),
+          portfolioSummaryProvider.overrideWith(
+            (ref) async => const PortfolioSummary(
+              totalMarketValue: 0,
+              totalCost: 0,
+              unrealizedPnL: 0,
+              returnRate: 0,
+              holdingCount: 0,
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: const HoldingsListPage(asTab: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // initState 首次刷新
+    expect(spy.refreshCalls, 1);
+
+    final ctx = tester.element(find.byType(HoldingsListPage));
+    final container = ProviderScope.containerOf(ctx, listen: false);
+
+    // 切到资产 tab（index 2）触发一次
+    container.read(bottomTabIndexProvider.notifier).state = 2;
+    await tester.pumpAndSettle();
+    expect(spy.refreshCalls, 2);
+
+    // 切走再切回仍会调用（15 分钟节流由 service 层控制）
+    container.read(bottomTabIndexProvider.notifier).state = 0;
+    await tester.pumpAndSettle();
+    container.read(bottomTabIndexProvider.notifier).state = 2;
+    await tester.pumpAndSettle();
+    expect(spy.refreshCalls, 3);
+  });
+}
+
+class _SpyInvestmentService extends InvestmentService {
+  int refreshCalls = 0;
+
+  _SpyInvestmentService(super.repo);
+
+  @override
+  Future<int> refreshNavsForLedger(int ledgerId, {bool force = false}) async {
+    refreshCalls++;
+    return 0;
+  }
 }

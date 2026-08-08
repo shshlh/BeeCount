@@ -206,7 +206,8 @@ class _CategoryRankRowState extends ConsumerState<CategoryRankRow> {
                       AmountText(
                         value: value,
                         signed: false,
-                        decimals: 0,
+                        // v6.10: 排行金额显示实际金额（2 位小数），与总结余/图表口径一致
+                        decimals: 2,
                         style: TextStyle(fontSize: isTopLevel ? 14 : 13),
                       ),
                     ],
