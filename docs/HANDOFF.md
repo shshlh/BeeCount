@@ -34,6 +34,30 @@
 ## 2026-08-09
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-ui + qa（7.1.1）/ invest-ui + invest-logic（7.1.2）
+
+**任务**：7.1 小组件显示修复 + App 更名
+
+**7.1.1 小组件显示修复（invest-ui + qa）**
+- 收支速览（GlanceView）真机/预览出现 `bottom overflowed by 2.0 pixels`：定位 364×169 固定高度下的布局溢出（header / stat 卡 / 间距 / Spacer），把内容收敛到可用高度内
+- 小组件管理页预览比例不当：`_buildGalleryCard` 当前所有尺寸都用同一 displayWidth，155×155 小号被放大成 364 宽，导致大中小比例失真；改为按预览尺寸保留真实比例（如小号最大 155、中号 364×169、大号 364×382，超出可用宽度再等比缩小）
+- 测试：GlanceView 在 364×169 / 155×155 渲染不溢出；预览卡片尺寸比例断言
+
+**7.1.2 App 更名「记账助手」（invest-ui + invest-logic）**
+- 用户可见的「蜜蜂记账」全部改为「记账助手」（zh / zh_TW 为 記帳助手；en / ko 可按现有风格译为 Bookkeeping Assistant / 가계부 도우미 或保留 BeeCount，由工程师与 PM 确认）
+- 覆盖：l10n（appName / appTitle / homeAppTitle / splashAppName / mineSlogan / sharePosterAppName / 提醒/小组件引导/分享文案等）、Android strings.xml 与 build.gradle app_name（测试版为「记账助手测试版」）、分享海报/帖子/系统提示词、README/PRIVACY 标题
+- 包名 / applicationId / bundle id 不改，避免升级链路断裂
+- 测试：扫描用户可见文案不再出现「蜜蜂记账」；Android 资源断言
+
+**约束**：HANDOFF 只增不减；flutter analyze 新增代码零 error/warning；完成后更新 TEAM.md 任务板 + HANDOFF 追加完成记录，交 PM 审查
+
+**git 状态**：当前分支 main，HEAD 68b2288
+
+---
+
+## 2026-08-09
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-ui / invest-logic / qa
 
 **任务**：7.0 PM 审查通过 + 合入
