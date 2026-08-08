@@ -36,16 +36,18 @@
 **移交角色**：项目经理（PM）
 **接收角色**：invest-ui + invest-logic
 
-**任务**：7.0.4 原官网文档入口清理（beejz.com）
+**任务**：7.0.4 教程类内容本地化（beejz.com）
 
-**背景**：7.0.1/7.0.2 已把 GitHub 原仓库链接全部替换为自身 fork，但 `lib/utils/website_urls.dart` 仍指向原开发者官网 `count.beejz.com`，并被帮助中心、我的页使用帮助、登录页云同步注册指引、AI 教程等入口使用，用户仍会看到原开发者内容。
+**背景**：7.0.1/7.0.2 已把 GitHub 原仓库链接全部替换为自身 fork，但 `lib/utils/website_urls.dart` 仍指向原开发者官网 `count.beejz.com`，并被帮助中心、我的页使用帮助、登录页云同步注册指引、AI 教程等入口使用。用户确认这些教程类内容采用**本地化**方案，不删除功能。
 
 **要求**：
-- 帮助中心：改为本地静态帮助页（可参考 ChangelogPage 风格），不再 WebView 打开 beejz.com
-- 登录页云同步注册指引 / AI 教程入口：删除外链或改为本地说明，不指向原官网
-- 我的页「使用帮助」：改为本地帮助页或删除入口
+- 帮助中心：改为本地静态帮助页，覆盖基础记账、投资模块、导入导出、云同步、小组件、AI 记账等自用说明；不再 WebView 打开 beejz.com
+- 登录页云同步注册指引：改为本地「云同步设置」说明页（Supabase / WebDAV / 自行部署的简要步骤）
+- AI 教程入口：改为本地「AI 设置与使用」说明页（服务商配置、OCR/语音/截图记账）
+- 我的页「使用帮助」：指向本地帮助页
 - `lib/services/marketing/product_promos.dart` 等残留 beejz.com 资产链接：删除或置空（当前 UI 未使用，可清理）
 - 新增/更新扫描测试：`lib` 下（除 l10n 历史文案）不再出现 `beejz.com` 用户可见链接
+- 文案策略：本地页面正文先以中文为主（个人版主体中文），标题沿用现有 l10n；en/ko/zh_TW 如需完整翻译可后续补充
 
 **约束**：HANDOFF 只增不减；flutter analyze 新增代码零 error/warning；完成后更新 TEAM.md 任务板 + HANDOFF 追加完成记录，交 PM 审查
 
