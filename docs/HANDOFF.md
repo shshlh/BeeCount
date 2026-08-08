@@ -34,6 +34,65 @@
 ## 2026-08-08
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-logic + invest-ui
+
+**任务**：6.11 天天基金净值自动刷新（数据源已确认）
+
+**角色分工**：
+- invest-logic：6.11.1 NavFetchService + 6.11.2 refreshNavsForLedger 节流/接线 + 测试
+- invest-ui：6.11.3 持仓页下拉/进入自动刷新 + 提示
+
+**6.11.1 天天基金净值抓取服务（invest-logic）**
+- 数据源：`https://fundgz.1234567.com.cn/js/{基金代码}.js`（JSONP 壳 `jsonpgz({...})`），解析 `dwjz`（最新单位净值）；无 dwjz 时可用 `gsz`（估算净值）兜底或跳过该基金（工程师按字段可靠性决定，倾向 dwjz 优先、缺失跳过并记日志）
+- 新增 lib/services/data/nav_fetch_service.dart：`Future<Map<String, double>> fetchLatestNavs(List<String> fundCodes)`
+  - 复用现有 http/HttpClient，并发上限约 8，单只失败跳过不抛整批
+  - 只接受 6 位数字基金代码，过滤异常
+- 测试：JSONP 解析、无效代码过滤、单只失败跳过、并发限流
+
+**6.11.2 账本净值刷新 + 15 分钟节流（invest-logic）**
+- InvestmentService 新增 `Future<int> refreshNavsForLedger(int ledgerId, {bool force = false})`，返回成功更新的持仓数
+  - 读当前账本持仓 → 取 fundCode 列表 → fetchLatestNavs → 映射 holdingId → 调 batchUpdateNav（已有，事务 + 市值联动）
+  - 节流：15 分钟内不重复请求（force=true 忽略节流，供下拉刷新）；上次刷新时间用 SharedPreferences 持久化（key 含 ledgerId），首次/超时允许
+- 错误处理：整批失败抛错给 UI 提示；单只失败跳过不影响其余
+- 测试：节流命中/超时、force 绕过、刷新后市值联动、多账本 key 隔离
+
+**6.11.3 持仓页刷新入口（invest-ui）**
+- 文件：lib/pages/investment/holdings_list_page.dart
+- 下拉刷新（RefreshIndicator.onRefresh）：调 refreshNavsForLedger(ledgerId, force: true)，成功后再 invalidate currentHoldingsProvider / portfolioSummaryProvider / filteredHoldingsProvider
+- 进入持仓页：首次/页面出现时调 refreshNavsForLedger(ledgerId)（受 15 分钟节流，内部静默跳过）；返回成功更新数>0 时刷新列表
+- 失败提示：SnackBar「净值刷新失败」；部分成功不打断
+
+**约束**：
+- flutter analyze 新增代码零 error/warning
+- 全量测试保持 627 passed / 1 skipped / 1 failed（既存 bill_creation_service_test 除外）
+- 相关测试补充（service + widget）
+- 完成后更新 TEAM.md 任务板 + HANDOFF.md 追加完成记录，git 状态待提交交 PM 审查
+
+---
+
+## 2026-08-08
+
+**移交角色**：invest-ui
+**接收角色**：项目经理（PM）
+
+**任务**：6.10 洞察页排行金额精度（实际金额）
+
+**完成工作**：
+- lib/widgets/analytics/category_rank_row.dart — 一级/二级分类排行金额 AmountText decimals 0 → 2，显示实际金额，百分比仍 1 位
+- 核对 lib/widgets/analytics/analytics_summary.dart — 收入/支出/结余金额未显式传 decimals，AmountText 默认 2，口径已一致，无需改动
+- test/widgets/category_rank_row_test.dart — 新增 widget 测试：排行金额 AmountText decimals == 2、百分比 50.0% 保持 1 位
+
+**下一个任务需要知道的**：
+- 结余视角当前不显示分类排行（既有逻辑），本轮未改
+- 全量 analyze 零 error；全量测试 628 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，待提交交 PM 审查
+
+---
+
+## 2026-08-08
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-ui
 
 **任务**：6.10 洞察页排行金额精度（实际金额）
