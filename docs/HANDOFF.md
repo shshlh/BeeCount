@@ -49,6 +49,11 @@
 - 新增/更新扫描测试：`lib` 下（除 l10n 历史文案）不再出现 `beejz.com` 用户可见链接
 - 文案策略：本地页面正文先以中文为主（个人版主体中文），标题沿用现有 l10n；en/ko/zh_TW 如需完整翻译可后续补充
 
+**执行顺序（重要）**：
+1. invest-ui 先做：本地页面 + 移除 beejz.com 调用点（help_center / mine / login / ai_provider）
+2. invest-logic 后做：清理 website_urls / product_promos 等残留 + 扫描测试；确认 lib 下无 beejz.com 用户可见链接后再交 PM
+3. 两边不要同时修改 `lib/utils/website_urls.dart` 或同一页面文件，避免覆盖
+
 **约束**：HANDOFF 只增不减；flutter analyze 新增代码零 error/warning；完成后更新 TEAM.md 任务板 + HANDOFF 追加完成记录，交 PM 审查
 
 **git 状态**：当前分支 main，工作区含 7.0.1-7.0.3 待合入
