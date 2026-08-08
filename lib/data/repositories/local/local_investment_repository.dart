@@ -146,7 +146,14 @@ class LocalInvestmentRepository implements InvestmentRepository {
   /// 转换买入只按份额 × 净值）；卖出/赎回/转换转出按卖出份额占比扣减成本。
   /// 当前净值取最后一笔交易净值，市值 = 份额 × 当前净值。
   /// [preservedNav] 用于删除路径：保留删除前的手动净值，市值按保留净值重算。
-  Future<void> _recomputeHolding(int holdingId, {double? preservedNav}) async {
+  /// [preferredNavDate] 优先作为净值日期（如初始持仓导入显式传入）；
+  /// 否则保留持仓已有日期，缺失时用最后一笔交易的发生日期回填。
+  Future<void> _recomputeHolding(
+    int holdingId, {
+    double? preservedNav,
+    DateTime? preferredNavDate,
+  }) async {
+    final existing = await getHolding(holdingId);
     final txs = await (db.select(db.transactions)
           ..where((t) => t.holdingId.equals(holdingId))
           ..orderBy([
@@ -171,6 +178,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
     Decimal shares = Decimal.zero;
     Decimal cost = Decimal.zero;
     Decimal lastNav = Decimal.zero;
+    DateTime? lastNavDate;
     for (final tx in txs) {
       final invShares = _toDecimal(tx.investShares ?? 0);
       final nav = _toDecimal(tx.investNav ?? 0);
@@ -198,7 +206,10 @@ class LocalInvestmentRepository implements InvestmentRepository {
           cost += amount > Decimal.zero ? amount : invShares * nav + fee;
         }
       }
-      if (nav > Decimal.zero) lastNav = nav;
+      if (nav > Decimal.zero) {
+        lastNav = nav;
+        lastNavDate = tx.happenedAt;
+      }
     }
 
     final safeShares = shares < Decimal.zero ? Decimal.zero : shares;
@@ -206,11 +217,13 @@ class LocalInvestmentRepository implements InvestmentRepository {
     final navToUse = preservedNav != null && preservedNav > 0
         ? _toDecimal(preservedNav)
         : lastNav;
+    final navDateToUse = preferredNavDate ?? existing?.navDate ?? lastNavDate;
     await _updateHolding(
       holdingId,
       totalShares: safeShares.toDouble(),
       totalCost: safeCost.toDouble(),
       currentNav: navToUse > Decimal.zero ? navToUse.toDouble() : null,
+      navDate: navDateToUse,
       marketValue: (safeShares * navToUse).toDouble(),
       updatedAt: DateTime.now(),
     );
@@ -260,6 +273,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
     double? totalShares,
     double? totalCost,
     double? currentNav,
+    DateTime? navDate,
     double? marketValue,
     DateTime? updatedAt,
   }) async {
@@ -271,6 +285,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
           totalCost != null ? d.Value(totalCost) : const d.Value.absent(),
       currentNav:
           currentNav != null ? d.Value(currentNav) : const d.Value.absent(),
+      navDate: navDate != null ? d.Value(navDate) : const d.Value.absent(),
       marketValue:
           marketValue != null ? d.Value(marketValue) : const d.Value.absent(),
       updatedAt:
@@ -290,6 +305,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
     required double nav,
     required double amount,
     DateTime? happenedAt,
+    DateTime? navDate,
     String? note,
     int? holdingId,
     int? sourceAccountId,
@@ -298,6 +314,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
     final navDecimal = _toDecimal(nav);
     final amountDecimal = _toDecimal(amount);
     final effectiveHappenedAt = happenedAt ?? DateTime.now();
+    final effectiveNavDate = navDate ?? effectiveHappenedAt;
 
     return db.transaction(() async {
       // v4.7 返工：持仓归属必须是投资账户，禁止用扣款账户顶替。
@@ -361,6 +378,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
         totalShares: newShares.toDouble(),
         totalCost: newCost.toDouble(),
         currentNav: nav,
+        navDate: effectiveNavDate,
         marketValue: (newShares * navDecimal).toDouble(),
         updatedAt: effectiveHappenedAt,
       );
@@ -379,6 +397,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
     required double nav,
     double fee = 0,
     DateTime? happenedAt,
+    DateTime? navDate,
     String? note,
     int? targetAccountId,
   }) async {
@@ -386,6 +405,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
     final sharesDecimal = _toDecimal(shares);
     final navDecimal = _toDecimal(nav);
     final proceeds = (sharesDecimal * navDecimal - _toDecimal(fee)).toDouble();
+    final effectiveNavDate = navDate ?? effectiveHappenedAt;
 
     return db.transaction(() async {
       final holding = await getHolding(holdingId);
@@ -428,6 +448,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
         totalShares: safeRemaining.toDouble(),
         totalCost: safeCost.toDouble(),
         currentNav: nav,
+        navDate: effectiveNavDate,
         marketValue: (safeRemaining * navDecimal).toDouble(),
         updatedAt: effectiveHappenedAt,
       );
@@ -453,6 +474,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
     String? fundCode,
     String? fundName,
     DateTime? happenedAt,
+    DateTime? navDate,
     String? note,
   }) async {
     if (refundAmount < 0) throw ArgumentError('退回金额不能为负数');
@@ -465,6 +487,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
       throw ArgumentError('目标基金代码和名称必填');
     }
     final effectiveHappenedAt = happenedAt ?? DateTime.now();
+    final effectiveNavDate = navDate ?? effectiveHappenedAt;
     final batchId = _uuid.v4();
 
     return db.transaction(() async {
@@ -535,6 +558,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
         totalShares: safeFromRemaining.toDouble(),
         totalCost: safeFromCost.toDouble(),
         currentNav: fromNav,
+        navDate: effectiveNavDate,
         marketValue: (safeFromRemaining * fromNavDecimal).toDouble(),
         updatedAt: effectiveHappenedAt,
       );
@@ -562,6 +586,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
         totalCost:
             (_toDecimal(toHolding.totalCost) + toValueDecimal).toDouble(),
         currentNav: toNav,
+        navDate: effectiveNavDate,
         marketValue: (toNewShares * toNavDecimal).toDouble(),
         updatedAt: effectiveHappenedAt,
       );
@@ -592,14 +617,16 @@ class LocalInvestmentRepository implements InvestmentRepository {
   }
 
   @override
-  Future<void> updateNav(int holdingId, double nav) async {
+  Future<void> updateNav(int holdingId, double nav, {DateTime? navDate}) async {
     await db.transaction(() async {
       final holding = await getHolding(holdingId);
       if (holding == null) throw StateError('持仓 $holdingId 不存在');
+      final effectiveNavDate = navDate ?? DateTime.now();
 
       await _updateHolding(
         holdingId,
         currentNav: nav,
+        navDate: effectiveNavDate,
         marketValue:
             (_toDecimal(holding.totalShares) * _toDecimal(nav)).toDouble(),
         updatedAt: DateTime.now(),
@@ -665,6 +692,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
     required double cost,
     required double nav,
     DateTime? happenedAt,
+    DateTime? navDate,
     String? note,
   }) async {
     final effectiveHappenedAt = happenedAt ?? DateTime.now();
@@ -706,7 +734,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
       );
 
       // 3. 按全部投资交易重算持仓（复用场景自动累加份额/成本），并联动账户市值
-      await _recomputeHolding(holdingId);
+      await _recomputeHolding(holdingId, preferredNavDate: navDate);
       await _syncInvestmentAccountValue(accountId);
 
       return holdingId;

@@ -3,6 +3,7 @@ import 'package:drift/native.dart';
 import 'package:beecount/data/db.dart';
 import 'package:beecount/data/repositories/local/local_investment_repository.dart';
 import 'package:beecount/services/data/investment_service.dart';
+import 'package:beecount/services/data/nav_fetch_service.dart';
 
 void main() {
   late BeeDatabase db;
@@ -84,15 +85,21 @@ void main() {
         shares: 500,
         nav: 1.0);
 
-    await service.batchUpdateNav({1: 2.0, 2: 3.0});
+    final navDate = DateTime(2026, 8, 7);
+    await service.batchUpdateNav({
+      1: FundNavQuote(nav: 2.0, navDate: navDate),
+      2: FundNavQuote(nav: 3.0, navDate: navDate),
+    });
 
     final a = await repo.getHolding(1);
     expect(a!.currentNav, 2.0);
     expect(a.marketValue, 2000.0); // 1000 * 2.0
+    expect(a.navDate, navDate);
 
     final b = await repo.getHolding(2);
     expect(b!.currentNav, 3.0);
     expect(b.marketValue, 1500.0); // 500 * 3.0
+    expect(b.navDate, navDate);
   });
 
   // ---- 单持仓收益 ----

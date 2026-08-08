@@ -29,6 +29,7 @@ abstract class InvestmentRepository {
     required double nav,
     required double amount,
     DateTime? happenedAt,
+    DateTime? navDate,
     String? note,
     int? holdingId,
     int? sourceAccountId,
@@ -45,6 +46,7 @@ abstract class InvestmentRepository {
     required double nav,
     double fee = 0,
     DateTime? happenedAt,
+    DateTime? navDate,
     String? note,
     int? targetAccountId,
   });
@@ -70,11 +72,12 @@ abstract class InvestmentRepository {
     String? fundCode,
     String? fundName,
     DateTime? happenedAt,
+    DateTime? navDate,
     String? note,
   });
 
   /// 更新持仓净值，同时重算市值（marketValue = totalShares × nav）。
-  Future<void> updateNav(int holdingId, double nav);
+  Future<void> updateNav(int holdingId, double nav, {DateTime? navDate});
 
   /// 更新投资交易的可编辑字段。
   /// 仅允许编辑 note / happenedAt / investShares / investNav / investFee / amount。
@@ -111,6 +114,7 @@ abstract class InvestmentRepository {
     required double cost,
     required double nav,
     DateTime? happenedAt,
+    DateTime? navDate,
     String? note,
   });
 

@@ -80,10 +80,10 @@ class InvestmentService {
       throw StateError('净值刷新失败');
     }
 
-    final navMap = <int, double>{};
+    final navMap = <int, FundNavQuote>{};
     for (final h in holdings) {
-      final nav = navs[h.fundCode];
-      if (nav != null) navMap[h.id] = nav;
+      final quote = navs[h.fundCode];
+      if (quote != null) navMap[h.id] = quote;
     }
     if (navMap.isEmpty) {
       throw StateError('净值刷新失败');
@@ -135,9 +135,13 @@ class InvestmentService {
 
   // ---- 批量净值刷新 ----
 
-  Future<void> batchUpdateNav(Map<int, double> navMap) async {
+  Future<void> batchUpdateNav(Map<int, FundNavQuote> navMap) async {
     for (final entry in navMap.entries) {
-      await _repo.updateNav(entry.key, entry.value);
+      await _repo.updateNav(
+        entry.key,
+        entry.value.nav,
+        navDate: entry.value.navDate,
+      );
     }
   }
 
@@ -237,6 +241,7 @@ class InvestmentService {
     required double nav,
     required double amount,
     DateTime? happenedAt,
+    DateTime? navDate,
     String? note,
     int? holdingId,
     int? sourceAccountId,
@@ -250,6 +255,7 @@ class InvestmentService {
       nav: nav,
       amount: amount,
       happenedAt: happenedAt,
+      navDate: navDate,
       note: note,
       holdingId: holdingId,
       sourceAccountId: sourceAccountId,
@@ -262,6 +268,7 @@ class InvestmentService {
     required double nav,
     double fee = 0,
     DateTime? happenedAt,
+    DateTime? navDate,
     String? note,
     int? targetAccountId,
   }) {
@@ -271,6 +278,7 @@ class InvestmentService {
       nav: nav,
       fee: fee,
       happenedAt: happenedAt,
+      navDate: navDate,
       note: note,
       targetAccountId: targetAccountId,
     );
@@ -289,6 +297,7 @@ class InvestmentService {
     String? fundCode,
     String? fundName,
     DateTime? happenedAt,
+    DateTime? navDate,
     String? note,
   }) {
     return _repo.convert(
@@ -304,12 +313,13 @@ class InvestmentService {
       fundCode: fundCode,
       fundName: fundName,
       happenedAt: happenedAt,
+      navDate: navDate,
       note: note,
     );
   }
 
-  Future<void> updateNav(int holdingId, double nav) {
-    return _repo.updateNav(holdingId, nav);
+  Future<void> updateNav(int holdingId, double nav, {DateTime? navDate}) {
+    return _repo.updateNav(holdingId, nav, navDate: navDate);
   }
 
   Future<InvestmentHolding?> getHolding(int id) => _repo.getHolding(id);
@@ -355,6 +365,7 @@ class InvestmentService {
     required double cost,
     required double nav,
     DateTime? happenedAt,
+    DateTime? navDate,
     String? note,
   }) {
     return _repo.createInitialHolding(
@@ -366,6 +377,7 @@ class InvestmentService {
       cost: cost,
       nav: nav,
       happenedAt: happenedAt,
+      navDate: navDate,
       note: note,
     );
   }

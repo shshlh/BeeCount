@@ -34,6 +34,50 @@
 ## 2026-08-08
 
 **移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic / invest-ui
+
+**任务**：6.12.1 PM 审查通过 + 6.12.2 派工
+
+**审查结果**：6.12.1 通过，合入。
+- 验证：6.12.1 相关测试全过；全量 647 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）；改动文件 analyze 无新增 issue
+- 轻微风险记录：数据源缺日期时该基金整条跳过（当前两个数据源均带日期，可接受；若后续出现货币基金等异常品类再评估改为 navDate 可空）
+
+**6.12.2 派工（invest-ui）**：
+- 持仓卡片、持仓明细显示「净值（2026.8.7）」标签，数值 `1.2345` 单独显示；旧数据无 navDate 时不显示括号
+- 导入初始持仓弹窗：净值日期默认取导入/发生日期
+- widget 测试断言日期展示
+
+**git 状态**：当前分支 main，合入后提交
+
+---
+
+## 2026-08-08
+
+**移交角色**：architect + invest-logic
+**接收角色**：项目经理（PM）/ invest-ui（6.12.2）
+
+**任务**：6.12.1 净值日期数据层
+
+**完成工作**：
+- lib/services/data/nav_fetch_service.dart — 新增 FundNavQuote(nav + navDate)，fetchLatestNavs 返回 Map<String, FundNavQuote>；腾讯行情解析日期字段 yyyy-MM-dd，天天基金 Data_netWorthTrend 最后一项 x 时间戳（兼容毫秒/秒）；日期缺失时回退/跳过
+- lib/data/db.dart — InvestmentHoldings 新增 nullable navDate，schema v36 → v37 + 幂等迁移 nav_date；db.g.dart 已重新生成
+- lib/data/repositories/investment_repository.dart + local 实现 — buy/sell/convert/updateNav/createInitialHolding 支持 navDate（默认成交时间/当前时间）；_recomputeHolding 保留已有日期或按最后一笔交易发生日期回填；删除路径保留手动 navDate
+- lib/services/data/investment_service.dart — batchUpdateNav 改为 Map<int, FundNavQuote>，updateNav 透传 navDate，refreshNavsForLedger 把数据源日期写入
+- 测试 +5：腾讯/天天基金日期解析与缺失跳过、刷新后 navDate 持久化、migration v37、repo buy/updateNav 写日期、删除保留手动净值日期；schemaVersion 断言全部升到 37
+
+**下一个任务需要知道的**：
+- 6.12.2 UI 可开始：日期放「净值」标签后（如「净值（2026.8.7）」），数值保持独立；旧数据无 navDate 时不显示括号
+- 投资持仓数据类新增 navDate 字段（DateTime?）
+
+**验证**：flutter analyze 855 个 issue、零 error（我的文件零新增；1 条 dangling doc info 来自 invest-ui 并行的 6.10 测试）；全量测试 647 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）
+
+**git 状态**：当前分支 main，工作区改动未提交，待 PM 审查
+
+---
+
+## 2026-08-08
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-ui（6.12.2）
 
 **任务**：6.12.2 显示形式修正（净值日期）

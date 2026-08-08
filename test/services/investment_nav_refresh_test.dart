@@ -10,12 +10,13 @@ import 'package:beecount/services/data/nav_fetch_service.dart';
 class _FakeNavFetchService extends NavFetchService {
   _FakeNavFetchService(this.navs, {this.failAll = false});
 
-  final Map<String, double> navs;
+  final Map<String, FundNavQuote> navs;
   final bool failAll;
   int calls = 0;
 
   @override
-  Future<Map<String, double>> fetchLatestNavs(List<String> fundCodes) async {
+  Future<Map<String, FundNavQuote>> fetchLatestNavs(
+      List<String> fundCodes) async {
     calls++;
     if (failAll) return const {};
     return {
@@ -69,7 +70,11 @@ void main() {
         shares: 1000,
         nav: 2.0);
 
-    final fake = _FakeNavFetchService({'000001': 1.5, '000002': 2.5});
+    final navDate = DateTime(2026, 8, 7);
+    final fake = _FakeNavFetchService({
+      '000001': FundNavQuote(nav: 1.5, navDate: navDate),
+      '000002': FundNavQuote(nav: 2.5, navDate: navDate),
+    });
     final service = InvestmentService(repo, navFetch: fake);
 
     final updated = await service.refreshNavsForLedger(1);
@@ -79,9 +84,11 @@ void main() {
     final h1 = await repo.getHolding(1);
     expect(h1!.currentNav, 1.5);
     expect(h1.marketValue, 1500.0);
+    expect(h1.navDate, navDate);
     final h2 = await repo.getHolding(2);
     expect(h2!.currentNav, 2.5);
     expect(h2.marketValue, 2500.0);
+    expect(h2.navDate, navDate);
     expect(await accountValue(), closeTo(4000, 0.01));
   });
 
@@ -95,7 +102,9 @@ void main() {
         shares: 1000,
         nav: 1.0);
 
-    final fake = _FakeNavFetchService({'000001': 1.5});
+    final fake = _FakeNavFetchService({
+      '000001': FundNavQuote(nav: 1.5, navDate: DateTime(2026, 8, 7)),
+    });
     final service = InvestmentService(repo, navFetch: fake);
 
     expect(await service.refreshNavsForLedger(1), 1);
@@ -121,7 +130,9 @@ void main() {
           .millisecondsSinceEpoch,
     });
 
-    final fake = _FakeNavFetchService({'000001': 1.5});
+    final fake = _FakeNavFetchService({
+      '000001': FundNavQuote(nav: 1.5, navDate: DateTime(2026, 8, 7)),
+    });
     final service = InvestmentService(repo, navFetch: fake);
 
     expect(await service.refreshNavsForLedger(1), 1);
@@ -172,7 +183,10 @@ void main() {
         shares: 1000,
         nav: 3.0);
 
-    final fake = _FakeNavFetchService({'000001': 1.5, '000003': 3.5});
+    final fake = _FakeNavFetchService({
+      '000001': FundNavQuote(nav: 1.5, navDate: DateTime(2026, 8, 7)),
+      '000003': FundNavQuote(nav: 3.5, navDate: DateTime(2026, 8, 8)),
+    });
     final service = InvestmentService(repo, navFetch: fake);
 
     expect(await service.refreshNavsForLedger(1), 1);
@@ -201,13 +215,16 @@ void main() {
         shares: 1000,
         nav: 2.0);
 
-    final fake = _FakeNavFetchService({'000001': 1.5});
+    final fake = _FakeNavFetchService({
+      '000001': FundNavQuote(nav: 1.5, navDate: DateTime(2026, 8, 7)),
+    });
     final service = InvestmentService(repo, navFetch: fake);
 
     final updated = await service.refreshNavsForLedger(1);
 
     expect(updated, 1);
     expect((await repo.getHolding(1))!.currentNav, 1.5);
+    expect((await repo.getHolding(1))!.navDate, DateTime(2026, 8, 7));
     expect((await repo.getHolding(2))!.currentNav, 2.0);
   });
 }

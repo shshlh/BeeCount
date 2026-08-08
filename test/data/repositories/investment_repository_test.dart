@@ -423,6 +423,29 @@ void main() {
     expect(untouched.note, '保留我');
   });
 
+  test('买入/更新净值写入 navDate', () async {
+    final navDate = DateTime(2026, 8, 7);
+    final txId = await repo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000001',
+      fundName: '华夏成长混合',
+      amount: 1000,
+      shares: 1000,
+      nav: 1.0,
+      navDate: navDate,
+    );
+    expect(txId, isPositive);
+
+    final bought = await repo.getHolding(1);
+    expect(bought!.navDate, navDate);
+
+    final manualDate = DateTime(2026, 8, 8);
+    await repo.updateNav(1, 2.0, navDate: manualDate);
+    final updated = await repo.getHolding(1);
+    expect(updated!.navDate, manualDate);
+  });
+
   test('编辑交易：部分卖出后改买入份额按比例重算成本', () async {
     final buyTx = await repo.buy(
       ledgerId: 1,

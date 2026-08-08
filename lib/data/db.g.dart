@@ -11308,6 +11308,12 @@ class $InvestmentHoldingsTable extends InvestmentHoldings
       type: DriftSqlType.double,
       requiredDuringInsert: false,
       defaultValue: const Constant(0.0));
+  static const VerificationMeta _navDateMeta =
+      const VerificationMeta('navDate');
+  @override
+  late final GeneratedColumn<DateTime> navDate = GeneratedColumn<DateTime>(
+      'nav_date', aliasedName, true,
+      type: DriftSqlType.dateTime, requiredDuringInsert: false);
   static const VerificationMeta _marketValueMeta =
       const VerificationMeta('marketValue');
   @override
@@ -11353,6 +11359,7 @@ class $InvestmentHoldingsTable extends InvestmentHoldings
         totalShares,
         totalCost,
         currentNav,
+        navDate,
         marketValue,
         holdingType,
         note,
@@ -11412,6 +11419,10 @@ class $InvestmentHoldingsTable extends InvestmentHoldings
           currentNav.isAcceptableOrUnknown(
               data['current_nav']!, _currentNavMeta));
     }
+    if (data.containsKey('nav_date')) {
+      context.handle(_navDateMeta,
+          navDate.isAcceptableOrUnknown(data['nav_date']!, _navDateMeta));
+    }
     if (data.containsKey('market_value')) {
       context.handle(
           _marketValueMeta,
@@ -11461,6 +11472,8 @@ class $InvestmentHoldingsTable extends InvestmentHoldings
           .read(DriftSqlType.double, data['${effectivePrefix}total_cost'])!,
       currentNav: attachedDatabase.typeMapping
           .read(DriftSqlType.double, data['${effectivePrefix}current_nav'])!,
+      navDate: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}nav_date']),
       marketValue: attachedDatabase.typeMapping
           .read(DriftSqlType.double, data['${effectivePrefix}market_value'])!,
       holdingType: attachedDatabase.typeMapping
@@ -11503,6 +11516,9 @@ class InvestmentHolding extends DataClass
   /// 最新单位净值（外部刷新或成交时更新）。
   final double currentNav;
 
+  /// 当前净值对应的净值日期（v6.12；外部数据源或成交日期）。
+  final DateTime? navDate;
+
   /// 市值 = totalShares × currentNav（冗余字段，方便查询/排序）。
   final double marketValue;
 
@@ -11522,6 +11538,7 @@ class InvestmentHolding extends DataClass
       required this.totalShares,
       required this.totalCost,
       required this.currentNav,
+      this.navDate,
       required this.marketValue,
       required this.holdingType,
       this.note,
@@ -11538,6 +11555,9 @@ class InvestmentHolding extends DataClass
     map['total_shares'] = Variable<double>(totalShares);
     map['total_cost'] = Variable<double>(totalCost);
     map['current_nav'] = Variable<double>(currentNav);
+    if (!nullToAbsent || navDate != null) {
+      map['nav_date'] = Variable<DateTime>(navDate);
+    }
     map['market_value'] = Variable<double>(marketValue);
     map['holding_type'] = Variable<String>(holdingType);
     if (!nullToAbsent || note != null) {
@@ -11560,6 +11580,9 @@ class InvestmentHolding extends DataClass
       totalShares: Value(totalShares),
       totalCost: Value(totalCost),
       currentNav: Value(currentNav),
+      navDate: navDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(navDate),
       marketValue: Value(marketValue),
       holdingType: Value(holdingType),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
@@ -11582,6 +11605,7 @@ class InvestmentHolding extends DataClass
       totalShares: serializer.fromJson<double>(json['totalShares']),
       totalCost: serializer.fromJson<double>(json['totalCost']),
       currentNav: serializer.fromJson<double>(json['currentNav']),
+      navDate: serializer.fromJson<DateTime?>(json['navDate']),
       marketValue: serializer.fromJson<double>(json['marketValue']),
       holdingType: serializer.fromJson<String>(json['holdingType']),
       note: serializer.fromJson<String?>(json['note']),
@@ -11601,6 +11625,7 @@ class InvestmentHolding extends DataClass
       'totalShares': serializer.toJson<double>(totalShares),
       'totalCost': serializer.toJson<double>(totalCost),
       'currentNav': serializer.toJson<double>(currentNav),
+      'navDate': serializer.toJson<DateTime?>(navDate),
       'marketValue': serializer.toJson<double>(marketValue),
       'holdingType': serializer.toJson<String>(holdingType),
       'note': serializer.toJson<String?>(note),
@@ -11618,6 +11643,7 @@ class InvestmentHolding extends DataClass
           double? totalShares,
           double? totalCost,
           double? currentNav,
+          Value<DateTime?> navDate = const Value.absent(),
           double? marketValue,
           String? holdingType,
           Value<String?> note = const Value.absent(),
@@ -11632,6 +11658,7 @@ class InvestmentHolding extends DataClass
         totalShares: totalShares ?? this.totalShares,
         totalCost: totalCost ?? this.totalCost,
         currentNav: currentNav ?? this.currentNav,
+        navDate: navDate.present ? navDate.value : this.navDate,
         marketValue: marketValue ?? this.marketValue,
         holdingType: holdingType ?? this.holdingType,
         note: note.present ? note.value : this.note,
@@ -11650,6 +11677,7 @@ class InvestmentHolding extends DataClass
       totalCost: data.totalCost.present ? data.totalCost.value : this.totalCost,
       currentNav:
           data.currentNav.present ? data.currentNav.value : this.currentNav,
+      navDate: data.navDate.present ? data.navDate.value : this.navDate,
       marketValue:
           data.marketValue.present ? data.marketValue.value : this.marketValue,
       holdingType:
@@ -11671,6 +11699,7 @@ class InvestmentHolding extends DataClass
           ..write('totalShares: $totalShares, ')
           ..write('totalCost: $totalCost, ')
           ..write('currentNav: $currentNav, ')
+          ..write('navDate: $navDate, ')
           ..write('marketValue: $marketValue, ')
           ..write('holdingType: $holdingType, ')
           ..write('note: $note, ')
@@ -11690,6 +11719,7 @@ class InvestmentHolding extends DataClass
       totalShares,
       totalCost,
       currentNav,
+      navDate,
       marketValue,
       holdingType,
       note,
@@ -11707,6 +11737,7 @@ class InvestmentHolding extends DataClass
           other.totalShares == this.totalShares &&
           other.totalCost == this.totalCost &&
           other.currentNav == this.currentNav &&
+          other.navDate == this.navDate &&
           other.marketValue == this.marketValue &&
           other.holdingType == this.holdingType &&
           other.note == this.note &&
@@ -11723,6 +11754,7 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
   final Value<double> totalShares;
   final Value<double> totalCost;
   final Value<double> currentNav;
+  final Value<DateTime?> navDate;
   final Value<double> marketValue;
   final Value<String> holdingType;
   final Value<String?> note;
@@ -11737,6 +11769,7 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
     this.totalShares = const Value.absent(),
     this.totalCost = const Value.absent(),
     this.currentNav = const Value.absent(),
+    this.navDate = const Value.absent(),
     this.marketValue = const Value.absent(),
     this.holdingType = const Value.absent(),
     this.note = const Value.absent(),
@@ -11752,6 +11785,7 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
     this.totalShares = const Value.absent(),
     this.totalCost = const Value.absent(),
     this.currentNav = const Value.absent(),
+    this.navDate = const Value.absent(),
     this.marketValue = const Value.absent(),
     this.holdingType = const Value.absent(),
     this.note = const Value.absent(),
@@ -11770,6 +11804,7 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
     Expression<double>? totalShares,
     Expression<double>? totalCost,
     Expression<double>? currentNav,
+    Expression<DateTime>? navDate,
     Expression<double>? marketValue,
     Expression<String>? holdingType,
     Expression<String>? note,
@@ -11785,6 +11820,7 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
       if (totalShares != null) 'total_shares': totalShares,
       if (totalCost != null) 'total_cost': totalCost,
       if (currentNav != null) 'current_nav': currentNav,
+      if (navDate != null) 'nav_date': navDate,
       if (marketValue != null) 'market_value': marketValue,
       if (holdingType != null) 'holding_type': holdingType,
       if (note != null) 'note': note,
@@ -11802,6 +11838,7 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
       Value<double>? totalShares,
       Value<double>? totalCost,
       Value<double>? currentNav,
+      Value<DateTime?>? navDate,
       Value<double>? marketValue,
       Value<String>? holdingType,
       Value<String?>? note,
@@ -11816,6 +11853,7 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
       totalShares: totalShares ?? this.totalShares,
       totalCost: totalCost ?? this.totalCost,
       currentNav: currentNav ?? this.currentNav,
+      navDate: navDate ?? this.navDate,
       marketValue: marketValue ?? this.marketValue,
       holdingType: holdingType ?? this.holdingType,
       note: note ?? this.note,
@@ -11851,6 +11889,9 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
     if (currentNav.present) {
       map['current_nav'] = Variable<double>(currentNav.value);
     }
+    if (navDate.present) {
+      map['nav_date'] = Variable<DateTime>(navDate.value);
+    }
     if (marketValue.present) {
       map['market_value'] = Variable<double>(marketValue.value);
     }
@@ -11880,6 +11921,7 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
           ..write('totalShares: $totalShares, ')
           ..write('totalCost: $totalCost, ')
           ..write('currentNav: $currentNav, ')
+          ..write('navDate: $navDate, ')
           ..write('marketValue: $marketValue, ')
           ..write('holdingType: $holdingType, ')
           ..write('note: $note, ')
@@ -17788,6 +17830,7 @@ typedef $$InvestmentHoldingsTableCreateCompanionBuilder
   Value<double> totalShares,
   Value<double> totalCost,
   Value<double> currentNav,
+  Value<DateTime?> navDate,
   Value<double> marketValue,
   Value<String> holdingType,
   Value<String?> note,
@@ -17804,6 +17847,7 @@ typedef $$InvestmentHoldingsTableUpdateCompanionBuilder
   Value<double> totalShares,
   Value<double> totalCost,
   Value<double> currentNav,
+  Value<DateTime?> navDate,
   Value<double> marketValue,
   Value<String> holdingType,
   Value<String?> note,
@@ -17868,6 +17912,9 @@ class $$InvestmentHoldingsTableFilterComposer
 
   ColumnFilters<double> get currentNav => $composableBuilder(
       column: $table.currentNav, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get navDate => $composableBuilder(
+      column: $table.navDate, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<double> get marketValue => $composableBuilder(
       column: $table.marketValue, builder: (column) => ColumnFilters(column));
@@ -17941,6 +17988,9 @@ class $$InvestmentHoldingsTableOrderingComposer
   ColumnOrderings<double> get currentNav => $composableBuilder(
       column: $table.currentNav, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<DateTime> get navDate => $composableBuilder(
+      column: $table.navDate, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<double> get marketValue => $composableBuilder(
       column: $table.marketValue, builder: (column) => ColumnOrderings(column));
 
@@ -17989,6 +18039,9 @@ class $$InvestmentHoldingsTableAnnotationComposer
 
   GeneratedColumn<double> get currentNav => $composableBuilder(
       column: $table.currentNav, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get navDate =>
+      $composableBuilder(column: $table.navDate, builder: (column) => column);
 
   GeneratedColumn<double> get marketValue => $composableBuilder(
       column: $table.marketValue, builder: (column) => column);
@@ -18062,6 +18115,7 @@ class $$InvestmentHoldingsTableTableManager extends RootTableManager<
             Value<double> totalShares = const Value.absent(),
             Value<double> totalCost = const Value.absent(),
             Value<double> currentNav = const Value.absent(),
+            Value<DateTime?> navDate = const Value.absent(),
             Value<double> marketValue = const Value.absent(),
             Value<String> holdingType = const Value.absent(),
             Value<String?> note = const Value.absent(),
@@ -18077,6 +18131,7 @@ class $$InvestmentHoldingsTableTableManager extends RootTableManager<
             totalShares: totalShares,
             totalCost: totalCost,
             currentNav: currentNav,
+            navDate: navDate,
             marketValue: marketValue,
             holdingType: holdingType,
             note: note,
@@ -18092,6 +18147,7 @@ class $$InvestmentHoldingsTableTableManager extends RootTableManager<
             Value<double> totalShares = const Value.absent(),
             Value<double> totalCost = const Value.absent(),
             Value<double> currentNav = const Value.absent(),
+            Value<DateTime?> navDate = const Value.absent(),
             Value<double> marketValue = const Value.absent(),
             Value<String> holdingType = const Value.absent(),
             Value<String?> note = const Value.absent(),
@@ -18107,6 +18163,7 @@ class $$InvestmentHoldingsTableTableManager extends RootTableManager<
             totalShares: totalShares,
             totalCost: totalCost,
             currentNav: currentNav,
+            navDate: navDate,
             marketValue: marketValue,
             holdingType: holdingType,
             note: note,

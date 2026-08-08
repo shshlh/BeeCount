@@ -213,6 +213,9 @@ class InvestmentHoldings extends Table {
   /// 最新单位净值（外部刷新或成交时更新）。
   RealColumn get currentNav => real().withDefault(const Constant(0.0))();
 
+  /// 当前净值对应的净值日期（v6.12；外部数据源或成交日期）。
+  DateTimeColumn get navDate => dateTime().nullable()();
+
   /// 市值 = totalShares × currentNav（冗余字段，方便查询/排序）。
   RealColumn get marketValue => real().withDefault(const Constant(0.0))();
 
@@ -546,7 +549,7 @@ class BeeDatabase extends _$BeeDatabase {
 
   @override
   int get schemaVersion =>
-      36; // v31: 账户隐藏 / v32: 投资数据层 / v33: 账户体系改造 / v34: 账户初始资金日期 / v35: 账户不计入资产 / v36: 基金分组
+      37; // v31: 账户隐藏 / v32: 投资数据层 / v33: 账户体系改造 / v34: 账户初始资金日期 / v35: 账户不计入资产 / v36: 基金分组 / v37: 投资净值日期
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1377,6 +1380,15 @@ class BeeDatabase extends _$BeeDatabase {
                 'ON investment_group_holdings (holding_id);');
 
             logger.info('DBMigration', 'v36 迁移完成');
+          }
+          if (from < 37) {
+            logger.info('DBMigration', '开始迁移到 v37: 投资持仓净值日期(nav_date)');
+            await _addColumnIfMissing(
+              'investment_holdings',
+              'nav_date',
+              'ALTER TABLE investment_holdings ADD COLUMN nav_date DATETIME;',
+            );
+            logger.info('DBMigration', 'v37 迁移完成');
           }
         },
         onCreate: (m) async {

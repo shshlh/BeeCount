@@ -9,6 +9,17 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.setMockInitialValues({});
 
+  void expectQuote(
+    Map<String, FundNavQuote> navs,
+    String code,
+    double nav,
+    DateTime navDate,
+  ) {
+    expect(navs.keys, contains(code));
+    expect(navs[code]!.nav, nav);
+    expect(navs[code]!.navDate, navDate);
+  }
+
   test('腾讯行情单位净值优先解析', () async {
     final client = MockClient((request) async {
       expect(request.url.toString(), 'https://qt.gtimg.cn/q=jj000001');
@@ -23,7 +34,7 @@ void main() {
     final service = NavFetchService(client: client);
     final navs = await service.fetchLatestNavs(['000001']);
 
-    expect(navs, {'000001': 1.342});
+    expectQuote(navs, '000001', 1.342, DateTime(2026, 8, 7));
   });
 
   test('腾讯行情单位净值缺失时用累计净值兜底', () async {
@@ -39,7 +50,7 @@ void main() {
     final service = NavFetchService(client: client);
     final navs = await service.fetchLatestNavs(['000002']);
 
-    expect(navs, {'000002': 2.1111});
+    expectQuote(navs, '000002', 2.1111, DateTime(2026, 8, 7));
   });
 
   test('主接口异常时回退天天基金历史净值', () async {
@@ -64,7 +75,31 @@ void main() {
     final service = NavFetchService(client: client);
     final navs = await service.fetchLatestNavs(['000003']);
 
-    expect(navs, {'000003': 3.304});
+    expectQuote(
+      navs,
+      '000003',
+      3.304,
+      DateTime.fromMillisecondsSinceEpoch(1786032000000),
+    );
+  });
+
+  test('日期缺失时回退天天基金，仍无日期则跳过', () async {
+    final client = MockClient((request) async {
+      if (request.url.toString().startsWith('https://qt.gtimg.cn/')) {
+        return http.Response(
+          'v_jj000005="000005~测试~0~0~~1.0000~1.0000~0~";',
+          200,
+          headers: {'content-type': 'text/plain; charset=utf-8'},
+        );
+      }
+      return http.Response('<html>not found</html>', 200,
+          headers: {'content-type': 'text/html; charset=utf-8'});
+    });
+
+    final service = NavFetchService(client: client);
+    final navs = await service.fetchLatestNavs(['000005']);
+
+    expect(navs, isEmpty);
   });
 
   test('两个接口都返回 HTML 时干净跳过', () async {

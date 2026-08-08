@@ -104,7 +104,8 @@ void main() {
       shares: 500,
       nav: 1.5,
     );
-    await investmentRepo.updateNav(1, 3.0); // 手动净值 3.0
+    final manualNavDate = DateTime(2026, 8, 7);
+    await investmentRepo.updateNav(1, 3.0, navDate: manualNavDate);
 
     await transactionRepo.deleteTransaction(secondBuyTx);
 
@@ -112,6 +113,7 @@ void main() {
     expect(after!.totalShares, 1000);
     expect(after.totalCost, closeTo(2000, 0.01));
     expect(after.currentNav, 3.0); // 保留手动净值，不被剩余流水净值覆盖
+    expect(after.navDate, manualNavDate);
     expect(after.marketValue, closeTo(3000, 0.01));
     expect(await accountValue(), closeTo(3000, 0.01));
   });
