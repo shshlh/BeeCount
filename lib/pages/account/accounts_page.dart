@@ -227,10 +227,12 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                                 ...groups.keys
                                     .where((type) =>
                                         !allAccountTypes.contains(type) &&
-                                        groups[type]!.any((a) => !a.hidden))
+                                        inUseAccountsExcludingOffBalance(
+                                                groups[type]!)
+                                            .isNotEmpty)
                                     .map((type) {
-                                  final groupList =
-                                      groups[type]!.where((a) => !a.hidden).toList();
+                                  final groupList = inUseAccountsExcludingOffBalance(
+                                      groups[type]!);
                                   return _AccountTypeGroup(
                                     type: type,
                                     accounts: groupList,
@@ -245,7 +247,20 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
                                   );
                                 }),
 
-                                // 5. 已隐藏账户分区(账户隐藏 #240,D2:主列表退场,
+                                // 5. 表外/受托账户分区(7.3.2:单独展示,不混入个人资产)
+                                OffBalanceAccountsSection(
+                                  accounts: accounts
+                                      .where((a) => !a.hidden && a.isOffBalance)
+                                      .toList(),
+                                  allStats: allStatsAsync.valueOrNull,
+                                  primaryColor: primaryColor,
+                                  onTap: (account) =>
+                                      _viewAccountDetail(context, ref, account),
+                                  onEdit: (account) =>
+                                      _editAccount(context, ref, account, ledgerId),
+                                ),
+
+                                // 6. 已隐藏账户分区(账户隐藏 #240,D2:主列表退场,
                                 // 分区头小计与净资产卡差额对账)
                                 _HiddenAccountsSection(
                                   accounts: accounts.where((a) => a.hidden).toList(),
@@ -490,7 +505,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     // 检查此分类下是否有在用(非隐藏)账户 —— 账户隐藏 #240:隐藏账户移入
     // 底部「已隐藏」分区(_HiddenAccountsSection),此处只看在用账户。
     final hasAccounts = typeOrder.any((type) =>
-        groups.containsKey(type) && groups[type]!.any((a) => !a.hidden));
+        groups.containsKey(type) &&
+        inUseAccountsExcludingOffBalance(groups[type]!).isNotEmpty);
     if (!hasAccounts) return [];
 
     // 按币种分组计算小计(仅在用账户;隐藏账户的小计在「已隐藏」分区单独
@@ -498,8 +514,8 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     final Map<String, double> subtotalByCurrency = {};
     for (final type in typeOrder) {
       if (groups.containsKey(type)) {
-        for (final account in groups[type]!) {
-          if (account.hidden) continue;
+        for (final account
+            in inUseAccountsExcludingOffBalance(groups[type]!)) {
           final balance = allStats?[account.id]?.balance ?? 0;
           subtotalByCurrency.update(
             account.currency,
@@ -589,9 +605,10 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
       // 类型分组(排除隐藏账户,账户隐藏 #240)
       ...typeOrder
           .where((type) =>
-              groups.containsKey(type) && groups[type]!.any((a) => !a.hidden))
+              groups.containsKey(type) &&
+              inUseAccountsExcludingOffBalance(groups[type]!).isNotEmpty)
           .map((type) {
-        final groupList = groups[type]!.where((a) => !a.hidden).toList();
+        final groupList = inUseAccountsExcludingOffBalance(groups[type]!);
         return _AccountTypeGroup(
           type: type,
           accounts: groupList,
@@ -1164,6 +1181,107 @@ class _AccountTypeGroupState extends ConsumerState<_AccountTypeGroup> {
   }
 }
 
+/// 在用（非隐藏）且非表外的账户列表。资产/负债分类展示与分组小计共用，
+/// 表外账户单独进 [OffBalanceAccountsSection]，不混入个人资产视图。
+@visibleForTesting
+List<db.Account> inUseAccountsExcludingOffBalance(
+  Iterable<db.Account> accounts,
+) =>
+    accounts.where((a) => !a.hidden && !a.isOffBalance).toList();
+
+/// 「表外/受托账户」分区(7.3.2)。单独展示受托资金账户，不参与资产/负债
+/// 分类小计，也不混入个人净资产视图。
+class OffBalanceAccountsSection extends ConsumerStatefulWidget {
+  final List<db.Account> accounts;
+  final Map<int, ({double balance, double expense, double income})>? allStats;
+  final Color primaryColor;
+  final void Function(db.Account account) onTap;
+  final void Function(db.Account account) onEdit;
+
+  const OffBalanceAccountsSection({
+    super.key,
+    required this.accounts,
+    required this.allStats,
+    required this.primaryColor,
+    required this.onTap,
+    required this.onEdit,
+  });
+
+  @override
+  ConsumerState<OffBalanceAccountsSection> createState() =>
+      _OffBalanceAccountsSectionState();
+}
+
+class _OffBalanceAccountsSectionState
+    extends ConsumerState<OffBalanceAccountsSection> {
+  bool _expanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.accounts.isEmpty) return const SizedBox.shrink();
+
+    final l10n = AppLocalizations.of(context);
+    final isDark = BeeTokens.isDark(context);
+    final mutedColor = isDark ? const Color(0xFF48484A) : Colors.grey.shade400;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: () => setState(() => _expanded = !_expanded),
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: EdgeInsets.only(
+              top: 16.0.scaled(context, ref),
+              bottom: 4.0.scaled(context, ref),
+              left: 4.0.scaled(context, ref),
+              right: 4.0.scaled(context, ref),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.layers_outlined,
+                    size: 18.0.scaled(context, ref),
+                    color: BeeTokens.textSecondary(context)),
+                SizedBox(width: 6.0.scaled(context, ref)),
+                Expanded(
+                  child: Text(
+                    '${l10n.accountOffBalanceSection}'
+                    '（${widget.accounts.length}）',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: BeeTokens.textSecondary(context),
+                    ),
+                  ),
+                ),
+                AnimatedRotation(
+                  turns: _expanded ? 0.25 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(Icons.chevron_right,
+                      size: 18.0.scaled(context, ref),
+                      color: BeeTokens.iconTertiary(context)),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_expanded)
+          ...widget.accounts.map((account) => _AccountCard(
+                key: ValueKey('off_balance_${account.id}'),
+                account: account,
+                primaryColor: widget.primaryColor,
+                typeColor: mutedColor,
+                stats: widget.allStats?[account.id],
+                onTap: () => widget.onTap(account),
+                onEdit: () => widget.onEdit(account),
+              )),
+      ],
+    );
+  }
+}
+
 /// 「已隐藏」账户分区(账户隐藏 #240,产品设计 01 §4.1)。置于所有在用分组
 /// 之后,默认折叠;分区头显示「已隐藏(N)· 合计 ¥x」(小计口径同净资产卡:
 /// 多币种折算跳过缺汇率币种,复用 [convertAmountsToBase],与资产/负债分组
@@ -1437,6 +1555,11 @@ class _AccountCard extends ConsumerWidget {
                       ],
                     ),
                     SizedBox(height: 10.0.scaled(context, ref)),
+                    // 表外/受托标识(7.3.2)
+                    if (account.isOffBalance && !account.hidden) ...[
+                      _buildOffBalanceBadgeRow(context, ref, l10n),
+                      SizedBox(height: 8.0.scaled(context, ref)),
+                    ],
                     // 已隐藏标签 + 恢复按钮(账户隐藏 #240,D2)
                     if (account.hidden) ...[
                       _buildHiddenBadgeRow(context, ref, l10n),
@@ -1473,6 +1596,30 @@ class _AccountCard extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  /// 「表外/受托」灰标(7.3.2)。仅 account.isOffBalance && !hidden 时渲染。
+  Widget _buildOffBalanceBadgeRow(
+    BuildContext context,
+    WidgetRef ref,
+    AppLocalizations l10n,
+  ) {
+    return Row(
+      children: [
+        Icon(Icons.layers_outlined,
+            size: 14.0.scaled(context, ref),
+            color: BeeTokens.textTertiary(context)),
+        SizedBox(width: 4.0.scaled(context, ref)),
+        Text(
+          l10n.accountOffBalanceBadge,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: BeeTokens.textTertiary(context),
+          ),
+        ),
+      ],
     );
   }
 

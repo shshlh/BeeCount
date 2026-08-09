@@ -3957,6 +3957,19 @@ class AppLocalizationsKo extends AppLocalizations {
       'Excluded from net worth and asset composition stats';
 
   @override
+  String get accountOffBalance => '표외/수탁 계좌';
+
+  @override
+  String get accountOffBalanceHint =>
+      '수탁 자금이나 대납 이자를 기록하는 계좌로, 순자산과 추세에서 제외됩니다';
+
+  @override
+  String get accountOffBalanceBadge => '표외';
+
+  @override
+  String get accountOffBalanceSection => '표외/수탁 계좌';
+
+  @override
   String get accountAssetShort => 'Assets';
 
   @override

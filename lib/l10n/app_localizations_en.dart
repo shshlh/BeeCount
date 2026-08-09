@@ -4077,6 +4077,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'Excluded from net worth and asset composition stats';
 
   @override
+  String get accountOffBalance => 'Off-balance / Trustee account';
+
+  @override
+  String get accountOffBalanceHint =>
+      'For entrusted or escrow funds; excluded from net worth and trend';
+
+  @override
+  String get accountOffBalanceBadge => 'Off-balance';
+
+  @override
+  String get accountOffBalanceSection => 'Off-balance Accounts';
+
+  @override
   String get accountAssetShort => 'Assets';
 
   @override

@@ -3934,6 +3934,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountExcludeFromAssetsHint => '不参与净资产/资产构成/净值趋势统计，仅提醒作用';
 
   @override
+  String get accountOffBalance => '表外/受托账户';
+
+  @override
+  String get accountOffBalanceHint => '用于受托资金/代管款项，不影响净资产与净值趋势';
+
+  @override
+  String get accountOffBalanceBadge => '表外/受托';
+
+  @override
+  String get accountOffBalanceSection => '表外/受托账户';
+
+  @override
   String get accountAssetShort => '资产';
 
   @override
@@ -11518,6 +11530,18 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get accountBalance => '餘額';
+
+  @override
+  String get accountOffBalance => '表外/受託帳戶';
+
+  @override
+  String get accountOffBalanceHint => '用於受託資金/代管款項，不影響淨資產與淨值趨勢';
+
+  @override
+  String get accountOffBalanceBadge => '表外/受託';
+
+  @override
+  String get accountOffBalanceSection => '表外/受託帳戶';
 
   @override
   String get accountEditTitle => '編輯帳戶';

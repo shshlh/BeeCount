@@ -46,6 +46,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
   bool _reminderEnabled = false;
   int _reminderDaysBefore = 3;
   bool _excludeFromAssets = false;
+  bool _isOffBalance = false;
   bool _saving = false;
   bool _isNameDuplicate = false;
   String? _nameErrorText;
@@ -79,6 +80,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
     _billingDay = widget.account?.billingDay;
     _paymentDueDay = widget.account?.paymentDueDay;
     _excludeFromAssets = widget.account?.excludeFromAssets ?? false;
+    _isOffBalance = widget.account?.isOffBalance ?? false;
     _loadReminderSettings();
   }
 
@@ -465,6 +467,44 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                             ],
                           ),
                           const SizedBox(height: 4),
+                          // 7.3.2: 表外/受托账户开关
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      l10n.accountOffBalance,
+                                      style: TextStyle(
+                                        fontSize: 14.0.scaled(context, ref),
+                                        color: BeeTokens.textPrimary(context),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      l10n.accountOffBalanceHint,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color:
+                                            BeeTokens.textTertiary(context),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Switch(
+                                value: _isOffBalance,
+                                activeThumbColor:
+                                    Theme.of(context).colorScheme.primary,
+                                onChanged: (v) => setState(() {
+                                  _isOffBalance = v;
+                                  if (v) _excludeFromAssets = true;
+                                }),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
                           // v5.6: 不计入资产开关（贷款/代管账户仅提醒用）
                           Row(
                             children: [
@@ -495,8 +535,10 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                                 value: _excludeFromAssets,
                                 activeThumbColor:
                                     Theme.of(context).colorScheme.primary,
-                                onChanged: (v) =>
-                                    setState(() => _excludeFromAssets = v),
+                                onChanged: (v) => setState(() {
+                                  _excludeFromAssets = v;
+                                  if (!v) _isOffBalance = false;
+                                }),
                               ),
                             ],
                           ),
@@ -910,6 +952,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
           note: noteText.isNotEmpty ? noteText : null,
           clearMetadataFields: clearMetadataFields,
           excludeFromAssets: _excludeFromAssets,
+          isOffBalance: _isOffBalance,
           iconType: _iconType == 'custom' ? 'custom' : null,
           customIconPath:
               _iconType == 'custom' ? _customIconPath : null,
@@ -939,6 +982,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
           cardLastFour: cardLastFourText != null && cardLastFourText.isNotEmpty ? cardLastFourText : null,
           note: noteText.isNotEmpty ? noteText : null,
           excludeFromAssets: _excludeFromAssets,
+          isOffBalance: _isOffBalance,
           iconType: _iconType == 'custom' ? 'custom' : null,
           customIconPath:
               _iconType == 'custom' ? _customIconPath : null,

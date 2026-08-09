@@ -7468,6 +7468,30 @@ abstract class AppLocalizations {
   /// **'Excluded from net worth and asset composition stats'**
   String get accountExcludeFromAssetsHint;
 
+  /// No description provided for @accountOffBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Off-balance / Trustee account'**
+  String get accountOffBalance;
+
+  /// No description provided for @accountOffBalanceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'For entrusted or escrow funds; excluded from net worth and trend'**
+  String get accountOffBalanceHint;
+
+  /// No description provided for @accountOffBalanceBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Off-balance'**
+  String get accountOffBalanceBadge;
+
+  /// No description provided for @accountOffBalanceSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Off-balance Accounts'**
+  String get accountOffBalanceSection;
+
   /// No description provided for @accountAssetShort.
   ///
   /// In en, this message translates to:

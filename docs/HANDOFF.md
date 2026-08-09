@@ -31,6 +31,47 @@
 
 ---
 
+## 2026-08-10
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-ui
+
+**任务**：7.3.2 PM 审查通过 + 合入
+
+**审查结果**：7.3.2 通过，合入。
+- 账户编辑页新增「表外/受托账户」开关，与「不计入资产」联动语义与 Repository 一致
+- 资产页表外账户从资产/负债分组与分组小计中剔除，单独「表外/受托账户」分区展示，账户卡带灰标
+- l10n：zh / zh_TW / en / ko 同步
+- 验证：7.3.2 相关测试全过；全量 734 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）；改动文件 analyze 无新增 warning
+
+**下一步**：7.3.3 AI 上下文排除表外账户完成后一并合入并编译 APK
+
+**git 状态**：当前分支 main，合入后提交
+
+---
+
+## 2026-08-09
+
+**移交角色**：invest-ui（7.3.2）
+**接收角色**：PM（审查合入）
+
+**任务**：表外/受托账户 UI
+
+**完成工作**：
+- `account_edit_page.dart` 新增「表外/受托账户」开关，开启后强制不计入资产；取消不计入资产时同步关闭表外（复用 Repository 联动语义）
+- `accounts_page.dart` 表外账户从资产/负债分类与分组小计中剔除，新增 `OffBalanceAccountsSection` 单独分区，账户卡显示「表外/受托」标识
+- 抽取 `inUseAccountsExcludingOffBalance` 纯过滤函数，供分类分组与小计复用
+- l10n：zh / zh_TW / en / ko 新增 `accountOffBalance` / `accountOffBalanceHint` / `accountOffBalanceBadge` / `accountOffBalanceSection`
+- 测试：`account_off_balance_test.dart` 3 例（开关联动、分区与标识、分组过滤）；相关账户测试全过
+
+**下一个任务需要知道的**：
+- 7.3.1 数据层已合入工作区；UI 开关直接透传 `isOffBalance`，联动由 Repository 保证
+- 资产页整页 widget 测试因真实 Drift 异步 + 无限动画不适用，改为分区组件直测 + 纯函数断言
+
+**git 状态**：当前分支 main，7.3.1-7.3.3 相关改动在未提交工作区，待 PM 审查合入
+
+---
+
 ## 2026-08-09
 
 **移交角色**：项目经理（PM）
