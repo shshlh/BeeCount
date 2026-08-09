@@ -34,6 +34,50 @@
 ## 2026-08-09
 
 **移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic / invest-logic / invest-ui
+
+**任务**：7.2.1 PM 审查通过 + 7.2.2/7.2.3 放行
+
+**审查结果**：7.2.1 通过，合入。
+- FinancialAnalystSnapshot / FinancialAnalystContext.forLedger 覆盖账户、收支、分类、预算、净资产、投资持仓、近期投资流水与缺失汇率提示
+- 过滤口径与现有净资产计算一致（隐藏账户排除、不计入资产/统计按口径过滤、多币种折算并标注缺失汇率）
+- 验证：7.2.1 测试全过；全量 710 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）；改动文件 analyze 零 issue
+
+**接口约定（7.2.2 / 7.2.3 按此接线）**：
+- `FinancialAnalystContext.forLedger({repository, investmentRepository, ledgerId, recentTxLimit, holdingsLimit, trendDays})`，注意必须同时传 `investmentRepository`
+- `toPromptText({maxChars})` 生成中文分析上下文；`scopeLabel()` 给 UI 展示数据范围
+
+**git 状态**：当前分支 main，合入后提交
+
+---
+
+## 2026-08-09
+
+**移交角色**：architect + invest-logic（7.2.1）
+**接收角色**：PM（审查合入）→ invest-logic（7.2.2）
+
+**任务**：7.2.1 财务上下文服务
+
+**完成工作**：
+- 新增 `lib/ai/core/financial_analyst_context.dart`：`FinancialAnalystSnapshot` + `FinancialAnalystContext.forLedger`
+- 覆盖：账户与余额、近 30 天 / 本月收支、支出分类 Top、预算进度、净资产趋势、投资持仓摘要（代码/名称/份额/成本/市值/盈亏/收益率/净值日期）、近期投资交易、缺失汇率提示
+- 过滤口径：隐藏账户不进入上下文；不计入资产 / 不计入统计按现有 Repository 口径；多币种按本位币折算并标注缺失汇率；投资盈亏用 Decimal 链路
+- `toPromptText()` 中文格式化且受 `maxChars` 截断控制 token；`scopeLabel()` 返回「近 N 天 · N 只持仓」
+- 新增测试 5 例：摘要内容、过滤规则、token 上限、空数据兜底、empty 常量
+
+**下一个任务需要知道的**：
+- `forLedger` 比 PM 规格多了 `investmentRepository` 必填参数：投资数据不在 `BaseRepository` 接口内，7.2.2 调用时需同时传 `repository` + `investmentRepository`
+- 净资产按「非隐藏 + 不计入资产排除」自算口径（比现有 repo 净值方法更严格，隐藏账户不再计入），`trendDays` 默认 30
+- 近期投资交易按 `investType != null && != initial` 过滤；转换显示为买卖两笔并标注「（转换）」
+- 全量 `flutter test`：710 passed / 1 skipped / 1 failed（唯一失败为既存 `bill_creation_service_test`）；改动文件 `flutter analyze` 无 error/warning
+
+**git 状态**：当前分支 main，工作区仅含 7.2.1 改动，待 PM 审查合入
+
+---
+
+## 2026-08-09
+
+**移交角色**：项目经理（PM）
 **接收角色**：architect + invest-logic（7.2.1）→ invest-logic（7.2.2）/ invest-logic + invest-ui（7.2.3）→ qa（7.2.4）
 
 **任务**：7.2 AI 财务分析师（第一版）
