@@ -34,6 +34,36 @@
 ## 2026-08-10
 
 **移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic（7.4.1）/ invest-ui（7.4.2）
+
+**任务**：7.4 账户备注修复
+
+**背景**：账户备注填写后保存，非银行卡/信用卡类型（现金、虚拟、负债等）再打开备注消失；账户列表卡片也不显示备注。
+
+**根因**：
+- `LocalAccountRepository.updateAccount` 的 `clearMetadataFields=true` 会连 `note` 一起置 NULL；账户编辑页对非银行卡/信用卡保存时传了 `clearMetadataFields=true`
+- 清空备注也无法生效：备注为空时 UI 传 null，Repository 视为“不更新”
+- 账户列表卡片没有渲染备注字段
+
+**7.4.1 数据层（architect + invest-logic）**
+- `clearMetadataFields` 只清开户行/卡号后四位等元信息，不再清 `note`
+- 新增 `clearNote` 语义（或等价哨兵）：备注为空且原备注非空时写 NULL；不传则不更新
+- 测试：非卡账户编辑后备注保留；备注清空后读回 NULL；银行卡编辑备注正常保存
+
+**7.4.2 UI（invest-ui）**
+- `accounts_page.dart` 账户卡展示备注（单行截断 + tooltip 或两行省略）
+- `account_edit_page.dart` 保存时区分「未修改」与「清空备注」，正确调用 Repository
+- 测试：账户卡备注展示、编辑后回显、清空备注生效
+
+**约束**：HANDOFF 只增不减；flutter analyze 新增代码零 error/warning；完成后更新 TEAM.md 任务板 + HANDOFF 追加完成记录，交 PM 审查
+
+**git 状态**：当前分支 main，HEAD ceae802
+
+---
+
+## 2026-08-10
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-logic / qa
 
 **任务**：7.3.3 PM 审查通过 + 7.3.4 待实机验证
