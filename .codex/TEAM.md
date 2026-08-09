@@ -48,8 +48,8 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 |---|---|---|---|---|
 | 7.3.1 表外账户数据层 | ✅ | architect + invest-logic | accounts.is_off_balance + schema v38 + 统计/AI 排除 + 测试 | 2026-08-09 |
 | 7.3.2 表外账户 UI | ✅ | invest-ui | 账户编辑开关 + 资产页标识/分区 + l10n + 测试 | 2026-08-10 |
-| 7.3.3 AI 上下文排除表外账户 | 🔄 已派工 | invest-logic | FinancialAnalystContext 排除 off_balance + 测试 | — |
-| 7.3.4 全流程测试与实机验证 | ⬜ 等前几项 | qa + invest-logic + invest-ui | 迁移/统计/AI/UI 测试 + 实机验证 | — |
+| 7.3.3 AI 上下文排除表外账户 | ✅ | invest-logic | FinancialAnalystContext 排除 off_balance + 测试 | 2026-08-10 |
+| 7.3.4 全流程测试与实机验证 | ⬜ 待实机验证 | qa + invest-logic + invest-ui | 迁移/统计/AI/UI 测试 + 实机验证 | — |
 
 ### 阶段 7.2：AI 财务分析师
 

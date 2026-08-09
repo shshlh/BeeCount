@@ -34,6 +34,23 @@
 ## 2026-08-10
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-logic / qa
+
+**任务**：7.3.3 PM 审查通过 + 7.3.4 待实机验证
+
+**审查结果**：7.3.3 通过，合入。
+- FinancialAnalystContext 显式排除 `is_off_balance=1` 账户：账户与余额、缺失汇率、净资产、toPromptText 均不再出现表外/受托账户
+- 验证：7.3.3 相关测试全过；全量 735 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）；改动文件 analyze 零 issue
+
+**下一步**：7.3.4 实机验证（新建表外账户、资产页分区、AI 摘要不可见）后关闭
+
+**git 状态**：当前分支 main，合入后提交
+
+---
+
+## 2026-08-10
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-ui
 
 **任务**：7.3.2 PM 审查通过 + 合入
@@ -69,6 +86,27 @@
 - 资产页整页 widget 测试因真实 Drift 异步 + 无限动画不适用，改为分区组件直测 + 纯函数断言
 
 **git 状态**：当前分支 main，7.3.1-7.3.3 相关改动在未提交工作区，待 PM 审查合入
+
+---
+
+## 2026-08-10
+
+**移交角色**：invest-logic（7.3.3）
+**接收角色**：PM（审查合入）→ qa（7.3.4）
+
+**任务**：AI 上下文排除表外账户
+
+**完成工作**：
+- `FinancialAnalystContext.forLedger` 账户与余额、缺失汇率列表排除 `is_off_balance=1` 账户
+- `_buildNetWorthSummary` 口径与净资产一致：同时排除 `exclude_from_assets` 与 `is_off_balance`
+- `toPromptText()` 不再出现表外/受托账户
+- 新增测试：表外账户不进账户列表/净资产/缺失汇率/提示词
+
+**下一个任务需要知道的**：
+- 表外账户由 7.3.1 数据层强制 `exclude_from_assets=true`，本次按 7.3.3 规格显式过滤 `is_off_balance`
+- 全量 `flutter test`：735 passed / 1 skipped / 1 failed（唯一失败为既存 `bill_creation_service_test`）；`flutter analyze` 无 error、无新增 warning
+
+**git 状态**：当前分支 main，7.3.3 改动待 PM 审查合入
 
 ---
 

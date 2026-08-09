@@ -280,7 +280,7 @@ class FinancialAnalystContext {
     final ratesToBase = await _loadRatesToBase(repository, base);
 
     final allAccounts = (await repository.getAllAccounts())
-        .where((a) => a.ledgerId == ledgerId && !a.hidden)
+        .where((a) => a.ledgerId == ledgerId && !a.hidden && !a.isOffBalance)
         .toList();
     final balances = await repository.getAllAccountBalances(ledgerId);
     final accounts = [
@@ -403,7 +403,9 @@ class FinancialAnalystContext {
     required Map<String, double> ratesToBase,
     required int trendDays,
   }) async {
-    final visible = accounts.where((a) => !a.excludeFromAssets).toList();
+    final visible = accounts
+        .where((a) => !a.excludeFromAssets && !a.isOffBalance)
+        .toList();
     if (visible.isEmpty) return null;
 
     final now = DateTime.now();

@@ -146,6 +146,46 @@ void main() {
     expect(ctx.toPromptText(), contains('缺少汇率'));
   });
 
+  test('表外账户不进入 AI 摘要', () async {
+    final ledgerId = await repo.createLedger(name: '表外', currency: 'CNY');
+    await repo.createAccount(
+      ledgerId: ledgerId,
+      name: '自有现金',
+      type: 'cash',
+      currency: 'CNY',
+      initialBalance: 2000,
+    );
+    await repo.createAccount(
+      ledgerId: ledgerId,
+      name: '受托资金',
+      type: 'cash',
+      currency: 'CNY',
+      initialBalance: 500,
+      isOffBalance: true,
+    );
+    await repo.createAccount(
+      ledgerId: ledgerId,
+      name: '受托美元',
+      type: 'cash',
+      currency: 'USD',
+      initialBalance: 100,
+      isOffBalance: true,
+    );
+
+    final ctx = await FinancialAnalystContext.forLedger(
+      repository: repo,
+      investmentRepository: investRepo,
+      ledgerId: ledgerId,
+    );
+
+    expect(ctx.accounts.map((a) => a.name), isNot(contains('受托资金')));
+    expect(ctx.accounts.map((a) => a.name), isNot(contains('受托美元')));
+    expect(ctx.netWorth!.assets, closeTo(2000, 0.001));
+    expect(ctx.missingRateCurrencies, isNot(contains('USD')));
+    expect(ctx.toPromptText(), isNot(contains('受托资金')));
+    expect(ctx.toPromptText(), isNot(contains('受托美元')));
+  });
+
   test('toPromptText 受 maxChars 限制', () async {
     final ledgerId = await repo.createLedger(name: 'Token', currency: 'CNY');
     final cashId = await repo.createAccount(
