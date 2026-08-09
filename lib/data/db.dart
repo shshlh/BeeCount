@@ -70,6 +70,9 @@ class Accounts extends Table {
   BoolColumn get excludeFromAssets =>
       boolean().withDefault(const Constant(false))();
 
+  /// v7.3: 表外/受托账户 — 隐式等同于不计入资产，仍可在账户页看到
+  BoolColumn get isOffBalance => boolean().withDefault(const Constant(false))();
+
   /// 图标类型: null=默认（按账户type自动匹配SVG） / 'custom'=用户自定义图片
   TextColumn get iconType => text().nullable()();
 
@@ -549,7 +552,7 @@ class BeeDatabase extends _$BeeDatabase {
 
   @override
   int get schemaVersion =>
-      37; // v31: 账户隐藏 / v32: 投资数据层 / v33: 账户体系改造 / v34: 账户初始资金日期 / v35: 账户不计入资产 / v36: 基金分组 / v37: 投资净值日期
+      38; // v31: 账户隐藏 / v32: 投资数据层 / v33: 账户体系改造 / v34: 账户初始资金日期 / v35: 账户不计入资产 / v36: 基金分组 / v37: 投资净值日期 / v38: 表外账户
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1389,6 +1392,16 @@ class BeeDatabase extends _$BeeDatabase {
               'ALTER TABLE investment_holdings ADD COLUMN nav_date DATETIME;',
             );
             logger.info('DBMigration', 'v37 迁移完成');
+          }
+          if (from < 38) {
+            logger.info('DBMigration', '开始迁移到 v38: 表外账户(is_off_balance)');
+            await _addColumnIfMissing(
+              'accounts',
+              'is_off_balance',
+              'ALTER TABLE accounts ADD COLUMN is_off_balance '
+                  'INTEGER NOT NULL DEFAULT 0;',
+            );
+            logger.info('DBMigration', 'v38 迁移完成');
           }
         },
         onCreate: (m) async {

@@ -302,6 +302,7 @@ Account _account(int id, String name, {String type = 'bank'}) => Account(
       sortOrder: id,
       hidden: false,
       excludeFromAssets: false,
+      isOffBalance: false,
     );
 
 Category _category(int id, String name, String icon) => Category(

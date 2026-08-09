@@ -670,6 +670,16 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
       defaultConstraints: GeneratedColumn.constraintIsAlways(
           'CHECK ("exclude_from_assets" IN (0, 1))'),
       defaultValue: const Constant(false));
+  static const VerificationMeta _isOffBalanceMeta =
+      const VerificationMeta('isOffBalance');
+  @override
+  late final GeneratedColumn<bool> isOffBalance = GeneratedColumn<bool>(
+      'is_off_balance', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'CHECK ("is_off_balance" IN (0, 1))'),
+      defaultValue: const Constant(false));
   static const VerificationMeta _iconTypeMeta =
       const VerificationMeta('iconType');
   @override
@@ -703,6 +713,7 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         syncId,
         hidden,
         excludeFromAssets,
+        isOffBalance,
         iconType,
         customIconPath
       ];
@@ -809,6 +820,12 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
           excludeFromAssets.isAcceptableOrUnknown(
               data['exclude_from_assets']!, _excludeFromAssetsMeta));
     }
+    if (data.containsKey('is_off_balance')) {
+      context.handle(
+          _isOffBalanceMeta,
+          isOffBalance.isAcceptableOrUnknown(
+              data['is_off_balance']!, _isOffBalanceMeta));
+    }
     if (data.containsKey('icon_type')) {
       context.handle(_iconTypeMeta,
           iconType.isAcceptableOrUnknown(data['icon_type']!, _iconTypeMeta));
@@ -866,6 +883,8 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
           .read(DriftSqlType.bool, data['${effectivePrefix}hidden'])!,
       excludeFromAssets: attachedDatabase.typeMapping.read(
           DriftSqlType.bool, data['${effectivePrefix}exclude_from_assets'])!,
+      isOffBalance: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_off_balance'])!,
       iconType: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}icon_type']),
       customIconPath: attachedDatabase.typeMapping.read(
@@ -907,6 +926,9 @@ class Account extends DataClass implements Insertable<Account> {
   /// v5.6: 不计入资产 — 不参与净资产/资产构成/净值趋势统计（仅提醒作用）
   final bool excludeFromAssets;
 
+  /// v7.3: 表外/受托账户 — 隐式等同于不计入资产，仍可在账户页看到
+  final bool isOffBalance;
+
   /// 图标类型: null=默认（按账户type自动匹配SVG） / 'custom'=用户自定义图片
   final String? iconType;
 
@@ -932,6 +954,7 @@ class Account extends DataClass implements Insertable<Account> {
       this.syncId,
       required this.hidden,
       required this.excludeFromAssets,
+      required this.isOffBalance,
       this.iconType,
       this.customIconPath});
   @override
@@ -976,6 +999,7 @@ class Account extends DataClass implements Insertable<Account> {
     }
     map['hidden'] = Variable<bool>(hidden);
     map['exclude_from_assets'] = Variable<bool>(excludeFromAssets);
+    map['is_off_balance'] = Variable<bool>(isOffBalance);
     if (!nullToAbsent || iconType != null) {
       map['icon_type'] = Variable<String>(iconType);
     }
@@ -1023,6 +1047,7 @@ class Account extends DataClass implements Insertable<Account> {
           syncId == null && nullToAbsent ? const Value.absent() : Value(syncId),
       hidden: Value(hidden),
       excludeFromAssets: Value(excludeFromAssets),
+      isOffBalance: Value(isOffBalance),
       iconType: iconType == null && nullToAbsent
           ? const Value.absent()
           : Value(iconType),
@@ -1055,6 +1080,7 @@ class Account extends DataClass implements Insertable<Account> {
       syncId: serializer.fromJson<String?>(json['syncId']),
       hidden: serializer.fromJson<bool>(json['hidden']),
       excludeFromAssets: serializer.fromJson<bool>(json['excludeFromAssets']),
+      isOffBalance: serializer.fromJson<bool>(json['isOffBalance']),
       iconType: serializer.fromJson<String?>(json['iconType']),
       customIconPath: serializer.fromJson<String?>(json['customIconPath']),
     );
@@ -1082,6 +1108,7 @@ class Account extends DataClass implements Insertable<Account> {
       'syncId': serializer.toJson<String?>(syncId),
       'hidden': serializer.toJson<bool>(hidden),
       'excludeFromAssets': serializer.toJson<bool>(excludeFromAssets),
+      'isOffBalance': serializer.toJson<bool>(isOffBalance),
       'iconType': serializer.toJson<String?>(iconType),
       'customIconPath': serializer.toJson<String?>(customIconPath),
     };
@@ -1107,6 +1134,7 @@ class Account extends DataClass implements Insertable<Account> {
           Value<String?> syncId = const Value.absent(),
           bool? hidden,
           bool? excludeFromAssets,
+          bool? isOffBalance,
           Value<String?> iconType = const Value.absent(),
           Value<String?> customIconPath = const Value.absent()}) =>
       Account(
@@ -1131,6 +1159,7 @@ class Account extends DataClass implements Insertable<Account> {
         syncId: syncId.present ? syncId.value : this.syncId,
         hidden: hidden ?? this.hidden,
         excludeFromAssets: excludeFromAssets ?? this.excludeFromAssets,
+        isOffBalance: isOffBalance ?? this.isOffBalance,
         iconType: iconType.present ? iconType.value : this.iconType,
         customIconPath:
             customIconPath.present ? customIconPath.value : this.customIconPath,
@@ -1167,6 +1196,9 @@ class Account extends DataClass implements Insertable<Account> {
       excludeFromAssets: data.excludeFromAssets.present
           ? data.excludeFromAssets.value
           : this.excludeFromAssets,
+      isOffBalance: data.isOffBalance.present
+          ? data.isOffBalance.value
+          : this.isOffBalance,
       iconType: data.iconType.present ? data.iconType.value : this.iconType,
       customIconPath: data.customIconPath.present
           ? data.customIconPath.value
@@ -1196,6 +1228,7 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('syncId: $syncId, ')
           ..write('hidden: $hidden, ')
           ..write('excludeFromAssets: $excludeFromAssets, ')
+          ..write('isOffBalance: $isOffBalance, ')
           ..write('iconType: $iconType, ')
           ..write('customIconPath: $customIconPath')
           ..write(')'))
@@ -1223,6 +1256,7 @@ class Account extends DataClass implements Insertable<Account> {
         syncId,
         hidden,
         excludeFromAssets,
+        isOffBalance,
         iconType,
         customIconPath
       ]);
@@ -1249,6 +1283,7 @@ class Account extends DataClass implements Insertable<Account> {
           other.syncId == this.syncId &&
           other.hidden == this.hidden &&
           other.excludeFromAssets == this.excludeFromAssets &&
+          other.isOffBalance == this.isOffBalance &&
           other.iconType == this.iconType &&
           other.customIconPath == this.customIconPath);
 }
@@ -1273,6 +1308,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<String?> syncId;
   final Value<bool> hidden;
   final Value<bool> excludeFromAssets;
+  final Value<bool> isOffBalance;
   final Value<String?> iconType;
   final Value<String?> customIconPath;
   const AccountsCompanion({
@@ -1295,6 +1331,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.syncId = const Value.absent(),
     this.hidden = const Value.absent(),
     this.excludeFromAssets = const Value.absent(),
+    this.isOffBalance = const Value.absent(),
     this.iconType = const Value.absent(),
     this.customIconPath = const Value.absent(),
   });
@@ -1318,6 +1355,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.syncId = const Value.absent(),
     this.hidden = const Value.absent(),
     this.excludeFromAssets = const Value.absent(),
+    this.isOffBalance = const Value.absent(),
     this.iconType = const Value.absent(),
     this.customIconPath = const Value.absent(),
   })  : ledgerId = Value(ledgerId),
@@ -1342,6 +1380,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<String>? syncId,
     Expression<bool>? hidden,
     Expression<bool>? excludeFromAssets,
+    Expression<bool>? isOffBalance,
     Expression<String>? iconType,
     Expression<String>? customIconPath,
   }) {
@@ -1365,6 +1404,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (syncId != null) 'sync_id': syncId,
       if (hidden != null) 'hidden': hidden,
       if (excludeFromAssets != null) 'exclude_from_assets': excludeFromAssets,
+      if (isOffBalance != null) 'is_off_balance': isOffBalance,
       if (iconType != null) 'icon_type': iconType,
       if (customIconPath != null) 'custom_icon_path': customIconPath,
     });
@@ -1390,6 +1430,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       Value<String?>? syncId,
       Value<bool>? hidden,
       Value<bool>? excludeFromAssets,
+      Value<bool>? isOffBalance,
       Value<String?>? iconType,
       Value<String?>? customIconPath}) {
     return AccountsCompanion(
@@ -1412,6 +1453,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       syncId: syncId ?? this.syncId,
       hidden: hidden ?? this.hidden,
       excludeFromAssets: excludeFromAssets ?? this.excludeFromAssets,
+      isOffBalance: isOffBalance ?? this.isOffBalance,
       iconType: iconType ?? this.iconType,
       customIconPath: customIconPath ?? this.customIconPath,
     );
@@ -1477,6 +1519,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (excludeFromAssets.present) {
       map['exclude_from_assets'] = Variable<bool>(excludeFromAssets.value);
     }
+    if (isOffBalance.present) {
+      map['is_off_balance'] = Variable<bool>(isOffBalance.value);
+    }
     if (iconType.present) {
       map['icon_type'] = Variable<String>(iconType.value);
     }
@@ -1508,6 +1553,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('syncId: $syncId, ')
           ..write('hidden: $hidden, ')
           ..write('excludeFromAssets: $excludeFromAssets, ')
+          ..write('isOffBalance: $isOffBalance, ')
           ..write('iconType: $iconType, ')
           ..write('customIconPath: $customIconPath')
           ..write(')'))
@@ -12791,6 +12837,7 @@ typedef $$AccountsTableCreateCompanionBuilder = AccountsCompanion Function({
   Value<String?> syncId,
   Value<bool> hidden,
   Value<bool> excludeFromAssets,
+  Value<bool> isOffBalance,
   Value<String?> iconType,
   Value<String?> customIconPath,
 });
@@ -12814,6 +12861,7 @@ typedef $$AccountsTableUpdateCompanionBuilder = AccountsCompanion Function({
   Value<String?> syncId,
   Value<bool> hidden,
   Value<bool> excludeFromAssets,
+  Value<bool> isOffBalance,
   Value<String?> iconType,
   Value<String?> customIconPath,
 });
@@ -12885,6 +12933,9 @@ class $$AccountsTableFilterComposer
   ColumnFilters<bool> get excludeFromAssets => $composableBuilder(
       column: $table.excludeFromAssets,
       builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isOffBalance => $composableBuilder(
+      column: $table.isOffBalance, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get iconType => $composableBuilder(
       column: $table.iconType, builder: (column) => ColumnFilters(column));
@@ -12964,6 +13015,10 @@ class $$AccountsTableOrderingComposer
       column: $table.excludeFromAssets,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<bool> get isOffBalance => $composableBuilder(
+      column: $table.isOffBalance,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get iconType => $composableBuilder(
       column: $table.iconType, builder: (column) => ColumnOrderings(column));
 
@@ -13038,6 +13093,9 @@ class $$AccountsTableAnnotationComposer
   GeneratedColumn<bool> get excludeFromAssets => $composableBuilder(
       column: $table.excludeFromAssets, builder: (column) => column);
 
+  GeneratedColumn<bool> get isOffBalance => $composableBuilder(
+      column: $table.isOffBalance, builder: (column) => column);
+
   GeneratedColumn<String> get iconType =>
       $composableBuilder(column: $table.iconType, builder: (column) => column);
 
@@ -13087,6 +13145,7 @@ class $$AccountsTableTableManager extends RootTableManager<
             Value<String?> syncId = const Value.absent(),
             Value<bool> hidden = const Value.absent(),
             Value<bool> excludeFromAssets = const Value.absent(),
+            Value<bool> isOffBalance = const Value.absent(),
             Value<String?> iconType = const Value.absent(),
             Value<String?> customIconPath = const Value.absent(),
           }) =>
@@ -13110,6 +13169,7 @@ class $$AccountsTableTableManager extends RootTableManager<
             syncId: syncId,
             hidden: hidden,
             excludeFromAssets: excludeFromAssets,
+            isOffBalance: isOffBalance,
             iconType: iconType,
             customIconPath: customIconPath,
           ),
@@ -13133,6 +13193,7 @@ class $$AccountsTableTableManager extends RootTableManager<
             Value<String?> syncId = const Value.absent(),
             Value<bool> hidden = const Value.absent(),
             Value<bool> excludeFromAssets = const Value.absent(),
+            Value<bool> isOffBalance = const Value.absent(),
             Value<String?> iconType = const Value.absent(),
             Value<String?> customIconPath = const Value.absent(),
           }) =>
@@ -13156,6 +13217,7 @@ class $$AccountsTableTableManager extends RootTableManager<
             syncId: syncId,
             hidden: hidden,
             excludeFromAssets: excludeFromAssets,
+            isOffBalance: isOffBalance,
             iconType: iconType,
             customIconPath: customIconPath,
           ),

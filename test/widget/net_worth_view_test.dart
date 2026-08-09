@@ -44,6 +44,7 @@ void main() {
       sortOrder: id,
       hidden: false,
       excludeFromAssets: false,
+      isOffBalance: false,
     );
   }
 

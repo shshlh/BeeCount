@@ -97,6 +97,7 @@ class LocalAccountRepository implements AccountRepository {
     String? note,
     String? syncId,
     bool excludeFromAssets = false,
+    bool isOffBalance = false,
     String? iconType,
     String? customIconPath,
   }) async {
@@ -119,6 +120,8 @@ class LocalAccountRepository implements AccountRepository {
         readsFrom: {db.accounts},
       ).getSingle();
       final nextSortOrder = (maxSortOrderResult.data['max_order'] as int) + 1;
+      // 表外/受托账户隐式等同于不计入资产（7.3.1）。
+      final effectiveExcludeFromAssets = excludeFromAssets || isOffBalance;
 
       final companion = AccountsCompanion.insert(
         ledgerId: ledgerId,
@@ -138,7 +141,8 @@ class LocalAccountRepository implements AccountRepository {
         cardLastFour: d.Value(cardLastFour),
         note: d.Value(note),
         syncId: d.Value(syncId ?? _uuid.v4()),
-        excludeFromAssets: d.Value(excludeFromAssets),
+        excludeFromAssets: d.Value(effectiveExcludeFromAssets),
+        isOffBalance: d.Value(isOffBalance),
         iconType: d.Value(iconType),
         customIconPath: d.Value(customIconPath),
       );
@@ -194,9 +198,23 @@ class LocalAccountRepository implements AccountRepository {
     bool clearMetadataFields = false,
     bool? hidden,
     bool? excludeFromAssets,
+    bool? isOffBalance,
     String? iconType,
     String? customIconPath,
   }) async {
+    // 7.3.1 联动：表外隐式不计入资产；显式取消不计入资产时同步关闭表外。
+    final current = await (db.select(db.accounts)
+          ..where((a) => a.id.equals(id)))
+        .getSingleOrNull();
+    if (current == null) return;
+
+    final effectiveOffBalance = isOffBalance ??
+        (excludeFromAssets == false && current.isOffBalance
+            ? false
+            : current.isOffBalance);
+    final effectiveExcludeFromAssets =
+        isOffBalance == true ? true : excludeFromAssets;
+
     await (db.update(db.accounts)..where((a) => a.id.equals(id))).write(
       AccountsCompanion(
         name: name != null ? d.Value(name) : const d.Value.absent(),
@@ -211,9 +229,10 @@ class LocalAccountRepository implements AccountRepository {
         cardLastFour: clearMetadataFields ? const d.Value(null) : (cardLastFour != null ? d.Value(cardLastFour) : const d.Value.absent()),
         note: clearMetadataFields ? const d.Value(null) : (note != null ? d.Value(note) : const d.Value.absent()),
         hidden: hidden == null ? const d.Value.absent() : d.Value(hidden),
-        excludeFromAssets: excludeFromAssets == null
+        excludeFromAssets: effectiveExcludeFromAssets == null
             ? const d.Value.absent()
-            : d.Value(excludeFromAssets),
+            : d.Value(effectiveExcludeFromAssets),
+        isOffBalance: d.Value(effectiveOffBalance),
         iconType: iconType == null
             ? const d.Value.absent()
             : d.Value(iconType),

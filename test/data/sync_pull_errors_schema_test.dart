@@ -31,8 +31,8 @@ void main() {
     await db.close();
   });
 
-  test('schemaVersion = 37(确保 sync_pull_errors 表已纳入 schema)', () {
-    expect(db.schemaVersion, 37);
+  test('schemaVersion = 38(确保 sync_pull_errors 表已纳入 schema)', () {
+    expect(db.schemaVersion, 38);
   });
 
   test('sync_pull_errors 表存在,所有列就位', () async {

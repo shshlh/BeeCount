@@ -44,6 +44,7 @@ abstract class AccountRepository {
     String? note,
     String? syncId,
     bool excludeFromAssets = false,
+    bool isOffBalance = false,
     String? iconType,
     String? customIconPath,
   });
@@ -82,6 +83,7 @@ abstract class AccountRepository {
     bool clearMetadataFields = false,
     bool? hidden,
     bool? excludeFromAssets,
+    bool? isOffBalance,
     String? iconType,
     String? customIconPath,
   });

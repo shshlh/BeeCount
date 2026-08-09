@@ -34,6 +34,51 @@
 ## 2026-08-09
 
 **移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic / invest-ui / invest-logic
+
+**任务**：7.3.1 PM 审查通过 + 7.3.2/7.3.3 放行
+
+**审查结果**：7.3.1 通过，合入。
+- `accounts.is_off_balance` + schema v38 幂等迁移；创建/更新联动正确（开启表外强制不计入资产；取消不计入资产同步关闭表外；单独关闭表外保留不计入资产）
+- 净资产、资产构成、净值趋势均排除表外账户
+- 验证：7.3.1 测试全过；全量 731 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）；analyze 无新增 warning
+
+**接口约定（7.3.2 / 7.3.3 按此接线）**：
+- `createAccount(..., isOffBalance:)` / `updateAccount(..., isOffBalance:)` 已支持；UI 开关复用该联动语义
+- 7.3.3 仍需在 FinancialAnalystContext 中显式过滤 `isOffBalance`（当前仅靠 excludeFromAssets 隐式排除净资产）
+
+**git 状态**：当前分支 main，合入后提交
+
+---
+
+## 2026-08-09
+
+**移交角色**：architect + invest-logic（7.3.1）
+**接收角色**：PM（审查合入）→ invest-ui（7.3.2）/ invest-logic（7.3.3）
+
+**任务**：7.3.1 表外账户数据层
+
+**完成工作**：
+- `accounts` 新增 `is_off_balance`（默认 0），schema v37 → v38，`_addColumnIfMissing` 幂等迁移 + `db.g.dart` 重新生成
+- Repository：`createAccount` / `updateAccount` 支持 `isOffBalance`
+  - 开启表外隐式强制 `exclude_from_assets=true`
+  - 显式取消不计入资产时同步关闭表外；单独关闭表外保留不计入资产状态
+- 统计/净资产沿用不计入资产排除（表外账户不参与净资产、资产构成、净值趋势）
+- 手工构造 `Account` 的 9 处（lib 5 处 + test 5 处）补 `isOffBalance: false`；旧 schema 版本断言统一升到 38
+- 新增测试：migration v38（默认 0 / 写入 1 / schemaVersion 38）+ account_off_balance（创建/更新联动、净资产排除）
+
+**下一个任务需要知道的**：
+- 7.3.2 UI 的开关联动可直接复用 Repository 语义（开启表外 → 强制不计入资产；取消不计入资产 → 关闭表外）
+- 7.3.3 AI 上下文目前因 repo 强制 `exclude_from_assets=true` 已隐式排除表外账户；仍需按 7.3.3 规格显式过滤 `is_off_balance`
+- 全量 `flutter test`：731 passed / 1 skipped / 1 failed（唯一失败为既存 `bill_creation_service_test`）；`flutter analyze` 无 error、无新增 warning
+
+**git 状态**：当前分支 main，7.3.1 改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-09
+
+**移交角色**：项目经理（PM）
 **接收角色**：architect + invest-logic（7.3.1）→ invest-ui（7.3.2）/ invest-logic（7.3.3）→ qa（7.3.4）
 
 **任务**：7.3 表外/受托账户

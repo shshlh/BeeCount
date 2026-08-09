@@ -1700,6 +1700,7 @@ class LocalRepository extends BaseRepository {
     String? note,
     String? syncId,
     bool excludeFromAssets = false,
+    bool isOffBalance = false,
     String? iconType,
     String? customIconPath,
   }) async {
@@ -1718,6 +1719,7 @@ class LocalRepository extends BaseRepository {
       note: note,
       syncId: syncId,
       excludeFromAssets: excludeFromAssets,
+      isOffBalance: isOffBalance,
       iconType: iconType,
       customIconPath: customIconPath,
     );
@@ -1775,6 +1777,7 @@ class LocalRepository extends BaseRepository {
     bool clearMetadataFields = false,
     bool? hidden,
     bool? excludeFromAssets,
+    bool? isOffBalance,
     String? iconType,
     String? customIconPath,
   }) async {
@@ -1796,6 +1799,7 @@ class LocalRepository extends BaseRepository {
       clearMetadataFields: clearMetadataFields,
       hidden: hidden,
       excludeFromAssets: excludeFromAssets,
+      isOffBalance: isOffBalance,
       iconType: iconType,
       customIconPath: customIconPath,
     );

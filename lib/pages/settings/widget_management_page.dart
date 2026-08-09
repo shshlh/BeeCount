@@ -648,6 +648,7 @@ Account _sampleAccount(
     sortOrder: id,
     hidden: false,
     excludeFromAssets: false,
+    isOffBalance: false,
   );
 }
 
