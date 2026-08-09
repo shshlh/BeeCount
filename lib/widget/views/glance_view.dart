@@ -277,7 +277,7 @@ class GlanceView extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Expanded(
               child: Row(
                 children: [
@@ -303,7 +303,7 @@ class GlanceView extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Expanded(
               child: Row(
                 children: [
@@ -347,7 +347,7 @@ class GlanceView extends StatelessWidget {
     bool isToday,
   ) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: dark
             ? Colors.white.withValues(alpha: 0.07)

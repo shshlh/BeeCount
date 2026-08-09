@@ -34,6 +34,67 @@
 ## 2026-08-09
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-ui / qa / invest-logic
+
+**任务**：7.1 PM 审查通过 + 合入
+
+**审查结果**：7.1.1 / 7.1.2 通过，合入。
+- 收支速览 364×169 / 155×155 在字体缩放 1.2 下不再底部溢出，新增回归测试
+- 小组件管理页预览按原生尺寸保留比例，小/中/大档位不再失真，新增比例测试
+- 「记账助手」更名覆盖 zh/zh_TW ARB、Android 桌面名、iOS 显示名、分享/欢迎/提醒/小组件引导/AI 系统提示与文档；en/ko 按约定保留 BeeCount；包名/deep link 未改
+- 验证：相关测试全过；全量 705 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）；改动文件 analyze 无新增 error/warning
+
+**git 状态**：当前分支 main，合入后提交
+
+---
+
+## 2026-08-09
+
+**移交角色**：invest-logic（7.1.2 逻辑侧）
+**接收角色**：PM（审查合入）
+
+**任务**：App 更名「记账助手」invest-logic 侧
+
+**完成工作**：
+- 补齐 zh / zh_TW ARB 中独立的 `BeeCount` 分享/欢迎/邀请文案，改为「记账助手」/「記帳助手」并重新 `flutter gen-l10n`
+- en / ko 按 PM 口径保留 BeeCount，未改动
+- `docs/cloud-setup.md`、`docs/contributing/CONTRIBUTING_ZH.md` 中文文档更名
+- 新增 `app_rename_scan_test.dart`：l10n appName 断言、lib 无「蜜蜂记账」、Android `build.gradle` / `strings.xml`、README 标题
+
+**下一个任务需要知道的**：
+- 与 invest-ui 并行完成，TEAM.md 已由 invest-ui 标记 ✅；本记录只补 invest-logic 侧明细
+- 更新缓存 / 存储管理仍使用 `BeeCount_` 内部文件名，未改名
+- 全量 `flutter test`：705 passed / 1 skipped / 1 failed（唯一失败为既存 `bill_creation_service_test`）；`flutter analyze` 无 error
+
+**git 状态**：当前分支 main，7.0 + 7.1 改动均在未提交工作区，待 PM 审查合入
+
+---
+
+## 2026-08-09
+
+**移交角色**：invest-ui（7.1.1 + 7.1.2）
+**接收角色**：PM（审查合入）
+
+**任务**：小组件显示修复 + App 更名「记账助手」
+
+**完成工作**：
+- 7.1.1：GlanceView medium stat 卡纵向 padding 8→6、区块间距 10→8，字体缩放 1.2 下 364×169 / 155×155 不再底部溢出；新增对应回归测试
+- 7.1.1：小组件管理页预览卡新增 `widgetPreviewDisplaySize`，小号保持 155、中/大号保持 364，可用宽度不足才等比缩小；新增比例测试
+- 7.1.2：zh / zh_TW ARB 与生成文件、Android `strings.xml` / `build.gradle`、iOS 显示名与权限文案、README / PRIVACY、AI 系统提示、分享海报与分享文案全部改为「记账助手」/「記帳助手」；en / ko 按 PM 约定保留 BeeCount
+- 测试：新增 `app_rename_scan_test.dart`（20 例）；全量 705 passed / 1 skipped / 1 failed（唯一失败为既存 `bill_creation_service_test`）
+
+**下一个任务需要知道的**：
+- 包名 / applicationId / bundle id 未改，`beecount://` deep link 未改
+- en / ko 用户可见文案仍为 BeeCount（PM 允许保留）
+- 未改 `docs/cloud-setup` / `CONTRIBUTING` / `COMMERCIAL_LICENSE` 等文档旧名（非用户可见 App 文案）
+
+**git 状态**：当前分支 main，7.0 + 7.1 改动均在未提交工作区，待 PM 审查合入
+
+---
+
+## 2026-08-09
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-ui + qa（7.1.1）/ invest-ui + invest-logic（7.1.2）
 
 **任务**：7.1 小组件显示修复 + App 更名

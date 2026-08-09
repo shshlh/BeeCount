@@ -1,4 +1,4 @@
-# 蜜蜂记账（BeeCount Fork）
+# 记账助手（BeeCount Fork）
 
 <div align="center">
 

@@ -66,7 +66,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('蜜蜂记账'), findsOneWidget);
+    expect(find.text('记账助手'), findsOneWidget);
     expect(find.text('新建账本'), findsOneWidget);
     expect(find.byTooltip('AI助手'), findsOneWidget);
     expect(find.byTooltip('日历'), findsOneWidget);

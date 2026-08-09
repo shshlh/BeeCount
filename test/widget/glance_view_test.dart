@@ -71,6 +71,36 @@ void main() {
 
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('364x169 字体缩放 1.2 时仍不底部溢出', (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 1.2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      const size = Size(364, 169);
+      await tester.pumpWidget(wrap(
+        const GlanceView.medium(
+          todayExpense: '¥12,345.67',
+          todayIncome: '¥456.78',
+          monthExpense: '¥1,234.56',
+          monthIncome: '¥7,890.12',
+          themeColor: Color(0xFFF5A623),
+          redForIncome: true,
+          dark: false,
+          titleLabel: '收支速览',
+          monthSuffix: '月',
+          todayExpenseLabel: '今日支出',
+          todayIncomeLabel: '今日收入',
+          monthExpenseLabel: '本月支出',
+          monthIncomeLabel: '本月收入',
+          width: 364,
+          height: 169,
+        ),
+        size,
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
   });
 
   group('GlanceView.small', () {
@@ -109,6 +139,33 @@ void main() {
           themeColor: Color(0xFFF5A623),
           redForIncome: false,
           dark: true,
+          todayLabel: '今日',
+          todayExpenseLabel: '今日支出',
+          monthExpenseLabel: '本月支出',
+          monthIncomeLabel: '本月收入',
+          width: 155,
+          height: 155,
+        ),
+        size,
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('155x155 字体缩放 1.2 时仍不底部溢出', (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 1.2;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      const size = Size(155, 155);
+      await tester.pumpWidget(wrap(
+        const GlanceView.small(
+          todayExpense: '¥9,999,999.99',
+          monthExpense: '¥1,234.56',
+          monthIncome: '¥7,890.12',
+          themeColor: Color(0xFFF5A623),
+          redForIncome: true,
+          dark: false,
           todayLabel: '今日',
           todayExpenseLabel: '今日支出',
           monthExpenseLabel: '本月支出',

@@ -26,6 +26,16 @@ import '../../widget/widget_spec.dart' show HWSize;
 import '../../widgets/biz/section_card.dart';
 import '../../widgets/ui/ui.dart';
 
+/// 画廊预览卡的实际展示尺寸:优先保留小组件原生尺寸比例,只在可用宽度不足时
+/// 等比缩小。155×155 小号不会被放大成 364 宽,大中小档位比例不失真。
+@visibleForTesting
+Size widgetPreviewDisplaySize(double availableWidth, Size previewSize) {
+  final scale = availableWidth < previewSize.width
+      ? availableWidth / previewSize.width
+      : 1.0;
+  return Size(previewSize.width * scale, previewSize.height * scale);
+}
+
 /// 小组件管理页 ——「组件库」画廊。
 ///
 /// Phase C:从单一收支速览预览升级为 6 类内容(收支速览/净资产/快速记账/
@@ -357,12 +367,11 @@ class WidgetManagementPage extends ConsumerWidget {
           Center(
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final displayWidth = constraints.maxWidth.clamp(0.0, 400.0);
-                final displayHeight =
-                    displayWidth * previewSize.height / previewSize.width;
+                final displaySize =
+                    widgetPreviewDisplaySize(constraints.maxWidth, previewSize);
                 return Container(
-                  width: displayWidth,
-                  height: displayHeight,
+                  width: displaySize.width,
+                  height: displaySize.height,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
