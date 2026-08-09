@@ -46,8 +46,9 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
 |---|---|---|---|---|
-| 7.4.1 账户备注保存修复 | 🔄 已派工 | architect + invest-logic | updateAccount 不再连带清 note + 支持清空备注 + 测试 | — |
-| 7.4.2 账户卡展示备注 | 🔄 已派工 | invest-ui | accounts_page 卡片显示备注 + 测试 | — |
+| 7.4.1 账户备注保存修复 | ✅ | architect + invest-logic | updateAccount 不再连带清 note + 支持清空备注 + 测试 | 2026-08-10 |
+| 7.4.2 账户卡展示备注 | ✅ | invest-ui | accounts_page 卡片显示备注 + 测试 | 2026-08-10 |
+| 7.4.3 备注清空优先级返工 | 🔄 已派工 | architect + invest-logic | clearNote 优先于 clearMetadataFields + 非卡账户清空测试 | — |
 
 ### 阶段 7.3：表外/受托账户
 

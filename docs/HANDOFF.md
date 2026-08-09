@@ -34,6 +34,66 @@
 ## 2026-08-10
 
 **移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic
+
+**任务**：7.4.3 备注清空优先级返工
+
+**审查发现**：`LocalAccountRepository.updateAccount` 中 `clearMetadataFields` 优先于 `clearNote`，因此现金/虚拟等非卡账户（保存时 `clearMetadataFields=true`）清空备注仍会保留旧值；UI 已正确传 `clearNote`，是数据层优先级问题。
+
+**要求**：
+- `note` 分支改为 `clearNote` 优先：`clearNote=true` 写 NULL；未清空时 `clearMetadataFields` 只影响开户行/卡号后四位，不再影响 note
+- 新增回归测试：非卡账户（cash）已有备注 + `clearMetadataFields=true` + `clearNote=true` 时读回 NULL
+- 完成后更新 TEAM.md 任务板 + HANDOFF 追加完成记录，交 PM 审查
+
+**git 状态**：当前分支 main，7.4.1/7.4.2 未提交待合入
+
+---
+
+## 2026-08-10
+
+**移交角色**：architect + invest-logic（7.4.1）
+**接收角色**：PM（审查合入）→ invest-ui（7.4.2）
+
+**任务**：账户备注保存修复（数据层）
+
+**完成工作**：
+- `updateAccount` 新增 `clearNote` 哨兵：`clearNote=true` 写 NULL；不传则不更新；`note` 传值正常保存
+- `clearMetadataFields` 不再清 `note`，只清开户行/卡号后四位等元信息
+- 接口 / LocalAccountRepository / LocalRepository 三层同步
+- 新增测试 4 例：非卡账户编辑后备注保留、clearNote 清空、银行卡备注保存且元信息保留、不传不更新
+
+**下一个任务需要知道的**：
+- 7.4.2 UI 保存空备注时应传 `clearNote: true`（当前 `account_edit_page` 仍传 null，invest-ui 正在并行接线）
+- 全量 `flutter test` 当前含 invest-ui 7.4.2 进行中的 UI 测试失败（`account_note_test` 编辑页清空保存）+ 既存 `bill_creation_service_test`；数据层相关测试全过
+- `flutter analyze` 无 error，7.4.1 改动无新增 warning
+
+**git 状态**：当前分支 main，7.4.1 数据层 + invest-ui 7.4.2 UI 并行改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-10
+
+**移交角色**：invest-ui（7.4.2）
+**接收角色**：PM（审查合入）→ invest-logic（7.4.1 收尾）
+
+**任务**：账户卡展示备注
+
+**完成工作**：
+- `accounts_page.dart` 账户卡新增备注行：单行截断 + Tooltip 查看全文
+- `account_edit_page.dart` 保存时区分「未修改」与「清空备注」：备注为空且原备注非空时传 `clearNote: true`
+- 测试：`account_note_test.dart` 2 例（卡片备注展示、编辑回显 + 清空保存）；相关账户测试全过
+
+**下一个任务需要知道的**：
+- 当前 `LocalAccountRepository.updateAccount` 中 `clearMetadataFields=true` 优先于 `clearNote`，非卡账户清空备注仍会保留旧值；需 7.4.1 调整为 `clearNote` 优先（UI 已正确传参）
+- 7.4.2 UI 测试用 bank_card 路径验证 `clearNote` 生效；非卡路径待 7.4.1 修复后补回归
+
+**git 状态**：当前分支 main，7.4.1/7.4.2 相关改动在未提交工作区，待 PM 审查合入
+
+---
+
+## 2026-08-10
+
+**移交角色**：项目经理（PM）
 **接收角色**：architect + invest-logic（7.4.1）/ invest-ui（7.4.2）
 
 **任务**：7.4 账户备注修复
