@@ -34,6 +34,43 @@
 ## 2026-08-09
 
 **移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic（7.2.1）→ invest-logic（7.2.2）/ invest-logic + invest-ui（7.2.3）→ qa（7.2.4）
+
+**任务**：7.2 AI 财务分析师（第一版）
+
+**目标**：在记账基础上，让 AI 小助手能基于当前账本与投资持仓回答财务分析问题，并新增投资分析快捷指令。
+
+**7.2.1 财务上下文服务（architect + invest-logic）**
+- 新增 `FinancialAnalystSnapshot`：账户与余额、近 30 天/本月收支摘要、分类汇总、预算进度、净资产趋势摘要、投资持仓摘要（代码/名称/份额/成本/市值/盈亏/收益率/净值日期）、近期投资交易（买入/卖出/转换）
+- 工厂 `FinancialAnalystContext.forLedger({repository, ledgerId, recentTxLimit, holdingsLimit, trendDays})`：只取当前账本，隐藏账户/不计入资产/不计入统计的记录按现有口径过滤
+- 提供 `toPromptText()`（中文格式化，控制 token）与 `scopeLabel()`（如「近 30 天 · N 只持仓」供 UI 展示）
+- 金额 2 位小数、净值 4 位、多币种按本位币折算并标注缺失汇率；投资盈亏用 Decimal 链路
+- 测试：账本/投资摘要内容、过滤规则、token 上限、空数据兜底
+
+**7.2.2 分析师提示词 + 意图路由（invest-logic，等 7.2.1）**
+- 删除原系统提示「统计、查询等功能暂不支持」，改为财务分析师人设：仅基于注入的账本/投资摘要回答，未提供数据不臆造
+- `AIChatService` 意图判定扩展：财务分析意图（投资/持仓/收益/盈亏/基金/股票/分析/复盘/趋势/预算/净资产/资产/负债/浮盈/浮亏/组合）优先于记账意图；记账仍走原提取流程
+- 自由对话注入 `FinancialAnalystSnapshot.toPromptText()`，随用户问题一起发送
+- 测试：投资问题不误判为记账、分析师 prompt 含投资摘要、无数据兜底
+
+**7.2.3 投资分析快捷指令 + 数据范围提示（invest-logic + invest-ui，等 7.2.1 接口）**
+- 快捷指令新增：投资概览、持仓分析、本月复盘、财务健康、预算建议、异常提醒（原有指令保留）
+- 投资概览/持仓分析使用新的投资数据源；AI 页展示本次分析覆盖的数据范围（`scopeLabel`）
+- 模板：新增投资分析 prompt 模板（zh/zh_TW 为主，en/ko 可后续补）
+
+**7.2.4 全流程测试与实机验证（qa + invest-logic + invest-ui，等前几项）**
+- 上下文/路由/指令/UI 测试补齐；真实服务商对话冒烟
+- 验证样例问题：我的总浮盈多少 / 基金 A 最近表现 / 投资与现金比例是否失衡
+
+**约束**：HANDOFF 只增不减；flutter analyze 新增代码零 error/warning；完成后更新 TEAM.md 任务板 + HANDOFF 追加完成记录，交 PM 审查
+
+**git 状态**：当前分支 main，HEAD 3f98b65
+
+---
+
+## 2026-08-09
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-ui / qa / invest-logic
 
 **任务**：7.1 PM 审查通过 + 合入
