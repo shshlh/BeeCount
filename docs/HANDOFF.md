@@ -34,6 +34,41 @@
 ## 2026-08-09
 
 **移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic（7.3.1）→ invest-ui（7.3.2）/ invest-logic（7.3.3）→ qa（7.3.4）
+
+**任务**：7.3 表外/受托账户
+
+**背景**：用户作为中间人处理银行贷款与代付利息，需要把受托资金记为“表外/受托账户”，既不影响净资产/净值趋势，也不出现在 AI 财务摘要里。
+
+**7.3.1 数据层（architect + invest-logic）**
+- `accounts` 新增 `is_off_balance`（0/1，默认 0），schema v37 → v38 + 幂等迁移 + db.g.dart 重新生成
+- 语义：`is_off_balance=1` 时视为“表外/受托”，隐式等同于不计入资产（`exclude_from_assets=1`），但仍可在账户页看到
+- Repository：createAccount / updateAccount 支持该字段；统计与净资产口径沿用不计入资产排除
+- 测试：迁移 v38、创建/更新表外账户、净资产与账户统计排除
+
+**7.3.2 UI（invest-ui，等 7.3.1）**
+- 账户编辑页新增「表外/受托账户」开关：开启后自动勾选/强制“不计入资产”，可手动取消不计入资产时同步关闭表外
+- 账户列表/资产页：表外账户显示“表外/受托”标识，或单独分组展示，方便用户查看但不混入个人资产
+- l10n：zh/zh_TW/en/ko 同步（ko 可模板兜底）
+- 测试：开关联动、资产页标识/分区
+
+**7.3.3 AI 上下文排除（invest-logic，等 7.3.1）**
+- `FinancialAnalystContext.forLedger`：账户与余额、缺失汇率列表排除 `is_off_balance=1` 账户（与净资产口径一致）
+- `toPromptText` 不再出现表外/受托账户
+- 测试：表外账户不进入 AI 摘要
+
+**7.3.4 全流程测试与实机验证（qa + invest-logic + invest-ui，等前几项）**
+- 迁移/统计/AI/UI 测试；实机验证银行贷款 + 借给 A + 利息托管的完整场景
+
+**约束**：HANDOFF 只增不减；flutter analyze 新增代码零 error/warning；完成后更新 TEAM.md 任务板 + HANDOFF 追加完成记录，交 PM 审查
+
+**git 状态**：当前分支 main，HEAD a67a88e
+
+---
+
+## 2026-08-09
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-logic / invest-ui
 
 **任务**：7.2.2 / 7.2.3 PM 审查通过 + 合入
