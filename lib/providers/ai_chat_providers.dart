@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:drift/drift.dart';
 
 import '../ai/core/ai_extraction_engine.dart';
 import '../services/ai/ai_bookkeeper.dart';
@@ -29,6 +28,7 @@ final aiChatServiceProvider = Provider<AIChatService>((ref) {
   final repo = ref.watch(repositoryProvider);
   return AIChatService(
     repo: repo,
+    investmentRepository: ref.watch(investmentRepositoryProvider),
     bookkeeper: ref.watch(aiBookkeeperProvider),
   );
 });

@@ -5486,6 +5486,39 @@ class AppLocalizationsZh extends AppLocalizations {
       '请根据我的消费习惯给出省钱建议：\n\n[categoryStats]\n\n[recentTrends]\n\n请提供3-5条实用的省钱技巧。请用简体中文回复。';
 
   @override
+  String get aiQuickCommandInvestmentOverviewTitle => '投资概览';
+
+  @override
+  String get aiQuickCommandInvestmentOverviewDesc => '查看总市值、浮盈浮亏与持仓分布';
+
+  @override
+  String get aiQuickCommandInvestmentOverviewPrompt =>
+      '请根据以下财务上下文给出投资概览分析：\n\n[analystSnapshot]\n\n请总结总市值、总成本、浮盈浮亏、收益率与持仓分布，指出值得关注的风险。请用简体中文回复。';
+
+  @override
+  String get aiQuickCommandHoldingAnalysisTitle => '持仓分析';
+
+  @override
+  String get aiQuickCommandHoldingAnalysisDesc => '逐只分析持仓盈亏与净值';
+
+  @override
+  String get aiQuickCommandHoldingAnalysisPrompt =>
+      '请根据以下财务上下文逐只分析我的持仓：\n\n[analystSnapshot]\n\n对每只基金分析盈亏、收益率、净值日期与近期投资交易，给出加减仓建议。请用简体中文回复。';
+
+  @override
+  String get aiQuickCommandMonthReviewTitle => '本月复盘';
+
+  @override
+  String get aiQuickCommandMonthReviewDesc => '复盘本月收支与投资表现';
+
+  @override
+  String get aiQuickCommandMonthReviewPrompt =>
+      '请根据以下财务上下文做本月复盘：\n\n[analystSnapshot]\n\n从收支、分类、预算与投资表现角度复盘，指出改善点。请用简体中文回复。';
+
+  @override
+  String get aiAnalysisScopePrefix => '本次分析覆盖';
+
+  @override
   String get billCardUnknownLedger => '未知账本';
 
   @override
@@ -13025,6 +13058,39 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String get aiQuickCommandSavingTipsPrompt =>
       '請根據以下資料給出實用的省錢建議：\n\n[categoryStats]\n\n[recentTrends]\n\n請給出3-5條具體可行的建議。請用繁體中文回覆。';
+
+  @override
+  String get aiQuickCommandInvestmentOverviewTitle => '投資概覽';
+
+  @override
+  String get aiQuickCommandInvestmentOverviewDesc => '查看總市值、浮盈浮虧與持倉分佈';
+
+  @override
+  String get aiQuickCommandInvestmentOverviewPrompt =>
+      '請根據以下財務上下文給出投資概覽分析：\n\n[analystSnapshot]\n\n請總結總市值、總成本、浮盈浮虧、收益率與持倉分佈，指出值得關注的風險。請用繁體中文回覆。';
+
+  @override
+  String get aiQuickCommandHoldingAnalysisTitle => '持倉分析';
+
+  @override
+  String get aiQuickCommandHoldingAnalysisDesc => '逐隻分析持倉盈虧與淨值';
+
+  @override
+  String get aiQuickCommandHoldingAnalysisPrompt =>
+      '請根據以下財務上下文逐隻分析我的持倉：\n\n[analystSnapshot]\n\n對每隻基金分析盈虧、收益率、淨值日期與近期投資交易，給出加減倉建議。請用繁體中文回覆。';
+
+  @override
+  String get aiQuickCommandMonthReviewTitle => '本月複盤';
+
+  @override
+  String get aiQuickCommandMonthReviewDesc => '複盤本月收支與投資表現';
+
+  @override
+  String get aiQuickCommandMonthReviewPrompt =>
+      '請根據以下財務上下文做本月複盤：\n\n[analystSnapshot]\n\n從收支、分類、預算與投資表現角度複盤，指出改善點。請用繁體中文回覆。';
+
+  @override
+  String get aiAnalysisScopePrefix => '本次分析覆蓋';
 
   @override
   String get billCardUnknownLedger => '未知帳本';

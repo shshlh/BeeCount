@@ -11,6 +11,8 @@ import '../../widgets/biz/bee_icon.dart';
 import '../../widgets/ai/typewriter_text.dart';
 import '../../widgets/ai/bill_card_widget.dart';
 import '../../widgets/ai/ai_quick_commands_bar.dart';
+import '../../ai/core/financial_analyst_context.dart';
+import '../../models/ai_analysis_metadata.dart';
 import '../../styles/tokens.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../../services/billing/post_processor.dart';
@@ -372,6 +374,7 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
     }
 
     // 普通文字消息 - 带头像
+    final analysisScope = analysisScopeFromMetadata(message.metadata);
     return Padding(
       padding: EdgeInsets.only(bottom: 8.0.scaled(context, ref)),
       child: Row(
@@ -413,30 +416,62 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                         : BeeTokens.border(context),
                   ),
                 ),
-                child: TypewriterText(
-                  text: message.content,
-                  animate: shouldAnimate, // 只对标记的消息启用动画
-                  onTextChange: shouldAnimate
-                      ? () {
-                          // 每次文本更新时滚动到底部
-                          _scrollToBottomSmooth();
-                        }
-                      : null,
-                  onComplete: shouldAnimate
-                      ? () {
-                          // 动画完成后清除标记
-                          if (mounted) {
-                            setState(() {
-                              _animatingMessageId = null;
-                            });
-                          }
-                        }
-                      : null,
-                  style: TextStyle(
-                    color: BeeTokens.textPrimary(context),
-                    fontSize: 14.0.scaled(context, ref),
-                    height: 1.5,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (analysisScope != null) ...[
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 8.0.scaled(context, ref),
+                          vertical: 4.0.scaled(context, ref),
+                        ),
+                        decoration: BoxDecoration(
+                          color: ref
+                              .watch(primaryColorProvider)
+                              .withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(
+                            6.0.scaled(context, ref),
+                          ),
+                        ),
+                        child: Text(
+                          '${AppLocalizations.of(context).aiAnalysisScopePrefix}：'
+                          '$analysisScope',
+                          style: TextStyle(
+                            color: ref.watch(primaryColorProvider),
+                            fontSize: 11.0.scaled(context, ref),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 6.0.scaled(context, ref)),
+                    ],
+                    TypewriterText(
+                      text: message.content,
+                      animate: shouldAnimate, // 只对标记的消息启用动画
+                      onTextChange: shouldAnimate
+                          ? () {
+                              // 每次文本更新时滚动到底部
+                              _scrollToBottomSmooth();
+                            }
+                          : null,
+                      onComplete: shouldAnimate
+                          ? () {
+                              // 动画完成后清除标记
+                              if (mounted) {
+                                setState(() {
+                                  _animatingMessageId = null;
+                                });
+                              }
+                            }
+                          : null,
+                      style: TextStyle(
+                        color: BeeTokens.textPrimary(context),
+                        fontSize: 14.0.scaled(context, ref),
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -570,6 +605,15 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
       // 获取快捷指令的标题作为显示文本
       String displayText;
       switch (command.titleKey) {
+        case 'aiQuickCommandInvestmentOverviewTitle':
+          displayText = l10n.aiQuickCommandInvestmentOverviewTitle;
+          break;
+        case 'aiQuickCommandHoldingAnalysisTitle':
+          displayText = l10n.aiQuickCommandHoldingAnalysisTitle;
+          break;
+        case 'aiQuickCommandMonthReviewTitle':
+          displayText = l10n.aiQuickCommandMonthReviewTitle;
+          break;
         case 'aiQuickCommandFinancialHealthTitle':
           displayText = l10n.aiQuickCommandFinancialHealthTitle;
           break;
@@ -653,6 +697,21 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
 
       logger.info('AIChat', '当前账本ID: $ledgerId');
 
+      // 分析类消息附带本次数据范围标签（UI 展示用，与 service 内部摘要同源）。
+      String? analysisScope;
+      if (forceChat || AIChatService.isAnalystIntent(text)) {
+        try {
+          final snapshot = await FinancialAnalystContext.forLedger(
+            repository: repo,
+            investmentRepository: ref.read(investmentRepositoryProvider),
+            ledgerId: ledgerId,
+          );
+          analysisScope = snapshot.scopeLabel();
+        } catch (e) {
+          logger.warning('AIChat', '获取分析数据范围失败，忽略: $e');
+        }
+      }
+
       final response = await chatService.processMessage(
         text,
         ledgerId: ledgerId,
@@ -663,6 +722,9 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
 
       // 保存 AI 回复。多笔 metadata 用新格式 {bills, txIds, undoneIds};
       // transactionId 列仍存第一笔 id(getMessageByTransactionId 兼容)。
+      final scopeMetadata = analysisScope == null
+          ? null
+          : encodeAnalysisScopeMetadata(analysisScope);
       final messageId = await repo.createMessage(
         MessagesCompanion.insert(
           conversationId: _conversationId!,
@@ -675,7 +737,9 @@ class _AIChatPageState extends ConsumerState<AIChatPage>
                   response.transactionIds,
                   const <int>{},
                 ))
-              : const Value.absent(),
+              : (scopeMetadata != null
+                  ? Value(scopeMetadata)
+                  : const Value.absent()),
           transactionId: response.transactionId != null
               ? Value(response.transactionId)
               : const Value.absent(),

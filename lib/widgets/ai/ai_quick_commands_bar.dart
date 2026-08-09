@@ -65,6 +65,12 @@ class _QuickCommandCard extends ConsumerWidget {
 
   String _getTitle() {
     switch (command.titleKey) {
+      case 'aiQuickCommandInvestmentOverviewTitle':
+        return l10n.aiQuickCommandInvestmentOverviewTitle;
+      case 'aiQuickCommandHoldingAnalysisTitle':
+        return l10n.aiQuickCommandHoldingAnalysisTitle;
+      case 'aiQuickCommandMonthReviewTitle':
+        return l10n.aiQuickCommandMonthReviewTitle;
       case 'aiQuickCommandFinancialHealthTitle':
         return l10n.aiQuickCommandFinancialHealthTitle;
       case 'aiQuickCommandMonthlyExpenseTitle':
@@ -86,6 +92,12 @@ class _QuickCommandCard extends ConsumerWidget {
     if (command.descriptionKey == null) return null;
 
     switch (command.descriptionKey) {
+      case 'aiQuickCommandInvestmentOverviewDesc':
+        return l10n.aiQuickCommandInvestmentOverviewDesc;
+      case 'aiQuickCommandHoldingAnalysisDesc':
+        return l10n.aiQuickCommandHoldingAnalysisDesc;
+      case 'aiQuickCommandMonthReviewDesc':
+        return l10n.aiQuickCommandMonthReviewDesc;
       case 'aiQuickCommandFinancialHealthDesc':
         return l10n.aiQuickCommandFinancialHealthDesc;
       case 'aiQuickCommandMonthlyExpenseDesc':

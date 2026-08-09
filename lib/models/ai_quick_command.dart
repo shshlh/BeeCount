@@ -14,6 +14,9 @@ enum QuickCommandDataType {
   /// 近期趋势
   recentTrends,
 
+  /// 财务分析师上下文（账本 + 投资摘要）
+  analystSnapshot,
+
   /// 无需数据
   none,
 }
@@ -131,6 +134,36 @@ class AIQuickCommands {
     ],
   );
 
+  /// 投资概览
+  static const investmentOverview = AIQuickCommand(
+    id: 'investment_overview',
+    icon: Icons.trending_up,
+    titleKey: 'aiQuickCommandInvestmentOverviewTitle',
+    descriptionKey: 'aiQuickCommandInvestmentOverviewDesc',
+    promptTemplateKey: 'aiQuickCommandInvestmentOverviewPrompt',
+    requiredData: [QuickCommandDataType.analystSnapshot],
+  );
+
+  /// 持仓分析
+  static const holdingAnalysis = AIQuickCommand(
+    id: 'holding_analysis',
+    icon: Icons.show_chart,
+    titleKey: 'aiQuickCommandHoldingAnalysisTitle',
+    descriptionKey: 'aiQuickCommandHoldingAnalysisDesc',
+    promptTemplateKey: 'aiQuickCommandHoldingAnalysisPrompt',
+    requiredData: [QuickCommandDataType.analystSnapshot],
+  );
+
+  /// 本月复盘
+  static const monthReview = AIQuickCommand(
+    id: 'month_review',
+    icon: Icons.assignment,
+    titleKey: 'aiQuickCommandMonthReviewTitle',
+    descriptionKey: 'aiQuickCommandMonthReviewDesc',
+    promptTemplateKey: 'aiQuickCommandMonthReviewPrompt',
+    requiredData: [QuickCommandDataType.analystSnapshot],
+  );
+
   /// 获取所有启用的快捷指令
   static List<AIQuickCommand> getAllCommands() {
     return [
@@ -140,6 +173,9 @@ class AIQuickCommands {
       budgetPlanning,
       abnormalExpense,
       savingTips,
+      investmentOverview,
+      holdingAnalysis,
+      monthReview,
     ].where((cmd) => cmd.enabled).toList();
   }
 }

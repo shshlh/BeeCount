@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../ai/core/financial_analyst_context.dart';
 import '../../data/db.dart';
+import '../../data/repositories/base_repository.dart';
+import '../../data/repositories/investment_repository.dart';
 import '../../models/ai_quick_command.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers.dart';
@@ -12,12 +15,17 @@ import '../../data/repositories/local/local_repository.dart';
 class AIQuickCommandService {
   final BeeDatabase db;
   final int ledgerId;
+  final BaseRepository repository;
+  final InvestmentRepository investmentRepository;
+
   /// 读取账本每月起始日(走 repo 注入,不在本文件再扩 db 直查)
   final Future<int> Function() monthStartDayLoader;
 
   AIQuickCommandService({
     required this.db,
     required this.ledgerId,
+    required this.repository,
+    required this.investmentRepository,
     Future<int> Function()? monthStartDayLoader,
   }) : monthStartDayLoader = monthStartDayLoader ?? (() async => 1);
 
@@ -40,8 +48,24 @@ class AIQuickCommandService {
         return await _getRecentTransactionsText(context);
       case QuickCommandDataType.recentTrends:
         return await _getRecentTrendsText(context);
+      case QuickCommandDataType.analystSnapshot:
+        return await _getAnalystSnapshotText();
       case QuickCommandDataType.none:
         return '';
+    }
+  }
+
+  /// 财务分析师上下文（账本 + 投资摘要），投资概览 / 持仓分析等用。
+  Future<String> _getAnalystSnapshotText() async {
+    try {
+      final snapshot = await FinancialAnalystContext.forLedger(
+        repository: repository,
+        investmentRepository: investmentRepository,
+        ledgerId: ledgerId,
+      );
+      return snapshot.toPromptText();
+    } catch (e) {
+      return '获取财务上下文失败: $e';
     }
   }
 
@@ -119,8 +143,8 @@ class AIQuickCommandService {
       final categoryTotals = <int, double>{};
       for (final t in transactions) {
         if (t.categoryId != null) {
-          categoryTotals[t.categoryId!] =
-          (categoryTotals[t.categoryId!] ?? 0) + (t.nativeAmount ?? t.amount);
+          categoryTotals[t.categoryId!] = (categoryTotals[t.categoryId!] ?? 0) +
+              (t.nativeAmount ?? t.amount);
         }
       }
 
@@ -138,8 +162,10 @@ class AIQuickCommandService {
             .getSingleOrNull();
 
         if (category != null) {
-          final percentage = (entry.value / totalExpense * 100).toStringAsFixed(1);
-          categoryList.add('- ${category.name}: ${_formatAmount(entry.value)} ($percentage%)');
+          final percentage =
+              (entry.value / totalExpense * 100).toStringAsFixed(1);
+          categoryList.add(
+              '- ${category.name}: ${_formatAmount(entry.value)} ($percentage%)');
         }
       }
 
@@ -184,7 +210,8 @@ ${categoryList.join('\n')}
         final date = t.happenedAt.toString().substring(0, 10);
         final typeStr = t.type == 'income' ? '收入' : '支出';
         final amountStr = _formatAmount(t.amount);
-        final noteStr = t.note != null && t.note!.isNotEmpty ? ' (${t.note})' : '';
+        final noteStr =
+            t.note != null && t.note!.isNotEmpty ? ' (${t.note})' : '';
 
         list.add('- $date $typeStr $amountStr ${categoryName ?? ""}$noteStr');
       }
@@ -231,7 +258,8 @@ ${list.join('\n')}
         }
 
         final monthStr = '${month.year}年${month.month}月';
-        trends.add('- $monthStr: 收入${_formatAmount(income)}, 支出${_formatAmount(expense)}');
+        trends.add(
+            '- $monthStr: 收入${_formatAmount(income)}, 支出${_formatAmount(expense)}');
       }
 
       return '''
@@ -272,6 +300,15 @@ ${trends.join('\n')}
       case 'aiQuickCommandSavingTipsPrompt':
         promptTemplate = l10n.aiQuickCommandSavingTipsPrompt;
         break;
+      case 'aiQuickCommandInvestmentOverviewPrompt':
+        promptTemplate = l10n.aiQuickCommandInvestmentOverviewPrompt;
+        break;
+      case 'aiQuickCommandHoldingAnalysisPrompt':
+        promptTemplate = l10n.aiQuickCommandHoldingAnalysisPrompt;
+        break;
+      case 'aiQuickCommandMonthReviewPrompt':
+        promptTemplate = l10n.aiQuickCommandMonthReviewPrompt;
+        break;
       default:
         promptTemplate = command.promptTemplateKey;
     }
@@ -295,12 +332,15 @@ ${trends.join('\n')}
 }
 
 /// Provider for AIQuickCommandService
-final aiQuickCommandServiceProvider = Provider.family<AIQuickCommandService, int>((ref, ledgerId) {
+final aiQuickCommandServiceProvider =
+    Provider.family<AIQuickCommandService, int>((ref, ledgerId) {
   final repo = ref.watch(repositoryProvider);
   // 注意: AIQuickCommandService 需要直接访问 BeeDatabase 实例进行查询
   return AIQuickCommandService(
     db: (repo as LocalRepository).db,
     ledgerId: ledgerId,
+    repository: repo,
+    investmentRepository: ref.watch(investmentRepositoryProvider),
     monthStartDayLoader: () async {
       final l = await repo.getLedgerById(ledgerId);
       return (l?.monthStartDay ?? 1).clamp(1, 28);

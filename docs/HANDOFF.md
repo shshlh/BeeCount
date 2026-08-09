@@ -34,6 +34,94 @@
 ## 2026-08-09
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-logic / invest-ui
+
+**任务**：7.2.2 / 7.2.3 PM 审查通过 + 合入
+
+**审查结果**：7.2.2 / 7.2.3 通过，合入。
+- 分析师系统提示已移除原「统计/查询暂不支持」，只基于注入的账本/投资摘要回答；意图路由保证投资问题不误判为记账
+- 新增投资概览 / 持仓分析 / 本月复盘指令，AI 页展示「本次分析覆盖」范围标签
+- 验证：7.2 相关测试全过；全量 723 passed / 1 skipped / 1 failed（唯一失败为既存 bill_creation_service_test）；改动文件 analyze 无新增 error/warning
+- 备注：自由对话每次构建完整财务快照、UI 另算一次 scopeLabel，v1 接受重复查询，后续可缓存；ko 新文案走模板兜底
+
+**下一步**：7.2.4 实机验证（真机问「我的总浮盈多少 / 基金 A 最近表现 / 投资与现金比例」等）后关闭
+
+**git 状态**：当前分支 main，合入后提交
+
+---
+
+## 2026-08-09
+
+**移交角色**：invest-ui（7.2.3 UI 合并）
+**接收角色**：PM（审查合入）
+
+**任务**：投资分析快捷指令 + 数据范围提示（UI 侧）
+
+**完成工作**：
+- 对齐 invest-logic 命名（investmentOverview / holdingAnalysis / monthReview + `analystSnapshot`），清理并行重复，`AIQuickCommands` 列表含原有 6 条 + 新增 3 条
+- `ai_quick_commands_bar.dart` 与 `AIChatPage` 展示新指令标题 / 描述
+- AI 页新增本次分析数据范围标签：分析类消息发送前构建 `FinancialAnalystSnapshot`，`scopeLabel()` 写入 assistant metadata，气泡内显示「本次分析覆盖：近 N 天 · N 只持仓」
+- 新增 `lib/models/ai_analysis_metadata.dart` 编解码助手
+- 测试：`ai_quick_command_test`（2 例）、`ai_analysis_metadata_test`（2 例）、`ai_quick_commands_bar_test`（1 例）；invest-logic 的 `ai_quick_command_analyst_test` 一并跑过
+
+**下一个任务需要知道的**：
+- `scopeLabel` 由 UI 单独构建一次（service 内部也会构建），v1 接受重复查询，后续可改成 service 返回或共享 provider
+- en 已补投资指令文案，ko 走模板兜底（PM 允许后续补）
+- 并行期间 `ai_chat_service_analyst_test` 单独跑在文件锁竞争时可能失败，属环境问题
+
+**git 状态**：当前分支 main，7.2.1-7.2.3 改动均在未提交工作区，待 PM 审查合入
+
+---
+
+## 2026-08-09
+
+**移交角色**：invest-logic（7.2.3 逻辑侧）
+**接收角色**：PM（审查合入）→ invest-ui（UI 合并）
+
+**任务**：投资分析快捷指令 + 数据范围提示（逻辑侧）
+
+**完成工作**：
+- `QuickCommandDataType` 新增 `analystSnapshot`；`AIQuickCommands` 新增投资概览 / 持仓分析 / 本月复盘 3 个指令，原有 6 个保留
+- `AIQuickCommandService` 注入 `repository` + `investmentRepository`，`analystSnapshot` 数据文本走 `FinancialAnalystContext.forLedger(...).toPromptText()`
+- l10n en / zh / zh_TW 新增 9 个 key（标题 / 描述 / prompt 模板），ko 走模板兜底
+- `ai_quick_commands_bar.dart` 由 invest-ui 并行补了标题 / 描述展示，命名已对齐（`MonthReview`）
+- 新增测试 2 例：新指令保留原有指令、投资概览 prompt 含财务上下文与持仓
+
+**下一个任务需要知道的**：
+- 接口变化：`AIQuickCommandService` 构造函数新增 `repository` + `investmentRepository`，provider 已接线
+- `FinancialAnalystSnapshot.scopeLabel()` 已可给 UI 展示分析数据范围
+- `ai_chat_page._handleQuickCommand` 的 `displayText` switch 仍缺 3 个新指令 case，属 UI 侧待补
+- 全量 `flutter test`：722 passed / 1 skipped / 1 failed（唯一失败为既存 `bill_creation_service_test`）；`flutter analyze` 无 error
+
+**git 状态**：当前分支 main，7.2.2 + 7.2.3 逻辑侧改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-09
+
+**移交角色**：invest-logic（7.2.2）
+**接收角色**：PM（审查合入）→ invest-logic（7.2.3）
+
+**任务**：分析师提示词 + 意图路由
+
+**完成工作**：
+- `AIChatService` 新增财务分析意图判定：投资/持仓/收益/盈亏/基金/股票/分析/复盘/趋势/预算/净资产/资产/负债/浮盈/浮亏/组合 优先于记账意图
+- 删除原「统计、查询等功能暂不支持」提示，改为财务分析师人设：只基于注入的账本/投资摘要回答，未提供数据不臆造
+- 自由对话统一注入 `FinancialAnalystSnapshot.toPromptText()`（构建失败回退 `empty` 兜底）；`AIChatService` 构造函数新增 `investmentRepository`
+- 新增测试 6 例：投资问题不误判为记账、普通记账仍走记账、关键词命中、prompt 含投资摘要、空数据兜底、英文人设
+
+**下一个任务需要知道的**：
+- `AIChatService` 路由顺序：分析师意图 → 记账意图 → 自由对话（均注入财务上下文）
+- 意图判定方法公开为静态：`AIChatService.isAnalystIntent` / `isTransactionIntent`，7.2.3 快捷指令可复用
+- 全量 `flutter test`：716 passed / 1 skipped / 1 failed（唯一失败为既存 `bill_creation_service_test`）；`flutter analyze` 无 error
+
+**git 状态**：当前分支 main，7.2.2 改动待 PM 审查合入
+
+---
+
+## 2026-08-09
+
+**移交角色**：项目经理（PM）
 **接收角色**：architect + invest-logic / invest-logic / invest-ui
 
 **任务**：7.2.1 PM 审查通过 + 7.2.2/7.2.3 放行

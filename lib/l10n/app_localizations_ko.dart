@@ -5549,6 +5549,42 @@ class AppLocalizationsKo extends AppLocalizations {
       '다음 데이터를 바탕으로 실용적인 절약 제안을 제공해 주세요:\n\n[categoryStats]\n\n[recentTrends]\n\n구체적이고 실천 가능한 제안을 3~5가지 제공해 주세요. 한국어로 답변해 주세요.';
 
   @override
+  String get aiQuickCommandInvestmentOverviewTitle => 'Investment Overview';
+
+  @override
+  String get aiQuickCommandInvestmentOverviewDesc =>
+      'Total market value, unrealized P&L and holding mix';
+
+  @override
+  String get aiQuickCommandInvestmentOverviewPrompt =>
+      'Please provide an investment overview based on the financial context below:\n\n[analystSnapshot]\n\nSummarize total market value, total cost, unrealized P&L, return rate and holding mix, and point out notable risks. Please respond in English.';
+
+  @override
+  String get aiQuickCommandHoldingAnalysisTitle => 'Holding Analysis';
+
+  @override
+  String get aiQuickCommandHoldingAnalysisDesc =>
+      'Analyze each holding\'s P&L and NAV';
+
+  @override
+  String get aiQuickCommandHoldingAnalysisPrompt =>
+      'Please analyze my holdings one by one based on the financial context below:\n\n[analystSnapshot]\n\nFor each fund, analyze P&L, return rate, NAV date and recent investment transactions, then suggest whether to add or reduce positions. Please respond in English.';
+
+  @override
+  String get aiQuickCommandMonthReviewTitle => 'Monthly Review';
+
+  @override
+  String get aiQuickCommandMonthReviewDesc =>
+      'Review this month\'s income, spending and investment performance';
+
+  @override
+  String get aiQuickCommandMonthReviewPrompt =>
+      'Please review this month based on the financial context below:\n\n[analystSnapshot]\n\nReview income, spending, categories, budget and investment performance, and point out areas to improve. Please respond in English.';
+
+  @override
+  String get aiAnalysisScopePrefix => '이번 분석 범위';
+
+  @override
   String get billCardUnknownLedger => '알 수 없는 가계부';
 
   @override

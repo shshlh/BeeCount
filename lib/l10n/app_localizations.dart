@@ -10384,6 +10384,66 @@ abstract class AppLocalizations {
   /// **'Please provide practical money-saving suggestions based on the following data:\n\n[categoryStats]\n\n[recentTrends]\n\nPlease give 3-5 specific and actionable suggestions. Please respond in English.'**
   String get aiQuickCommandSavingTipsPrompt;
 
+  /// No description provided for @aiQuickCommandInvestmentOverviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Investment Overview'**
+  String get aiQuickCommandInvestmentOverviewTitle;
+
+  /// No description provided for @aiQuickCommandInvestmentOverviewDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Total market value, unrealized P&L and holding mix'**
+  String get aiQuickCommandInvestmentOverviewDesc;
+
+  /// No description provided for @aiQuickCommandInvestmentOverviewPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Please provide an investment overview based on the financial context below:\n\n[analystSnapshot]\n\nSummarize total market value, total cost, unrealized P&L, return rate and holding mix, and point out notable risks. Please respond in English.'**
+  String get aiQuickCommandInvestmentOverviewPrompt;
+
+  /// No description provided for @aiQuickCommandHoldingAnalysisTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Holding Analysis'**
+  String get aiQuickCommandHoldingAnalysisTitle;
+
+  /// No description provided for @aiQuickCommandHoldingAnalysisDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyze each holding\'s P&L and NAV'**
+  String get aiQuickCommandHoldingAnalysisDesc;
+
+  /// No description provided for @aiQuickCommandHoldingAnalysisPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Please analyze my holdings one by one based on the financial context below:\n\n[analystSnapshot]\n\nFor each fund, analyze P&L, return rate, NAV date and recent investment transactions, then suggest whether to add or reduce positions. Please respond in English.'**
+  String get aiQuickCommandHoldingAnalysisPrompt;
+
+  /// No description provided for @aiQuickCommandMonthReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly Review'**
+  String get aiQuickCommandMonthReviewTitle;
+
+  /// No description provided for @aiQuickCommandMonthReviewDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Review this month\'s income, spending and investment performance'**
+  String get aiQuickCommandMonthReviewDesc;
+
+  /// No description provided for @aiQuickCommandMonthReviewPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Please review this month based on the financial context below:\n\n[analystSnapshot]\n\nReview income, spending, categories, budget and investment performance, and point out areas to improve. Please respond in English.'**
+  String get aiQuickCommandMonthReviewPrompt;
+
+  /// No description provided for @aiAnalysisScopePrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'This analysis covers'**
+  String get aiAnalysisScopePrefix;
+
   /// No description provided for @billCardUnknownLedger.
   ///
   /// In en, this message translates to:
