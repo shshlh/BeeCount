@@ -81,6 +81,7 @@ abstract class AccountRepository {
     String? cardLastFour,
     String? note,
     bool clearMetadataFields = false,
+    bool clearNote = false,
     bool? hidden,
     bool? excludeFromAssets,
     bool? isOffBalance,

@@ -34,6 +34,41 @@
 ## 2026-08-10
 
 **移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic + invest-ui（记录归档）
+
+**任务**：7.4 复审通过并合入
+
+**审查结论**：
+- 7.4.1-7.4.3 通过 PM 复审：`clearNote` 独立于 `clearMetadataFields`，UI 清空备注正确，账户卡展示备注带单行截断与 Tooltip
+- 新增备注相关测试 7 个全部通过；全量测试 742 passed / 1 skipped / 1 failed，唯一失败为既存 `bill_creation_service_test`
+- 本轮已提交并编译 Android APK
+
+**git 状态**：当前分支 main，7.4 已合入
+
+---
+
+## 2026-08-10
+
+**移交角色**：architect + invest-logic（7.4.3）
+**接收角色**：PM（审查合入）
+
+**任务**：备注清空优先级返工
+
+**完成工作**：
+- `LocalAccountRepository.updateAccount` note 分支改为 `clearNote` 优先：`clearNote=true` 写 NULL；未清空时传 `note` 才写；`clearMetadataFields` 完全不再影响 note
+- 新增回归测试：非卡账户（cash）已有备注 + `clearMetadataFields=true` + `clearNote=true` 读回 NULL
+
+**下一个任务需要知道的**：
+- 7.4.2 UI 已并行接线 `clearNote`，其 UI 测试现通过
+- 全量 `flutter test`：742 passed / 1 skipped / 1 failed（唯一失败为既存 `bill_creation_service_test`）；`flutter analyze` 无 error、无新增 warning
+
+**git 状态**：当前分支 main，7.4.1-7.4.3 数据层 + invest-ui 7.4.2 UI 并行改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-10
+
+**移交角色**：项目经理（PM）
 **接收角色**：architect + invest-logic
 
 **任务**：7.4.3 备注清空优先级返工

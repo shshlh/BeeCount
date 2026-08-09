@@ -935,6 +935,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
         final bankName = isBankOrCredit ? _bankNameController.text.trim() : null;
         final cardLastFour = isBankOrCredit ? _cardLastFourController.text.trim() : null;
         final noteText = _noteController.text.trim();
+        final clearNote = noteText.isEmpty &&
+            (widget.account?.note?.isNotEmpty ?? false);
 
         await repo.updateAccount(
           widget.account!.id,
@@ -951,6 +953,7 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
           cardLastFour: cardLastFour != null && cardLastFour.isNotEmpty ? cardLastFour : null,
           note: noteText.isNotEmpty ? noteText : null,
           clearMetadataFields: clearMetadataFields,
+          clearNote: clearNote,
           excludeFromAssets: _excludeFromAssets,
           isOffBalance: _isOffBalance,
           iconType: _iconType == 'custom' ? 'custom' : null,

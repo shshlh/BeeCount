@@ -1565,6 +1565,32 @@ class _AccountCard extends ConsumerWidget {
                       _buildHiddenBadgeRow(context, ref, l10n),
                       SizedBox(height: 8.0.scaled(context, ref)),
                     ],
+                    // 账户备注(7.4.2):单行截断 + tooltip 看全文
+                    if (account.note != null && account.note!.isNotEmpty) ...[
+                      Row(
+                        children: [
+                          Icon(Icons.notes,
+                              size: 14.0.scaled(context, ref),
+                              color: BeeTokens.textTertiary(context)),
+                          SizedBox(width: 6.0.scaled(context, ref)),
+                          Expanded(
+                            child: Tooltip(
+                              message: account.note!,
+                              child: Text(
+                                account.note!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: BeeTokens.textSecondary(context),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8.0.scaled(context, ref)),
+                    ],
                     // 信用卡：进度条 + 额度信息
                     if (account.type == 'credit_card' && stats != null)
                       _buildCreditCardStats(context, ref, l10n)

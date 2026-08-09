@@ -196,6 +196,7 @@ class LocalAccountRepository implements AccountRepository {
     String? cardLastFour,
     String? note,
     bool clearMetadataFields = false,
+    bool clearNote = false,
     bool? hidden,
     bool? excludeFromAssets,
     bool? isOffBalance,
@@ -227,7 +228,9 @@ class LocalAccountRepository implements AccountRepository {
         paymentDueDay: clearCreditCardFields ? const d.Value(null) : (paymentDueDay != null ? d.Value(paymentDueDay) : const d.Value.absent()),
         bankName: clearMetadataFields ? const d.Value(null) : (bankName != null ? d.Value(bankName) : const d.Value.absent()),
         cardLastFour: clearMetadataFields ? const d.Value(null) : (cardLastFour != null ? d.Value(cardLastFour) : const d.Value.absent()),
-        note: clearMetadataFields ? const d.Value(null) : (note != null ? d.Value(note) : const d.Value.absent()),
+        note: clearNote
+            ? const d.Value(null)
+            : (note != null ? d.Value(note) : const d.Value.absent()),
         hidden: hidden == null ? const d.Value.absent() : d.Value(hidden),
         excludeFromAssets: effectiveExcludeFromAssets == null
             ? const d.Value.absent()
