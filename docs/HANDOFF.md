@@ -33,6 +33,39 @@
 
 ## 2026-08-11
 
+**移交角色**：kimi（外部审查员，本次为用户会话内直派执行）
+**接收角色**：PM（审查合入）
+
+**任务**：7.5.2 App 图标更换「托」字书法标
+
+**完成工作**：
+- 素材接入：用户提供三图层（均在仓库外 D:/Users/wanji/Downloads/）：`adaptive_icon_foreground_ji.png`（透明底「托」字）、`adaptive_icon_background_ji.png`（纯色底）、`adaptive_icon_preview_ji.png`（合成预览），均 1024×1024
+- `assets/icon/adaptive_foreground.png`：替换为用户前景（内容占画布 54.8%，居中）
+- `assets/icon/adaptive_monochrome.png`：用户未提供单色层，由前景 alpha 通道提取白色镂空剪影生成（Android 13+ themed icon 用）
+- `assets/icon/launcher_legacy.png`：前景 + 背景合成不透明 RGB（避免透明 legacy 在部分设备的已知问题）
+- `pubspec.yaml`：`adaptive_icon_background` `#FFFFFF` → `#F5F0E8`（背景图经全量像素检测仅 1 种颜色，纯单色直接写成色值，不打包图片）；注释同步更新，移除已失效的「legacy 钉死为线上版本」警告
+- 重跑 `dart run flutter_launcher_icons`：`mipmap-*/ic_launcher.png`、`drawable-*/ic_launcher_foreground|monochrome.png`、`values/colors.xml` 全部重新生成
+- `mipmap-anydpi-v26/ic_launcher.xml`：移除前景/单色层的 16% inset——实测新前景内容占比（54.8%）与用户预览图渲染比例（54.5%）一致，即图层按 1:1 设计；保留 inset 会缩至约 46%，小于用户确认的效果
+
+**验证**：
+- 用生成产物 `drawable-xxxhdpi` 实际合成圆形遮罩效果图，与用户预览图逐项对比：字号/位置/配色一致
+- monochrome 镂空 bbox 与前景内容完全对齐；legacy mipmap 为不透明 RGB
+- 提交前 `flutter analyze`：0 error / 0 warning（858 条均为既有 info 基线）
+- 未跑 flutter test：纯资源与配置变更，不触碰 Dart 代码
+
+**边界说明**：kimi 角色章程为只读审查，本次图标更换由用户在会话中直接指派执行，属跨边界操作，特此说明；改动仅限 android res / assets/icon / pubspec.yaml，未触碰 lib/ 与 test/
+
+**未完成/遗留**：
+- iOS 图标按项目惯例手工维护，本次未动（pubspec 保持 `ios: false`）
+- 未实机验证：需 PM 编译 APK 后确认桌面图标、圆形遮罩与 themed icon 效果
+- 三张用户原图在仓库外（D:/Users/wanji/Downloads/），如需归档原始素材建议移入仓库
+
+**git 状态**：当前分支 main，已提交 2e3ff11（图标交付）；本记录与 TEAM.md 任务板随后续 docs 提交入库
+
+---
+
+## 2026-08-11
+
 **移交角色**：项目经理（PM）
 **接收角色**：architect + invest-logic + invest-ui（记录归档）
 
