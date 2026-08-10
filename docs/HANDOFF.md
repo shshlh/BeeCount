@@ -34,6 +34,28 @@
 ## 2026-08-11
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-ui（+ kimi 可选，用户直派）
+
+**任务**：7.5.3 App 内品牌图替换（7.5.2 返工）
+
+**问题**：
+- 7.5.2 只替换了系统桌面 launcher 图标；App 内部仍使用旧蜜蜂品牌图
+- `BeeIcon` 目前引用 `assets/bee.svg`，影响：首页顶部左侧图标、我的页头像兜底、关于页、欢迎页、锁屏、AI 聊天、空状态
+- `assets/logo2.png` 仍为旧蜜蜂，影响：启动页、年度/月度/账本/用户海报、年度报告预缓存
+
+**要求**：
+1. `BeeIcon` 改为新「托」字标：建议用 `assets/icon/adaptive_foreground.png` + `ColorFiltered` 保留现有 `color` 参数，或等价实现，确保所有 `BeeIcon` 调用点自动跟随
+2. `assets/logo2.png` 替换为新品牌图（与桌面图标一致的米白底+黑托，或透明托字标，由 UI 决定并保证浅/深背景可见）
+3. 检查 `assets/logo.svg`、`assets/logo_216.png`、`assets/logo_512.png`、`assets/images/beeassets_*` 是否存在隐藏引用，统一处理；不再使用旧蜜蜂的资产可标记废弃
+4. 跑 widget 测试与 analyze，更新相关测试；全量 `flutter test` 0 failed
+
+**git 状态**：当前分支 main，HEAD 8f40363，工作区干净
+
+---
+
+## 2026-08-11
+
+**移交角色**：项目经理（PM）
 **接收角色**：kimi + qa（记录归档）
 
 **任务**：7.5.2 复审通过（待实机验证）
