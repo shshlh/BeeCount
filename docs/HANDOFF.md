@@ -31,6 +31,26 @@
 
 ---
 
+## 2026-08-11
+
+**移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic + invest-ui
+
+**任务**：7.5.1 同名不同币种账户提示优化（发布前基线修复）
+
+**问题**：
+- `accounts.name` 全局唯一（与币种无关），`bill_creation_service_test` 的「AI 账户名完全相等」测试仍按旧前提创建「支付宝 CNY + 支付宝 USD」，第二次创建抛 `DuplicateNameException`，是全量测试唯一失败
+- 产品决定：保持同名唯一；新建账户撞名时提示「该账户名已存在，请更换账户名，如支付宝USD」
+
+**要求**：
+1. 测试：`bill_creation_service_test` 不再创建同名双币种账户，改用「支付宝USD」验证不同币种账户不参与匹配；仓库层补回归测试：同名不同币种 `createAccount` 仍抛 `DuplicateNameException`
+2. UI：`account_edit_page` 重复名校验提示改为带建议名（如 name+currency），替换/扩展 `accountNameDuplicate` l10n
+3. 静默路径（import / app-link）继续走 `upsertAccount`，不做行为变更
+
+**git 状态**：当前分支 main，HEAD 9e0bc24，工作区干净
+
+---
+
 ## 2026-08-10
 
 **移交角色**：项目经理（PM）
