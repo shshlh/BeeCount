@@ -1525,7 +1525,14 @@
   "accountNameLabel": "账户名称",
   "accountNameHint": "例如：工商银行、支付宝等",
   "accountNameRequired": "请输入账户名称",
-  "accountNameDuplicate": "账户名称已存在，请使用其他名称",
+  "accountNameDuplicate": "该账户名已存在，请更换账户名，如{suggestedName}",
+  "@accountNameDuplicate": {
+    "placeholders": {
+      "suggestedName": {
+        "type": "String"
+      }
+    }
+  },
   "accountTypeLabel": "账户类型",
   "accountTypeCash": "现金",
   "accountTypeBankCard": "银行卡",

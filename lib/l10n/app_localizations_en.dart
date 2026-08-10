@@ -4117,8 +4117,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountNameRequired => 'Please enter account name';
 
   @override
-  String get accountNameDuplicate =>
-      'Account name already exists, please use a different name';
+  String accountNameDuplicate(String suggestedName) {
+    return 'This account name already exists. Please use another name, e.g. $suggestedName';
+  }
 
   @override
   String get accountTypeLabel => 'Account Type';

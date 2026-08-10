@@ -1676,7 +1676,14 @@
   "accountNameLabel": "Account Name",
   "accountNameHint": "e.g.: ICBC, Alipay, etc.",
   "accountNameRequired": "Please enter account name",
-  "accountNameDuplicate": "Account name already exists, please use a different name",
+  "accountNameDuplicate": "This account name already exists. Please use another name, e.g. {suggestedName}",
+  "@accountNameDuplicate": {
+    "placeholders": {
+      "suggestedName": {
+        "type": "String"
+      }
+    }
+  },
   "accountTypeLabel": "Account Type",
   "accountTypeCash": "Cash",
   "accountTypeBankCard": "Bank Card",

@@ -1181,7 +1181,14 @@
   "accountNameLabel": "계정 이름",
   "accountNameHint": "예: 국민은행, 카카오페이 등",
   "accountNameRequired": "계정 이름을 입력해 주세요",
-  "accountNameDuplicate": "이미 존재하는 계정 이름입니다. 다른 이름을 사용해 주세요",
+  "accountNameDuplicate": "이미 존재하는 계정 이름입니다. 다른 이름을 사용해 주세요. 예: {suggestedName}",
+  "@accountNameDuplicate": {
+    "placeholders": {
+      "suggestedName": {
+        "type": "String"
+      }
+    }
+  },
   "accountTypeLabel": "계정 유형",
   "accountTypeCash": "현금",
   "accountTypeBankCard": "은행 카드",

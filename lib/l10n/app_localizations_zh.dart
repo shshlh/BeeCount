@@ -3973,7 +3973,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get accountNameRequired => '请输入账户名称';
 
   @override
-  String get accountNameDuplicate => '账户名称已存在，请使用其他名称';
+  String accountNameDuplicate(String suggestedName) {
+    return '该账户名已存在，请更换账户名，如$suggestedName';
+  }
 
   @override
   String get accountTypeLabel => '账户类型';
@@ -11559,7 +11561,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get accountNameRequired => '請輸入帳戶名稱';
 
   @override
-  String get accountNameDuplicate => '帳戶名稱已存在，請使用其他名稱';
+  String accountNameDuplicate(String suggestedName) {
+    return '該帳戶名已存在，請更換帳戶名，如$suggestedName';
+  }
 
   @override
   String get accountTypeLabel => '帳戶類型';

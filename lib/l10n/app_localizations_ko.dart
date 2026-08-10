@@ -3997,7 +3997,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get accountNameRequired => '계정 이름을 입력해 주세요';
 
   @override
-  String get accountNameDuplicate => '이미 존재하는 계정 이름입니다. 다른 이름을 사용해 주세요';
+  String accountNameDuplicate(String suggestedName) {
+    return '이미 존재하는 계정 이름입니다. 다른 이름을 사용해 주세요. 예: $suggestedName';
+  }
 
   @override
   String get accountTypeLabel => '계정 유형';

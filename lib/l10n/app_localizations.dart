@@ -7549,8 +7549,8 @@ abstract class AppLocalizations {
   /// No description provided for @accountNameDuplicate.
   ///
   /// In en, this message translates to:
-  /// **'Account name already exists, please use a different name'**
-  String get accountNameDuplicate;
+  /// **'This account name already exists. Please use another name, e.g. {suggestedName}'**
+  String accountNameDuplicate(String suggestedName);
 
   /// No description provided for @accountTypeLabel.
   ///

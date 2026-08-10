@@ -34,6 +34,44 @@
 ## 2026-08-11
 
 **移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic + invest-ui（记录归档）
+
+**任务**：7.5.1 复审通过并合入
+
+**审查结论**：
+- 同名不同币种账户按产品决定保持全局唯一：`createAccount` 撞名抛 `DuplicateNameException`，`upsertAccount` 静默路径不变
+- UI 重复名提示已参数化并带建议名（如 支付宝USD），切换币种后建议名即时刷新；zh/zh_TW/en/ko l10n 同步
+- 全量 `flutter test`：746 passed / 1 skipped / 0 failed（原唯一失败已修复）；改动文件 analyze 无新增问题
+- 本轮已提交并编译 Android APK
+
+**git 状态**：当前分支 main，7.5.1 已合入
+
+---
+
+## 2026-08-11
+
+**移交角色**：architect + invest-logic + invest-ui
+**接收角色**：PM（审查合入）
+
+**任务**：7.5.1 同名不同币种账户提示优化
+
+**完成工作**：
+- `bill_creation_service_test` 改为「支付宝USD」验证不同币种账户不参与匹配，不再创建同名双币种账户
+- 新增仓库回归 `test/repositories/account_name_duplicate_test.dart`：同名不同币种 createAccount 仍抛 DuplicateNameException；upsertAccount 静默复用不变
+- `account_edit_page` 重复名提示改为带建议名（名称+币种，如 支付宝USD），切换币种后建议名即时刷新；`accountNameDuplicate` l10n 改为参数化，zh/zh_TW/en/ko 同步
+- 新增 UI 回归 `test/widgets/account_name_duplicate_test.dart`：提示带建议名 + 换币种刷新
+
+**验证**：
+- 全量 `flutter test`：746 passed / 1 skipped / 0 failed（原唯一失败 bill_creation_service_test 已修复）
+- 改动文件 `flutter analyze` 无新增 warning；新增测试文件 0 issue
+
+**git 状态**：当前分支 main，改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-11
+
+**移交角色**：项目经理（PM）
 **接收角色**：architect + invest-logic + invest-ui
 
 **任务**：7.5.1 同名不同币种账户提示优化（发布前基线修复）

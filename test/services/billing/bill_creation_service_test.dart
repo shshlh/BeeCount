@@ -274,10 +274,10 @@ void main() {
         name: '支付宝',
         currency: 'CNY',
       );
-      // 另一币种账户不参与匹配
+      // 另一币种账户不参与匹配（名称带币种后缀，避开全局重名）
       await repo.createAccount(
         ledgerId: ledgerId,
-        name: '支付宝',
+        name: '支付宝USD',
         currency: 'USD',
       );
       final txId = await service.createFromBill(

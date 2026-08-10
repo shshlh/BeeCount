@@ -163,11 +163,12 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
       return account.name == name.trim();
     });
 
+    final suggestedName = '${name.trim()}$_selectedCurrency';
     if (mounted) {
       setState(() {
         _isNameDuplicate = isDuplicate;
         _nameErrorText = isDuplicate
-            ? AppLocalizations.of(context).accountNameDuplicate
+            ? AppLocalizations.of(context).accountNameDuplicate(suggestedName)
             : null;
       });
     }
@@ -327,6 +328,8 @@ class _AccountEditPageState extends ConsumerState<AccountEditPage> {
                                         initial: _selectedCurrency);
                                     if (picked != null) {
                                       setState(() => _selectedCurrency = picked);
+                                      // 重复名提示中的建议名随币种刷新(如 支付宝USD)
+                                      _checkNameDuplicate(_nameController.text);
                                     }
                                   },
                                   child: InputDecorator(
