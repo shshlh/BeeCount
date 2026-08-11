@@ -34,6 +34,41 @@
 ## 2026-08-12
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-logic + invest-ui + qa + architect
+
+**任务**：7.5.5 转换流水只留退回 + 基金记录时间编辑
+
+**问题 1：明细页出现 3 条转换流水**
+- 转换内部会写 A 卖出、B 买入、退回 3 笔流水，明细页目前全显示；产品要求明细页只保留「退回」这一条真实资金流水
+- 持仓详情页仍要显示 A/B 两侧的「转换」记录，因此不能删除内部两笔，只能把它们从用户可见流水/统计中排除
+- 解决方案：转换的卖出/买入两笔设 `excludeFromStats=true`（与初始持仓登记一致），退回流水保持 `excludeFromStats=false`
+
+**问题 2：基金操作记录编辑只有日期**
+- 单笔基金交易编辑和转换整批编辑目前只用 `showDatePicker`，时分不可改；要求补「时间」选择（时/分，不要秒）
+- 复用现有 `lib/widgets/ui/wheel_time_picker.dart` 的 `showWheelTimePicker`（仅时/分），日期与时间分两行
+
+**要求**：
+1. 数据层：
+   - `convert` 写卖出/买入两笔时传 `excludeFromStats: true`；退回流水保持 false
+   - `updateConversion` 更新时保持两笔 internal 标记不变
+   - schema v39：回填历史转换内部流水 `UPDATE transactions SET exclude_from_stats=1 WHERE batch_id IS NOT NULL AND invest_type IN ('sell','buy')`；新增 `test/data/migration_v39_test.dart`
+   - 确认 `watchTransactions(holdingId)` 不按 excludeFromStats 过滤，持仓页仍可见；明细/统计查询继续过滤
+2. UI：
+   - `_TransactionEditDialog`（单笔基金交易）增加「时间」行，用 `showWheelTimePicker` 改时/分，保存后 happenedAt 秒归零
+   - `ConvertDialog` 编辑模式同样增加「时间」行，与日期分开，保存走 `updateConversion`
+3. 测试：
+   - 仓库测试：转换卖出/买入 `excludeFromStats=true`、退回 `false`；明细查询不返回内部两笔、返回退回
+   - 迁移测试：旧转换记录回填后不再出现在明细
+   - UI 测试：单笔编辑/转换编辑存在时间行，保存能写入时/分
+   - 全量 `flutter test` 0 failed，改动文件 analyze 无新增 issue
+
+**git 状态**：当前分支 main，HEAD 1c2407b，工作区干净
+
+---
+
+## 2026-08-12
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-logic + invest-ui + qa（记录归档）
 
 **任务**：7.5.4 复审通过并合入
