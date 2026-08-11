@@ -8,6 +8,7 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:beecount/data/db.dart';
 import 'package:beecount/data/repositories/local/local_investment_repository.dart';
 import 'package:beecount/data/repositories/local/local_account_repository.dart';
+import 'package:beecount/data/repositories/local/local_transaction_repository.dart';
 
 class _FakePathProviderPlatform extends PathProviderPlatform {
   final String docsDir;
@@ -862,8 +863,10 @@ void main() {
 
     final sell = batchTxs.singleWhere((t) => t.investType == 'sell');
     expect(sell.amount, 0); // 投资账户内部记账，不产生资金流水
+    expect(sell.excludeFromStats, isTrue); // 7.5.5: 内部卖出不进明细/统计
     final buy = batchTxs.singleWhere((t) => t.investType == 'buy');
     expect(buy.amount, 600); // 7.5.4: 买入侧 amount = 转入成本
+    expect(buy.excludeFromStats, isTrue); // 7.5.5: 内部买入不进明细/统计
 
     final refunds = txs.where((t) => t.note == '基金转换退回').toList();
     expect(refunds.length, 1);
@@ -874,6 +877,7 @@ void main() {
     expect(refund.accountId, 10);
     expect(refund.toAccountId, 20);
     expect(refund.amount, 100.0);
+    expect(refund.excludeFromStats, isFalse); // 7.5.5: 退回是真实资金流水
 
     final from = await repo.getHolding(1);
     expect(from!.totalShares, 500);
@@ -891,6 +895,57 @@ void main() {
     expect(investment.initialBalance, closeTo(1825, 0.01));
 
     expect(await accountRepo.getAccountBalance(20), closeTo(5100, 0.01));
+  });
+
+  test('转换内部卖出/买入不进明细，退回保留', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '基金B',
+        amount: 500,
+        shares: 500,
+        nav: 1.0);
+
+    await repo.convert(
+      fromHoldingId: 1,
+      toHoldingId: 2,
+      fromShares: 500,
+      fromNav: 1.2,
+      toShares: 480,
+      toNav: 1.25,
+      toCost: 600,
+      fee: 5,
+      refundAmount: 100,
+      refundAccountId: 20,
+    );
+
+    final detail = await LocalTransactionRepository(db)
+        .watchTransactionsWithCategoryAll(ledgerId: 1)
+        .first;
+    final detailIds = detail.map((r) => r.t.id).toSet();
+
+    final all = await db.select(db.transactions).get();
+    final internal = all
+        .where((t) =>
+            t.batchId != null &&
+            (t.investType == 'sell' || t.investType == 'buy'))
+        .toList();
+    expect(internal, isNotEmpty);
+    for (final tx in internal) {
+      expect(detailIds, isNot(contains(tx.id)));
+    }
+
+    final refund = all.singleWhere((t) => t.note == '基金转换退回');
+    expect(detailIds, contains(refund.id));
   });
 
   test('转换：refund=0 不生成退回记录', () async {

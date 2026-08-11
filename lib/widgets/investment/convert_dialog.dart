@@ -8,6 +8,7 @@ import '../../providers.dart';
 import '../../styles/tokens.dart';
 import '../../utils/account_type_utils.dart';
 import '../biz/section_card.dart';
+import '../ui/wheel_time_picker.dart';
 
 /// 转换批次编辑预填数据（7.5.4）。
 ///
@@ -95,7 +96,8 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
     _feeCtrl = TextEditingController(text: '0');
     _refundCtrl = TextEditingController(text: '0');
     _noteCtrl = TextEditingController();
-    _happenedAt = DateTime.now();
+    final now = DateTime.now();
+    _happenedAt = DateTime(now.year, now.month, now.day, now.hour, now.minute);
     _fromSharesCtrl.addListener(_updateAutoRefund);
     _fromNavCtrl.addListener(_updateAutoRefund);
     _toSharesCtrl.addListener(_updateAutoRefund);
@@ -125,7 +127,13 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
       _refundAccountId = edit.refundTx?.toAccountId;
       _toHolding = edit.toHolding;
       _targetSelectionId = edit.toHolding.id;
-      _happenedAt = edit.sellTx.happenedAt;
+      _happenedAt = DateTime(
+        edit.sellTx.happenedAt.year,
+        edit.sellTx.happenedAt.month,
+        edit.sellTx.happenedAt.day,
+        edit.sellTx.happenedAt.hour,
+        edit.sellTx.happenedAt.minute,
+      );
       _noteCtrl.text = edit.sellTx.note ?? '';
       _refundManual = true; // 编辑模式不自动覆盖已确认的退回金额
     }
@@ -226,6 +234,18 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
     if (picked != null && mounted) {
       setState(() => _happenedAt = DateTime(picked.year, picked.month,
           picked.day, _happenedAt.hour, _happenedAt.minute));
+    }
+  }
+
+  Future<void> _pickTime() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    final picked = await showWheelTimePicker(
+      context,
+      initial: TimeOfDay.fromDateTime(_happenedAt),
+    );
+    if (picked != null && mounted) {
+      setState(() => _happenedAt = DateTime(_happenedAt.year, _happenedAt.month,
+          _happenedAt.day, picked.hour, picked.minute));
     }
   }
 
@@ -647,6 +667,18 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
                     const InputDecoration(labelText: '日期', isDense: true),
                 child: Text(
                   DateFormat('yyyy-MM-dd HH:mm').format(_happenedAt),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // 7.5.5: 时间选择（时/分，不含秒），与日期分行
+            InkWell(
+              onTap: _pickTime,
+              child: InputDecorator(
+                decoration:
+                    const InputDecoration(labelText: '时间', isDense: true),
+                child: Text(
+                  DateFormat('HH:mm').format(_happenedAt),
                 ),
               ),
             ),

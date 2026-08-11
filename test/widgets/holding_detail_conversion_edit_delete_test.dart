@@ -46,6 +46,7 @@ void main() {
       amount: 1000,
       shares: 1000,
       nav: 1.0,
+      happenedAt: DateTime(2026, 8, 1, 9, 0),
     );
     await investmentRepo.buy(
       ledgerId: 1,
@@ -55,6 +56,7 @@ void main() {
       amount: 500,
       shares: 500,
       nav: 1.0,
+      happenedAt: DateTime(2026, 8, 1, 9, 0),
     );
   });
 
@@ -72,6 +74,7 @@ void main() {
       fee: 5,
       refundAmount: 100,
       refundAccountId: 20,
+      happenedAt: DateTime(2026, 8, 2, 10, 0),
     );
   }
 
@@ -113,7 +116,20 @@ void main() {
       expect(find.text('编辑转换'), findsOneWidget);
       expect(find.text('转入成本'), findsOneWidget);
       expect(find.text('日期'), findsOneWidget);
+      expect(find.text('时间'), findsOneWidget);
       expect(find.text('备注'), findsOneWidget);
+
+      await tester.ensureVisible(find.text('时间'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find
+            .ancestor(of: find.text('时间'), matching: find.byType(InkWell))
+            .first,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('选择时间'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, '确定'));
+      await tester.pumpAndSettle();
 
       // 字段顺序：转出份额/转出净值/转入份额/转入净值/转入成本/手续费/退回金额/备注
       await tester.enterText(find.byType(TextFormField).at(0), '400');
@@ -132,6 +148,10 @@ void main() {
       final to = await investmentRepo.getHolding(2);
       expect(to!.totalShares, closeTo(920, 0.01));
       expect(to.totalCost, closeTo(1000, 0.01));
+
+      final allTxs = await db.select(db.transactions).get();
+      final sellTx = allTxs.singleWhere((t) => t.investType == 'sell');
+      expect(sellTx.happenedAt.second, 0);
 
       // 卸载 ProviderScope 并冲刷 Drift stream 取消产生的零时长 timer
       await tester.pumpWidget(const SizedBox.shrink());

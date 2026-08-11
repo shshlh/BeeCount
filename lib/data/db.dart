@@ -552,7 +552,7 @@ class BeeDatabase extends _$BeeDatabase {
 
   @override
   int get schemaVersion =>
-      38; // v31: 账户隐藏 / v32: 投资数据层 / v33: 账户体系改造 / v34: 账户初始资金日期 / v35: 账户不计入资产 / v36: 基金分组 / v37: 投资净值日期 / v38: 表外账户
+      39; // v31: 账户隐藏 / v32: 投资数据层 / v33: 账户体系改造 / v34: 账户初始资金日期 / v35: 账户不计入资产 / v36: 基金分组 / v37: 投资净值日期 / v38: 表外账户 / v39: 转换内部流水不进明细
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1402,6 +1402,16 @@ class BeeDatabase extends _$BeeDatabase {
                   'INTEGER NOT NULL DEFAULT 0;',
             );
             logger.info('DBMigration', 'v38 迁移完成');
+          }
+          if (from < 39) {
+            logger.info('DBMigration', '开始迁移到 v39: 转换内部流水不计入明细/统计');
+            // 7.5.5: 明细页只保留退回这一条真实资金流水;卖出/买入为持仓内部
+            // 记账,设 exclude_from_stats=1 从明细与统计隐藏(持仓页仍可读)。
+            await customStatement(
+                "UPDATE transactions SET exclude_from_stats = 1 "
+                "WHERE batch_id IS NOT NULL "
+                "AND invest_type IN ('sell', 'buy');");
+            logger.info('DBMigration', 'v39 迁移完成');
           }
         },
         onCreate: (m) async {

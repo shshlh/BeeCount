@@ -54,7 +54,8 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 7.5.3 PM 复审合入 | ✅ | PM | 全量测试 0 failed + analyze 0 issue + HANDOFF 记录 + APK | 2026-08-11 |
 | 7.5.4 基金转换记录一体化 + 转入成本 | ✅ | invest-logic + invest-ui + qa | 转换整批编辑/删除 + 转入成本字段 + B 成本口径 + 测试 | 2026-08-12 |
 | 7.5.4 PM 复审合入 | ✅ | PM | 全量测试 0 failed + analyze 无新增 + HANDOFF 记录 + APK | 2026-08-12 |
-| 7.5.5 转换流水只留退回 + 基金记录时间编辑 | ⬜ 待执行 | invest-logic + invest-ui + qa + architect | internal 流水排除 + v39 回填 + 时分选择 + 测试 | — |
+| 7.5.5 转换流水只留退回 + 基金记录时间编辑 | ✅ | invest-logic + invest-ui + qa + architect | internal 流水排除 + v39 回填 + 时分选择 + 测试 | 2026-08-12 |
+| 7.5.5 PM 复审合入 | ✅ | PM | 全量测试 0 failed + analyze 无新增 + HANDOFF 记录 + APK | 2026-08-12 |
 
 ### 阶段 7.4：账户备注修复
 

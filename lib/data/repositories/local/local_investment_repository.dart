@@ -556,6 +556,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
         happenedAt: effectiveHappenedAt,
         note: note,
         batchId: batchId,
+        excludeFromStats: true, // 7.5.5: 转换内部卖出不进明细/统计
       );
 
       await _updateHolding(
@@ -583,6 +584,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
         happenedAt: effectiveHappenedAt,
         note: note,
         batchId: batchId,
+        excludeFromStats: true, // 7.5.5: 转换内部买入不进明细/统计
       );
 
       await _updateHolding(
@@ -754,6 +756,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
       }
 
       // 更新卖出侧（手续费只记这里）
+      // 7.5.5: 不更新 excludeFromStats，内部两笔保持隐藏标记。
       await (db.update(db.transactions)..where((t) => t.id.equals(sellTx.id)))
           .write(TransactionsCompanion(
         investShares: d.Value(-fromShares),
@@ -765,6 +768,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
       ));
 
       // 更新买入侧（amount = 转入成本）
+      // 7.5.5: 不更新 excludeFromStats，内部两笔保持隐藏标记。
       await (db.update(db.transactions)..where((t) => t.id.equals(buyTx.id)))
           .write(TransactionsCompanion(
         investShares: d.Value(toShares),

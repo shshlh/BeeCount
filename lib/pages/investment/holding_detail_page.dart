@@ -841,7 +841,9 @@ class _TransactionEditDialogState
         text: tx.investFee != null ? tx.investFee.toString() : '0');
     _amountCtrl =
         TextEditingController(text: tx.amount.abs().toStringAsFixed(2));
-    _happenedAt = tx.happenedAt;
+    // 7.5.5: 时间编辑精确到分，保存时秒归零。
+    _happenedAt = DateTime(tx.happenedAt.year, tx.happenedAt.month,
+        tx.happenedAt.day, tx.happenedAt.hour, tx.happenedAt.minute);
   }
 
   @override
@@ -875,12 +877,14 @@ class _TransactionEditDialogState
       final originalNote = tx.note ?? '';
       final clearNote = newNote.isEmpty && originalNote.isNotEmpty;
       final noteArg = !clearNote && newNote != originalNote ? newNote : null;
+      final happenedAt = DateTime(_happenedAt.year, _happenedAt.month,
+          _happenedAt.day, _happenedAt.hour, _happenedAt.minute);
 
       await service.updateTransaction(
         tx.id,
         note: noteArg,
         clearNote: clearNote,
-        happenedAt: _happenedAt != tx.happenedAt ? _happenedAt : null,
+        happenedAt: happenedAt != tx.happenedAt ? happenedAt : null,
         investShares: shares != (tx.investShares ?? 0) ? shares : null,
         investNav: nav,
         investFee: fee,
@@ -897,6 +901,18 @@ class _TransactionEditDialogState
       }
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _pickTime() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    final picked = await showWheelTimePicker(
+      context,
+      initial: TimeOfDay.fromDateTime(_happenedAt),
+    );
+    if (picked != null && mounted) {
+      setState(() => _happenedAt = DateTime(_happenedAt.year, _happenedAt.month,
+          _happenedAt.day, picked.hour, picked.minute));
     }
   }
 
@@ -936,6 +952,20 @@ class _TransactionEditDialogState
                     isDense: true,
                   ),
                   child: Text(dateStr),
+                ),
+              ),
+              const SizedBox(height: 12),
+              // 7.5.5: 时间选择（时/分，不含秒）
+              InkWell(
+                onTap: _pickTime,
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: '时间',
+                    isDense: true,
+                  ),
+                  child: Text(
+                    DateFormat('HH:mm').format(_happenedAt),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),

@@ -34,6 +34,45 @@
 ## 2026-08-12
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-logic + invest-ui + qa + architect（记录归档）
+
+**任务**：7.5.5 复审通过并合入
+
+**审查结论**：
+- 转换内部卖出/买入已写 `excludeFromStats=true`，退回保持 false；明细/统计不再显示内部两笔，持仓页 `watchTransactions` 不受影响
+- schema v39 已回填历史转换内部流水，迁移测试覆盖回填与明细过滤；v35-v38/sync schema 断言同步更新
+- 单笔基金交易编辑与转换整批编辑新增「时间」行，复用 `showWheelTimePicker`，保存后秒归零
+- 全量 `flutter test`：761 passed / 1 skipped / 0 failed；改动文件 analyze 无新增 issue（仅既有 info 基线）
+- 已合入并编译 Android APK
+
+**git 状态**：当前分支 main，7.5.5 已合入
+
+---
+
+## 2026-08-12
+
+**移交角色**：invest-logic + invest-ui + qa + architect
+**接收角色**：PM（审查合入）
+
+**任务**：7.5.5 转换流水只留退回 + 基金记录时间编辑
+
+**完成工作**：
+- 数据层：`convert` 卖出/买入两笔写 `excludeFromStats=true`，退回保持 false；`updateConversion` 不触碰内部标记；`watchTransactions` 不按 excludeFromStats 过滤，持仓页仍可见，明细/统计继续过滤
+- schema v39：回填历史转换内部流水 `exclude_from_stats=1`（batch_id IS NOT NULL AND invest_type IN ('sell','buy')）；新增 migration_v39_test；v35-v38 / sync schema 测试同步更新到 39
+- UI：单笔基金交易编辑与转换整批编辑新增「时间」行（复用 showWheelTimePicker，仅时/分），与日期分行；保存时秒归零
+- 测试：仓库测试新增内部流水不进明细、退回保留；迁移回填 + 明细过滤；单笔编辑/转换编辑时间行与保存秒归零 UI 测试
+
+**验证**：
+- 全量 `flutter test`：761 passed / 1 skipped / 0 failed
+- 改动文件 `flutter analyze` 无新增 issue（db.dart 等为既有 info 基线）
+
+**git 状态**：当前分支 main，改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-12
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-logic + invest-ui + qa + architect
 
 **任务**：7.5.5 转换流水只留退回 + 基金记录时间编辑
