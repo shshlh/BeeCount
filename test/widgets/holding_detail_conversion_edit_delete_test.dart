@@ -116,16 +116,19 @@ void main() {
       expect(find.text('编辑转换'), findsOneWidget);
       expect(find.text('转入成本'), findsOneWidget);
       expect(find.text('日期'), findsOneWidget);
-      expect(find.text('时间'), findsOneWidget);
+      expect(find.text('时间'), findsNothing);
       expect(find.text('备注'), findsOneWidget);
 
-      await tester.ensureVisible(find.text('时间'));
+      await tester.ensureVisible(find.text('日期'));
       await tester.pumpAndSettle();
       await tester.tap(
         find
-            .ancestor(of: find.text('时间'), matching: find.byType(InkWell))
+            .ancestor(of: find.text('日期'), matching: find.byType(InkWell))
             .first,
       );
+      await tester.pumpAndSettle();
+      expect(find.text('选择日期'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, '下一步'));
       await tester.pumpAndSettle();
       expect(find.text('选择时间'), findsOneWidget);
       await tester.tap(find.widgetWithText(TextButton, '确定'));

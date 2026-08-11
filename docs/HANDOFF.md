@@ -34,6 +34,43 @@
 ## 2026-08-12
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-ui + qa（记录归档）
+
+**任务**：7.5.6 复审通过并合入
+
+**审查结论**：
+- `ConvertDialog` 编辑模式与 `_TransactionEditDialog` 均移除独立「时间」行，日期栏统一改用 `showWheelDateTimePicker`（日期 → 时/分两步，秒固定 0）
+- 不再使用的 `showWheelTimePicker` 引用已清理，提醒设置等其他页面不受影响
+- 全量 `flutter test`：761 passed / 1 skipped / 0 failed；改动文件 analyze 0 issue
+- 已合入并编译 Android APK
+
+**git 状态**：当前分支 main，7.5.6 已合入
+
+---
+
+## 2026-08-12
+
+**移交角色**：invest-ui + qa
+**接收角色**：PM（审查合入）
+
+**任务**：7.5.6 基金记录编辑日期时间合并为单个日期栏
+
+**完成工作**：
+- `ConvertDialog` 编辑模式与 `_TransactionEditDialog`（单笔基金交易编辑）移除独立「时间」行与 `_pickTime`；日期行统一改用 `showWheelDateTimePicker`（日期→时间两步，仅时/分，秒固定 0），显示完整 `yyyy-MM-dd HH:mm`
+- 删除这两个文件中不再使用的 `showWheelTimePicker` 引用；提醒设置等其他页面不受影响
+- 测试更新：单笔编辑/转换编辑断言不再出现独立「时间」行，日期行可打开组合选择器，保存后时/分保留、秒归零
+
+**验证**：
+- 全量 `flutter test`：761 passed / 1 skipped / 0 failed
+- 改动文件 `flutter analyze` 0 issue
+
+**git 状态**：当前分支 main，改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-12
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-ui（+ qa）
 
 **任务**：7.5.6 基金记录编辑日期时间合并为单个日期栏

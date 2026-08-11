@@ -56,7 +56,8 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 7.5.4 PM 复审合入 | ✅ | PM | 全量测试 0 failed + analyze 无新增 + HANDOFF 记录 + APK | 2026-08-12 |
 | 7.5.5 转换流水只留退回 + 基金记录时间编辑 | ✅ | invest-logic + invest-ui + qa + architect | internal 流水排除 + v39 回填 + 时分选择 + 测试 | 2026-08-12 |
 | 7.5.5 PM 复审合入 | ✅ | PM | 全量测试 0 failed + analyze 无新增 + HANDOFF 记录 + APK | 2026-08-12 |
-| 7.5.6 基金记录编辑日期时间合并 | ⬜ 待执行 | invest-ui + qa | showWheelDateTimePicker 统一 + 移除时间行 + 测试 | — |
+| 7.5.6 基金记录编辑日期时间合并 | ✅ | invest-ui + qa | showWheelDateTimePicker 统一 + 移除时间行 + 测试 | 2026-08-12 |
+| 7.5.6 PM 复审合入 | ✅ | PM | 全量测试 0 failed + analyze 0 issue + HANDOFF 记录 + APK | 2026-08-12 |
 
 ### 阶段 7.4：账户备注修复
 

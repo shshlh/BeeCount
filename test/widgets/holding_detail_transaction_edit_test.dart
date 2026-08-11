@@ -1,4 +1,5 @@
-// 7.5.5 单笔基金操作记录编辑：日期之外增加「时间」行（时/分），保存后秒归零。
+// 7.5.6 单笔基金操作记录编辑：单个「日期」栏走日期→时间两步选择器，
+// 保存后时/分保留、秒归零。
 library;
 
 import 'package:flutter/material.dart';
@@ -45,7 +46,7 @@ void main() {
 
   tearDown(() async => db.close());
 
-  testWidgets('单笔编辑存在时间行，保存写入时/分且秒归零', (tester) async {
+  testWidgets('单笔编辑日期栏打开组合选择器，保存写入时/分且秒归零', (tester) async {
     await tester.runAsync(() async {
       await tester.pumpWidget(
         ProviderScope(
@@ -71,13 +72,16 @@ void main() {
 
       expect(find.text('编辑交易'), findsOneWidget);
       expect(find.text('日期'), findsOneWidget);
-      expect(find.text('时间'), findsOneWidget);
+      expect(find.text('时间'), findsNothing);
 
       await tester.tap(
         find
-            .ancestor(of: find.text('时间'), matching: find.byType(InkWell))
+            .ancestor(of: find.text('日期'), matching: find.byType(InkWell))
             .first,
       );
+      await tester.pumpAndSettle();
+      expect(find.text('选择日期'), findsOneWidget);
+      await tester.tap(find.widgetWithText(TextButton, '下一步'));
       await tester.pumpAndSettle();
       expect(find.text('选择时间'), findsOneWidget);
       await tester.tap(find.widgetWithText(TextButton, '确定'));

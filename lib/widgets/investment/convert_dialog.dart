@@ -8,7 +8,7 @@ import '../../providers.dart';
 import '../../styles/tokens.dart';
 import '../../utils/account_type_utils.dart';
 import '../biz/section_card.dart';
-import '../ui/wheel_time_picker.dart';
+import '../ui/wheel_date_picker.dart';
 
 /// 转换批次编辑预填数据（7.5.4）。
 ///
@@ -225,28 +225,13 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
 
   Future<void> _pickDate() async {
     FocusManager.instance.primaryFocus?.unfocus();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _happenedAt,
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null && mounted) {
-      setState(() => _happenedAt = DateTime(picked.year, picked.month,
-          picked.day, _happenedAt.hour, _happenedAt.minute));
-    }
-  }
-
-  Future<void> _pickTime() async {
-    FocusManager.instance.primaryFocus?.unfocus();
-    final picked = await showWheelTimePicker(
+    // 7.5.6: 与记账页一致，日期 → 时间两步选择器，秒固定 0。
+    final picked = await showWheelDateTimePicker(
       context,
-      initial: TimeOfDay.fromDateTime(_happenedAt),
+      initial: _happenedAt,
+      maxDate: DateTime.now(),
     );
-    if (picked != null && mounted) {
-      setState(() => _happenedAt = DateTime(_happenedAt.year, _happenedAt.month,
-          _happenedAt.day, picked.hour, picked.minute));
-    }
+    if (picked != null && mounted) setState(() => _happenedAt = picked);
   }
 
   void _selectToHolding(InvestmentHolding h) {
@@ -667,18 +652,6 @@ class _ConvertDialogState extends ConsumerState<ConvertDialog> {
                     const InputDecoration(labelText: '日期', isDense: true),
                 child: Text(
                   DateFormat('yyyy-MM-dd HH:mm').format(_happenedAt),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // 7.5.5: 时间选择（时/分，不含秒），与日期分行
-            InkWell(
-              onTap: _pickTime,
-              child: InputDecorator(
-                decoration:
-                    const InputDecoration(labelText: '时间', isDense: true),
-                child: Text(
-                  DateFormat('HH:mm').format(_happenedAt),
                 ),
               ),
             ),

@@ -904,16 +904,15 @@ class _TransactionEditDialogState
     }
   }
 
-  Future<void> _pickTime() async {
+  Future<void> _pickDate() async {
     FocusManager.instance.primaryFocus?.unfocus();
-    final picked = await showWheelTimePicker(
+    // 7.5.6: 与记账页一致，日期 → 时间两步选择器，秒固定 0。
+    final picked = await showWheelDateTimePicker(
       context,
-      initial: TimeOfDay.fromDateTime(_happenedAt),
+      initial: _happenedAt,
+      maxDate: DateTime.now(),
     );
-    if (picked != null && mounted) {
-      setState(() => _happenedAt = DateTime(_happenedAt.year, _happenedAt.month,
-          _happenedAt.day, picked.hour, picked.minute));
-    }
+    if (picked != null && mounted) setState(() => _happenedAt = picked);
   }
 
   @override
@@ -930,42 +929,13 @@ class _TransactionEditDialogState
             children: [
               // 日期选择
               InkWell(
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: _happenedAt,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime.now(),
-                  );
-                  if (picked != null) {
-                    setState(() => _happenedAt = DateTime(
-                        picked.year,
-                        picked.month,
-                        picked.day,
-                        _happenedAt.hour,
-                        _happenedAt.minute));
-                  }
-                },
+                onTap: _pickDate,
                 child: InputDecorator(
                   decoration: const InputDecoration(
                     labelText: '日期',
                     isDense: true,
                   ),
                   child: Text(dateStr),
-                ),
-              ),
-              const SizedBox(height: 12),
-              // 7.5.5: 时间选择（时/分，不含秒）
-              InkWell(
-                onTap: _pickTime,
-                child: InputDecorator(
-                  decoration: const InputDecoration(
-                    labelText: '时间',
-                    isDense: true,
-                  ),
-                  child: Text(
-                    DateFormat('HH:mm').format(_happenedAt),
-                  ),
                 ),
               ),
               const SizedBox(height: 12),
