@@ -105,11 +105,12 @@ class HoldingDetailPage extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error_outline, size: 48,
-                      color: BeeTokens.textTertiary(context)),
+                  Icon(Icons.error_outline,
+                      size: 48, color: BeeTokens.textTertiary(context)),
                   const SizedBox(height: 12),
                   Text('持仓不存在或已被删除',
-                      style: TextStyle(color: BeeTokens.textSecondary(context))),
+                      style:
+                          TextStyle(color: BeeTokens.textSecondary(context))),
                 ],
               ),
             ),
@@ -198,13 +199,10 @@ class HoldingDetailPage extends ConsumerWidget {
                 value: pnl,
                 signed: true,
                 style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: pnlColor),
+                    fontSize: 14, fontWeight: FontWeight.w600, color: pnlColor),
               ),
               const SizedBox(width: BeeDimens.p8),
-              Text(rateStr,
-                  style: TextStyle(fontSize: 12, color: pnlColor)),
+              Text(rateStr, style: TextStyle(fontSize: 12, color: pnlColor)),
             ],
           ),
         ],
@@ -254,8 +252,7 @@ class HoldingDetailPage extends ConsumerWidget {
       children: [
         Padding(
           padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text('交易记录',
-              style: BeeTextTokens.strongTitle(context)),
+          child: Text('交易记录', style: BeeTextTokens.strongTitle(context)),
         ),
         transactionsAsync.when(
           skipLoadingOnReload: true,
@@ -266,8 +263,8 @@ class HoldingDetailPage extends ConsumerWidget {
                   padding: const EdgeInsets.all(BeeDimens.p16),
                   child: Center(
                     child: Text('暂无交易记录',
-                        style: TextStyle(
-                            color: BeeTokens.textTertiary(context))),
+                        style:
+                            TextStyle(color: BeeTokens.textTertiary(context))),
                   ),
                 ),
               );
@@ -295,12 +292,14 @@ class HoldingDetailPage extends ConsumerWidget {
   }
 
   /// 弹出交易编辑弹窗（v4.7: 支持编辑交易记录）
-  void _showEditDialog(BuildContext context, WidgetRef ref, Transaction tx) {
-    // v6.4 返工：转换产生的 batch 交易禁止单边编辑，避免两持仓口径不一致
+  Future<void> _showEditDialog(
+    BuildContext context,
+    WidgetRef ref,
+    Transaction tx,
+  ) async {
+    // v7.5.4: 转换记录从任意一侧进入整批编辑页
     if (tx.batchId != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请编辑完整的转换记录')),
-      );
+      await _openConversionEdit(context, ref, tx.batchId!);
       return;
     }
     showDialog(
@@ -313,6 +312,76 @@ class HoldingDetailPage extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  /// 打开转换整批编辑页（7.5.4）。
+  Future<void> _openConversionEdit(
+    BuildContext context,
+    WidgetRef ref,
+    String batchId,
+  ) async {
+    try {
+      final service = ref.read(investmentServiceProvider);
+      final txs = await service.getTransactionsByBatchId(batchId);
+      final sellTx = txs.firstWhere((t) => t.investType == 'sell');
+      final buyTx = txs.firstWhere((t) => t.investType == 'buy');
+      Transaction? refundTx;
+      for (final t in txs) {
+        if (t.investType == null && t.holdingId == null) {
+          refundTx = t;
+          break;
+        }
+      }
+      final fromHolding = await service.getHolding(sellTx.holdingId!);
+      final toHolding = await service.getHolding(buyTx.holdingId!);
+      if (fromHolding == null || toHolding == null) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('转换关联持仓不存在')),
+          );
+        }
+        return;
+      }
+      if (!context.mounted) return;
+
+      final changed = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (_) => ConvertDialog(
+            ledgerId: fromHolding.ledgerId,
+            fromHolding: fromHolding,
+            edit: ConversionEditData(
+              batchId: batchId,
+              fromHolding: fromHolding,
+              toHolding: toHolding,
+              sellTx: sellTx,
+              buyTx: buyTx,
+              refundTx: refundTx,
+            ),
+          ),
+        ),
+      );
+      if (changed == true) {
+        _invalidateAfterConversionChange(ref, [fromHolding.id, toHolding.id]);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('打开转换编辑失败：$e')),
+        );
+      }
+    }
+  }
+
+  /// 转换整批编辑/删除后刷新双方持仓相关 Provider。
+  void _invalidateAfterConversionChange(WidgetRef ref, List<int> holdingIds) {
+    ref.invalidate(currentHoldingsProvider);
+    ref.invalidate(portfolioSummaryProvider);
+    ref.invalidate(filteredHoldingsProvider);
+    for (final id in holdingIds) {
+      ref.invalidate(holdingProvider(id));
+      ref.invalidate(holdingReturnProvider(id));
+      ref.invalidate(holdingTransactionsProvider(id));
+    }
   }
 
   /// 弹出基金代码/名称编辑弹窗（v6.13.2）
@@ -341,11 +410,9 @@ class HoldingDetailPage extends ConsumerWidget {
     WidgetRef ref,
     Transaction tx,
   ) async {
-    // v6.13.6 返工：转换批次流水禁止单边删除，与编辑入口防护一致
+    // v7.5.4: 转换记录从任意一侧删除整批
     if (tx.batchId != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请删除完整的转换记录')),
-      );
+      await _confirmDeleteConversion(context, ref, tx.batchId!);
       return;
     }
     final confirmed = await showDialog<bool>(
@@ -385,6 +452,51 @@ class HoldingDetailPage extends ConsumerWidget {
     }
   }
 
+  /// 确认删除一整笔转换（7.5.4）。
+  Future<void> _confirmDeleteConversion(
+    BuildContext context,
+    WidgetRef ref,
+    String batchId,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('删除转换记录'),
+        content: const Text('确定删除完整的转换记录？将同时删除转出、转入与退回记录并重算双方持仓，此操作不可恢复。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: BeeTokens.error(context),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      final txs = await ref
+          .read(investmentServiceProvider)
+          .getTransactionsByBatchId(batchId);
+      final holdingIds = txs.map((t) => t.holdingId).whereType<int>().toSet();
+      await ref.read(investmentServiceProvider).deleteConversion(batchId);
+      _invalidateAfterConversionChange(ref, holdingIds.toList());
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('删除转换记录失败：$e')),
+        );
+      }
+    }
+  }
+
   /// 确认删除整个持仓（含全部流水与分组关联）
   Future<void> _confirmDeleteHolding(
     BuildContext context,
@@ -395,8 +507,7 @@ class HoldingDetailPage extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除持仓'),
-        content: Text(
-            '删除持仓「${holding.fundName}」？将同时删除该持仓的全部交易记录，此操作不可恢复。'),
+        content: Text('删除持仓「${holding.fundName}」？将同时删除该持仓的全部交易记录，此操作不可恢复。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -538,33 +649,41 @@ class _TransactionTile extends ConsumerWidget {
     final investType = transaction.investType ?? '';
     final isBuy = investType == 'buy';
     final isInitial = investType == 'initial';
+    // v7.5.4: 转换批次在 A/B 两页统一显示「转换」标签
+    final isConvert = transaction.batchId != null;
 
-    final typeLabel = switch (investType) {
-      'buy' => '买入',
-      'sell' => '卖出',
-      'redeem' => '赎回',
-      'convert' => '转换',
-      'initial' => '初始登记',
-      _ => investType,
-    };
+    final typeLabel = isConvert
+        ? '转换'
+        : switch (investType) {
+            'buy' => '买入',
+            'sell' => '卖出',
+            'redeem' => '赎回',
+            'convert' => '转换',
+            'initial' => '初始登记',
+            _ => investType,
+          };
 
-    final typeColor = isInitial
-        ? BeeTokens.textTertiary(context)
-        : isBuy
-            ? BeeTokens.incomeColor(context, ref)
-            : BeeTokens.expenseColor(context, ref);
+    final typeColor = isConvert
+        ? BeeTokens.textSecondary(context)
+        : isInitial
+            ? BeeTokens.textTertiary(context)
+            : isBuy
+                ? BeeTokens.incomeColor(context, ref)
+                : BeeTokens.expenseColor(context, ref);
 
-    final dateStr =
-        DateFormat('MM-dd HH:mm').format(transaction.happenedAt);
+    final dateStr = DateFormat('MM-dd HH:mm').format(transaction.happenedAt);
     final shares = transaction.investShares ?? 0;
     final nav = transaction.investNav ?? 0;
     final fee = transaction.investFee ?? 0;
     final amount = transaction.amount;
     final isExcludedFromStats = transaction.excludeFromStats;
-    // v6.7 返工：转换的卖出/买入 amount 固定 0（内部记账），
-    // 展示层按「确认份额 × 确认净值」还原确认成交金额，不写回 DB
-    final isConvert = transaction.batchId != null;
-    final displayAmount = isConvert ? shares.abs() * nav : amount;
+    // v7.5.4: 转换买入侧展示转入成本(amount)；旧记录 amount=0 时与转出侧
+    // 一样按「份额 × 净值」回退。
+    final displayAmount = isConvert
+        ? (isBuy
+            ? (amount > 0 ? amount : shares.abs() * nav)
+            : shares.abs() * nav)
+        : amount;
 
     return SectionCard(
       padding: const EdgeInsets.all(BeeDimens.p12),
@@ -585,8 +704,8 @@ class _TransactionTile extends ConsumerWidget {
                           color: BeeTokens.textTertiary(context))),
                   const SizedBox(width: BeeDimens.p8),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: typeColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(4),
@@ -595,13 +714,11 @@ class _TransactionTile extends ConsumerWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(typeLabel,
-                            style:
-                                TextStyle(fontSize: 11, color: typeColor)),
+                            style: TextStyle(fontSize: 11, color: typeColor)),
                         // v4.7: 编辑图标暗示可编辑
                         if (onEdit != null) ...[
                           const SizedBox(width: 2),
-                          Icon(Icons.edit_outlined,
-                              size: 11, color: typeColor),
+                          Icon(Icons.edit_outlined, size: 11, color: typeColor),
                         ],
                       ],
                     ),
@@ -668,8 +785,7 @@ class _TransactionTile extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(transaction.note!,
                     style: TextStyle(
-                        fontSize: 11,
-                        color: BeeTokens.textTertiary(context)),
+                        fontSize: 11, color: BeeTokens.textTertiary(context)),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis),
               ],
@@ -715,16 +831,16 @@ class _TransactionEditDialogState
     super.initState();
     final tx = widget.transaction;
     _noteCtrl = TextEditingController(text: tx.note ?? '');
-    _sharesCtrl = TextEditingController(
-        text: (tx.investShares?.abs() ?? 0).toString());
+    _sharesCtrl =
+        TextEditingController(text: (tx.investShares?.abs() ?? 0).toString());
     _navCtrl = TextEditingController(
         text: tx.investNav != null && tx.investNav! > 0
             ? tx.investNav.toString()
             : '');
     _feeCtrl = TextEditingController(
         text: tx.investFee != null ? tx.investFee.toString() : '0');
-    _amountCtrl = TextEditingController(
-        text: tx.amount.abs().toStringAsFixed(2));
+    _amountCtrl =
+        TextEditingController(text: tx.amount.abs().toStringAsFixed(2));
     _happenedAt = tx.happenedAt;
   }
 
@@ -807,8 +923,11 @@ class _TransactionEditDialogState
                   );
                   if (picked != null) {
                     setState(() => _happenedAt = DateTime(
-                        picked.year, picked.month, picked.day,
-                        _happenedAt.hour, _happenedAt.minute));
+                        picked.year,
+                        picked.month,
+                        picked.day,
+                        _happenedAt.hour,
+                        _happenedAt.minute));
                   }
                 },
                 child: InputDecorator(
@@ -822,8 +941,10 @@ class _TransactionEditDialogState
               const SizedBox(height: 12),
               TextFormField(
                 controller: _amountCtrl,
-                decoration: const InputDecoration(labelText: '金额', isDense: true),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration:
+                    const InputDecoration(labelText: '金额', isDense: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return '请输入金额';
                   final n = double.tryParse(v);
@@ -834,8 +955,10 @@ class _TransactionEditDialogState
               const SizedBox(height: 12),
               TextFormField(
                 controller: _sharesCtrl,
-                decoration: const InputDecoration(labelText: '份额', isDense: true),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration:
+                    const InputDecoration(labelText: '份额', isDense: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return '请输入份额';
                   final n = double.tryParse(v);
@@ -846,8 +969,10 @@ class _TransactionEditDialogState
               const SizedBox(height: 12),
               TextFormField(
                 controller: _navCtrl,
-                decoration: const InputDecoration(labelText: '净值', isDense: true),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration:
+                    const InputDecoration(labelText: '净值', isDense: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return '请输入净值';
                   final n = double.tryParse(v);
@@ -858,8 +983,10 @@ class _TransactionEditDialogState
               const SizedBox(height: 12),
               TextFormField(
                 controller: _feeCtrl,
-                decoration: const InputDecoration(labelText: '手续费', isDense: true),
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration:
+                    const InputDecoration(labelText: '手续费', isDense: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return '请输入手续费';
                   final n = double.tryParse(v);
@@ -870,7 +997,8 @@ class _TransactionEditDialogState
               const SizedBox(height: 12),
               TextFormField(
                 controller: _noteCtrl,
-                decoration: const InputDecoration(labelText: '备注', isDense: true),
+                decoration:
+                    const InputDecoration(labelText: '备注', isDense: true),
               ),
             ],
           ),
@@ -969,8 +1097,8 @@ class _HoldingInfoEditDialogState
           children: [
             TextFormField(
               controller: _codeCtrl,
-              decoration: const InputDecoration(
-                  labelText: '基金代码', isDense: true),
+              decoration:
+                  const InputDecoration(labelText: '基金代码', isDense: true),
               keyboardType: TextInputType.number,
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return '请输入基金代码';
@@ -983,8 +1111,8 @@ class _HoldingInfoEditDialogState
             const SizedBox(height: 12),
             TextFormField(
               controller: _nameCtrl,
-              decoration: const InputDecoration(
-                  labelText: '基金名称', isDense: true),
+              decoration:
+                  const InputDecoration(labelText: '基金名称', isDense: true),
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? '请输入基金名称' : null,
             ),
@@ -1009,4 +1137,3 @@ class _HoldingInfoEditDialogState
     );
   }
 }
-

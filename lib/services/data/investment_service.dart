@@ -222,6 +222,7 @@ class InvestmentService {
     double? fromNav,
     double? toShares,
     double? toNav,
+    required double toCost,
     double? fee,
     double refundAmount = 0,
     int? refundAccountId,
@@ -236,6 +237,7 @@ class InvestmentService {
     if (toNav != null && toNav <= 0) {
       throw ArgumentError('转入净值必须大于 0');
     }
+    if (toCost <= 0) throw ArgumentError('转入成本必须大于 0');
     if (fee != null && fee < 0) throw ArgumentError('手续费不能为负数');
     if (refundAmount < 0) throw ArgumentError('退回金额不能为负数');
     if (refundAmount > 0 && refundAccountId == null) {
@@ -324,6 +326,7 @@ class InvestmentService {
     required double fromNav,
     required double toShares,
     required double toNav,
+    required double toCost,
     double fee = 0,
     double refundAmount = 0,
     int? refundAccountId,
@@ -340,6 +343,7 @@ class InvestmentService {
       fromNav: fromNav,
       toShares: toShares,
       toNav: toNav,
+      toCost: toCost,
       fee: fee,
       refundAmount: refundAmount,
       refundAccountId: refundAccountId,
@@ -349,6 +353,47 @@ class InvestmentService {
       navDate: navDate,
       note: note,
     );
+  }
+
+  /// 更新一整笔转换（A 卖出 + B 买入 + 关联退回），按 batchId 原子更新。
+  Future<void> updateConversion(
+    String batchId, {
+    required double fromShares,
+    required double fromNav,
+    required double toShares,
+    required double toNav,
+    required double toCost,
+    double fee = 0,
+    double refundAmount = 0,
+    int? refundAccountId,
+    DateTime? happenedAt,
+    String? note,
+    bool clearNote = false,
+  }) {
+    return _repo.updateConversion(
+      batchId,
+      fromShares: fromShares,
+      fromNav: fromNav,
+      toShares: toShares,
+      toNav: toNav,
+      toCost: toCost,
+      fee: fee,
+      refundAmount: refundAmount,
+      refundAccountId: refundAccountId,
+      happenedAt: happenedAt,
+      note: note,
+      clearNote: clearNote,
+    );
+  }
+
+  /// 删除一整笔转换（A 卖出 + B 买入 + 关联退回）。
+  Future<void> deleteConversion(String batchId) {
+    return _repo.deleteConversion(batchId);
+  }
+
+  /// 按 batchId 取转换批次下的全部交易，供编辑预填。
+  Future<List<Transaction>> getTransactionsByBatchId(String batchId) {
+    return _repo.getTransactionsByBatchId(batchId);
   }
 
   Future<void> updateNav(int holdingId, double nav, {DateTime? navDate}) {

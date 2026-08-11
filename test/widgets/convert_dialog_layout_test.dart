@@ -31,13 +31,11 @@ void main() {
     await db.customStatement(
         "INSERT INTO accounts (id, ledger_id, name, type, currency) "
         "VALUES (20, 1, '钱包', 'cash', 'CNY')");
-    await db.customStatement(
-        "INSERT INTO investment_holdings "
+    await db.customStatement("INSERT INTO investment_holdings "
         "(id, ledger_id, fund_code, fund_name, account_id, "
         "total_shares, total_cost, current_nav, market_value) "
         "VALUES (1, 1, '000001', '基金A', 10, 1000, 1000, 1.0, 1000)");
-    await db.customStatement(
-        "INSERT INTO investment_holdings "
+    await db.customStatement("INSERT INTO investment_holdings "
         "(id, ledger_id, fund_code, fund_name, account_id, "
         "total_shares, total_cost, current_nav, market_value) "
         "VALUES (2, 1, '000002', '基金B', 10, 500, 500, 1.0, 500)");
@@ -108,6 +106,7 @@ void main() {
     expect(find.text('目标基金'), findsOneWidget);
     expect(find.text('确认转入份额'), findsOneWidget);
     expect(find.text('确认转入净值'), findsOneWidget);
+    expect(find.text('转入成本'), findsOneWidget);
     expect(find.text('手续费'), findsOneWidget);
     expect(find.text('退回金额'), findsOneWidget);
     expect(find.text('无'), findsOneWidget);
@@ -171,7 +170,8 @@ void main() {
       await tester.enterText(find.byType(TextFormField).at(1), '1.0');
       await tester.enterText(find.byType(TextFormField).at(2), '100');
       await tester.enterText(find.byType(TextFormField).at(3), '1.2');
-      await tester.enterText(find.byType(TextFormField).at(4), '0');
+      await tester.enterText(find.byType(TextFormField).at(4), '600');
+      await tester.enterText(find.byType(TextFormField).at(5), '0');
 
       await tester.tap(find.widgetWithText(FilledButton, '确认'));
       await tester.pumpAndSettle();
@@ -194,7 +194,8 @@ void main() {
       await tester.enterText(find.byType(TextFormField).at(3), '基金C');
       await tester.enterText(find.byType(TextFormField).at(4), '100');
       await tester.enterText(find.byType(TextFormField).at(5), '1.2');
-      await tester.enterText(find.byType(TextFormField).at(6), '0');
+      await tester.enterText(find.byType(TextFormField).at(6), '600');
+      await tester.enterText(find.byType(TextFormField).at(7), '0');
 
       await tester.tap(find.widgetWithText(FilledButton, '确认'));
       await tester.pumpAndSettle();

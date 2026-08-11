@@ -239,7 +239,7 @@ void main() {
         nav: 1.0);
 
     await expectLater(
-      () => service.validateConvert(1, 200, toHoldingId: 2),
+      () => service.validateConvert(1, 200, toHoldingId: 2, toCost: 100),
       throwsA(isA<StateError>()),
     );
   });
@@ -255,19 +255,27 @@ void main() {
         nav: 1.0);
 
     await expectLater(
-      () => service.validateConvert(1, 10, toHoldingId: 2, fromNav: 0),
+      () => service.validateConvert(1, 10,
+          toHoldingId: 2, toCost: 100, fromNav: 0),
       throwsArgumentError,
     );
     await expectLater(
-      () => service.validateConvert(1, 10, toHoldingId: 2, toShares: 0),
+      () => service.validateConvert(1, 10,
+          toHoldingId: 2, toCost: 100, toShares: 0),
       throwsArgumentError,
     );
     await expectLater(
-      () => service.validateConvert(1, 10, toHoldingId: 2, toNav: -1),
+      () => service.validateConvert(1, 10,
+          toHoldingId: 2, toCost: 100, toNav: -1),
       throwsArgumentError,
     );
     await expectLater(
-      () => service.validateConvert(1, 10, toHoldingId: 2, fee: -1),
+      () =>
+          service.validateConvert(1, 10, toHoldingId: 2, toCost: 100, fee: -1),
+      throwsArgumentError,
+    );
+    await expectLater(
+      () => service.validateConvert(1, 10, toHoldingId: 2, toCost: 0),
       throwsArgumentError,
     );
     await service.validateConvert(
@@ -277,6 +285,7 @@ void main() {
       fromNav: 1.0,
       toShares: 10,
       toNav: 1.2,
+      toCost: 12,
       fee: 1,
     );
   });
@@ -292,18 +301,22 @@ void main() {
         nav: 1.0);
 
     await expectLater(
-      () => service.validateConvert(1, 10, toHoldingId: 2, refundAmount: -1),
+      () => service.validateConvert(1, 10,
+          toHoldingId: 2, toCost: 100, refundAmount: -1),
       throwsArgumentError,
     );
     await expectLater(
-      () => service.validateConvert(1, 10, toHoldingId: 2, refundAmount: 1),
+      () => service.validateConvert(1, 10,
+          toHoldingId: 2, toCost: 100, refundAmount: 1),
       throwsArgumentError,
     );
-    await service.validateConvert(1, 10, toHoldingId: 2, refundAmount: 0);
+    await service.validateConvert(1, 10,
+        toHoldingId: 2, toCost: 100, refundAmount: 0);
     await service.validateConvert(
       1,
       10,
       toHoldingId: 2,
+      toCost: 100,
       refundAmount: 1,
       refundAccountId: 20,
     );
@@ -320,7 +333,7 @@ void main() {
         nav: 1.0);
 
     await expectLater(
-      () => service.validateConvert(1, 10, toHoldingId: null),
+      () => service.validateConvert(1, 10, toHoldingId: null, toCost: 100),
       throwsArgumentError,
     );
     await expectLater(
@@ -328,6 +341,7 @@ void main() {
         1,
         10,
         toHoldingId: null,
+        toCost: 100,
         fundCode: '000002',
       ),
       throwsArgumentError,
@@ -336,6 +350,7 @@ void main() {
       1,
       10,
       toHoldingId: null,
+      toCost: 100,
       fundCode: '000002',
       fundName: '基金B',
     );
@@ -401,6 +416,7 @@ void main() {
         fromNav: 1.2,
         toShares: 480,
         toNav: 1.25,
+        toCost: 600,
         fee: 5);
 
     final from = await repo.getHolding(1);

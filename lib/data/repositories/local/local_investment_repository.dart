@@ -202,7 +202,9 @@ class LocalInvestmentRepository implements InvestmentRepository {
         if (tx.investType == 'initial') {
           cost += amount > Decimal.zero ? amount : invShares * nav;
         } else if (isConvert) {
-          cost += invShares * nav;
+          // 7.5.4: 转换买入侧以确认的转入成本(amount)为准;旧记录 amount=0
+          // 时回退为「份额 × 净值」。
+          cost += amount > Decimal.zero ? amount : invShares * nav;
         } else {
           cost += amount > Decimal.zero ? amount : invShares * nav + fee;
         }
@@ -469,6 +471,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
     required double fromNav,
     required double toShares,
     required double toNav,
+    required double toCost,
     double fee = 0,
     double refundAmount = 0,
     int? refundAccountId,
@@ -478,6 +481,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
     DateTime? navDate,
     String? note,
   }) async {
+    if (toCost <= 0) throw ArgumentError('转入成本必须大于 0');
     if (refundAmount < 0) throw ArgumentError('退回金额不能为负数');
     if (refundAmount > 0 && refundAccountId == null) {
       throw ArgumentError('退回金额大于 0 时必须指定退回账户');
@@ -527,8 +531,8 @@ class LocalInvestmentRepository implements InvestmentRepository {
       final fromNavDecimal = _toDecimal(fromNav);
       final toSharesDecimal = _toDecimal(toShares);
       final toNavDecimal = _toDecimal(toNav);
+      final toCostDecimal = _toDecimal(toCost);
       final fromTotalShares = _toDecimal(fromHolding.totalShares);
-      final toValueDecimal = toSharesDecimal * toNavDecimal;
       final costRatio = fromTotalShares > Decimal.zero
           ? _divide(fromSharesDecimal, fromTotalShares)
           : Decimal.one;
@@ -571,10 +575,10 @@ class LocalInvestmentRepository implements InvestmentRepository {
         accountId: null,
         toAccountId: toHolding.accountId,
         investType: 'buy',
-        amount: 0, // 投资账户内部记账，不产生资金流水
+        amount: toCost, // 7.5.4: 买入侧 amount = 转入成本
         investShares: toShares,
         investNav: toNav,
-        investFee: fee,
+        investFee: null, // 7.5.4: 手续费只记转出侧，避免同一笔费用重复
         holdingId: toHolding.id,
         happenedAt: effectiveHappenedAt,
         note: note,
@@ -584,8 +588,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
       await _updateHolding(
         toHolding.id,
         totalShares: toNewShares.toDouble(),
-        totalCost:
-            (_toDecimal(toHolding.totalCost) + toValueDecimal).toDouble(),
+        totalCost: (_toDecimal(toHolding.totalCost) + toCostDecimal).toDouble(),
         currentNav: toNav,
         navDate: effectiveNavDate,
         marketValue: (toNewShares * toNavDecimal).toDouble(),
@@ -606,6 +609,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
           holdingId: null,
           happenedAt: effectiveHappenedAt,
           note: '基金转换退回',
+          batchId: batchId,
         );
       }
 
@@ -681,6 +685,166 @@ class LocalInvestmentRepository implements InvestmentRepository {
         }
       }
     });
+  }
+
+  @override
+  Future<void> updateConversion(
+    String batchId, {
+    required double fromShares,
+    required double fromNav,
+    required double toShares,
+    required double toNav,
+    required double toCost,
+    double fee = 0,
+    double refundAmount = 0,
+    int? refundAccountId,
+    DateTime? happenedAt,
+    String? note,
+    bool clearNote = false,
+  }) async {
+    if (fromShares <= 0 || fromNav <= 0 || toShares <= 0 || toNav <= 0) {
+      throw ArgumentError('转换份额与净值必须大于 0');
+    }
+    if (toCost <= 0) throw ArgumentError('转入成本必须大于 0');
+    if (fee < 0) throw ArgumentError('手续费不能为负数');
+    if (refundAmount < 0) throw ArgumentError('退回金额不能为负数');
+    if (refundAmount > 0 && refundAccountId == null) {
+      throw ArgumentError('退回金额大于 0 时必须指定退回账户');
+    }
+
+    await db.transaction(() async {
+      final batchTxs = await getTransactionsByBatchId(batchId);
+      final sellTx =
+          batchTxs.firstWhere((t) => t.investType == 'sell', orElse: () {
+        throw StateError('转换批次缺少卖出记录');
+      });
+      final buyTx =
+          batchTxs.firstWhere((t) => t.investType == 'buy', orElse: () {
+        throw StateError('转换批次缺少买入记录');
+      });
+      Transaction? refundTx;
+      for (final tx in batchTxs) {
+        if (tx.investType == null && tx.holdingId == null) {
+          refundTx = tx;
+          break;
+        }
+      }
+
+      final fromHolding = await getHolding(sellTx.holdingId!);
+      final toHolding = await getHolding(buyTx.holdingId!);
+      if (fromHolding == null || toHolding == null) {
+        throw StateError('转换关联持仓不存在');
+      }
+
+      // 转出上限 = 当前持仓份额 + 本批次原转出份额（编辑会替换整批）。
+      final originalFromShares = (sellTx.investShares ?? 0).abs();
+      final availableFrom = fromHolding.totalShares + originalFromShares;
+      if (fromShares > availableFrom) {
+        throw StateError('来源持仓份额不足：可转出上限 ${availableFrom.toStringAsFixed(2)}');
+      }
+
+      final effectiveHappenedAt = happenedAt ?? sellTx.happenedAt;
+      final d.Value<String?> noteCompanion;
+      if (clearNote) {
+        noteCompanion = const d.Value(null);
+      } else if (note != null) {
+        noteCompanion = d.Value(note);
+      } else {
+        noteCompanion = const d.Value.absent();
+      }
+
+      // 更新卖出侧（手续费只记这里）
+      await (db.update(db.transactions)..where((t) => t.id.equals(sellTx.id)))
+          .write(TransactionsCompanion(
+        investShares: d.Value(-fromShares),
+        investNav: d.Value(fromNav),
+        investFee: d.Value(fee),
+        amount: const d.Value(0),
+        happenedAt: d.Value(effectiveHappenedAt),
+        note: noteCompanion,
+      ));
+
+      // 更新买入侧（amount = 转入成本）
+      await (db.update(db.transactions)..where((t) => t.id.equals(buyTx.id)))
+          .write(TransactionsCompanion(
+        investShares: d.Value(toShares),
+        investNav: d.Value(toNav),
+        investFee: const d.Value(null),
+        amount: d.Value(toCost),
+        happenedAt: d.Value(effectiveHappenedAt),
+        note: noteCompanion,
+      ));
+
+      if (refundAmount > 0) {
+        if (refundTx == null) {
+          await _insertTx(
+            ledgerId: fromHolding.ledgerId,
+            accountId: fromHolding.accountId,
+            toAccountId: refundAccountId,
+            investType: null,
+            amount: refundAmount,
+            investShares: null,
+            investNav: null,
+            investFee: null,
+            holdingId: null,
+            happenedAt: effectiveHappenedAt,
+            note: '基金转换退回',
+            batchId: batchId,
+          );
+        } else {
+          final existingRefund = refundTx;
+          await (db.update(db.transactions)
+                ..where((t) => t.id.equals(existingRefund.id)))
+              .write(TransactionsCompanion(
+            amount: d.Value(refundAmount),
+            toAccountId: d.Value(refundAccountId),
+            happenedAt: d.Value(effectiveHappenedAt),
+          ));
+        }
+      } else if (refundTx != null) {
+        await LocalTransactionRepository(db).deleteTransaction(refundTx.id);
+      }
+
+      // 重算双方持仓并联动投资账户市值
+      await _recomputeHolding(fromHolding.id);
+      await _recomputeHolding(toHolding.id);
+      await _syncInvestmentAccountValue(fromHolding.accountId);
+      await _syncInvestmentAccountValue(toHolding.accountId);
+    });
+  }
+
+  @override
+  Future<void> deleteConversion(String batchId) async {
+    await db.transaction(() async {
+      final txs = await getTransactionsByBatchId(batchId);
+      final holdingIds = txs.map((t) => t.holdingId).whereType<int>().toSet();
+      final accountIds = <int>{};
+      for (final id in holdingIds) {
+        final h = await getHolding(id);
+        if (h != null) accountIds.add(h.accountId);
+      }
+
+      final txRepo = LocalTransactionRepository(db);
+      for (final tx in txs) {
+        await txRepo.deleteTransaction(tx.id);
+      }
+
+      // 删除后统一重算剩余持仓，保证双方份额/成本/市值一致。
+      for (final id in holdingIds) {
+        await _recomputeHolding(id);
+      }
+      for (final id in accountIds) {
+        await _syncInvestmentAccountValue(id);
+      }
+    });
+  }
+
+  @override
+  Future<List<Transaction>> getTransactionsByBatchId(String batchId) {
+    return (db.select(db.transactions)
+          ..where((t) => t.batchId.equals(batchId))
+          ..orderBy([(t) => d.OrderingTerm(expression: t.id)]))
+        .get();
   }
 
   @override

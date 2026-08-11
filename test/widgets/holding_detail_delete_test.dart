@@ -60,8 +60,7 @@ void main() {
         holdingTransactionsProvider(1)
             .overrideWith((ref) => Stream.value([tx])),
         holdingReturnProvider(1).overrideWith(
-          (ref) async =>
-              const HoldingReturn(unrealizedPnL: 0, returnRate: 0),
+          (ref) async => const HoldingReturn(unrealizedPnL: 0, returnRate: 0),
         ),
         repositoryProvider.overrideWithValue(repo),
         investmentServiceProvider.overrideWithValue(service),
@@ -103,7 +102,7 @@ void main() {
     expect(service.deleteHoldingCalls, 1);
   });
 
-  testWidgets('转换批次流水删除被拦截', (tester) async {
+  testWidgets('转换批次流水删除整批并调用服务', (tester) async {
     final batchTx = Transaction(
       id: 2,
       ledgerId: 1,
@@ -127,8 +126,7 @@ void main() {
           holdingTransactionsProvider(1)
               .overrideWith((ref) => Stream.value([batchTx])),
           holdingReturnProvider(1).overrideWith(
-            (ref) async =>
-                const HoldingReturn(unrealizedPnL: 0, returnRate: 0),
+            (ref) async => const HoldingReturn(unrealizedPnL: 0, returnRate: 0),
           ),
           repositoryProvider.overrideWithValue(repo),
           investmentServiceProvider.overrideWithValue(service),
@@ -146,8 +144,13 @@ void main() {
     await tester.tap(find.byTooltip('删除流水'));
     await tester.pumpAndSettle();
 
-    expect(find.text('请删除完整的转换记录'), findsOneWidget);
-    expect(find.text('删除流水'), findsNothing);
+    expect(find.text('删除转换记录'), findsOneWidget);
+    expect(find.textContaining('删除完整的转换记录'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilledButton, '删除'));
+    await tester.pumpAndSettle();
+
+    expect(service.deleteConversionCalls, 1);
     expect(repo.deleteTransactionCalls, 0);
   });
 }
@@ -165,11 +168,17 @@ class _SpyRepository extends LocalRepository {
 
 class _SpyService extends InvestmentService {
   int deleteHoldingCalls = 0;
+  int deleteConversionCalls = 0;
 
   _SpyService(super.repo);
 
   @override
   Future<void> deleteHolding(int holdingId) async {
     deleteHoldingCalls++;
+  }
+
+  @override
+  Future<void> deleteConversion(String batchId) async {
+    deleteConversionCalls++;
   }
 }

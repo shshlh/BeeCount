@@ -31,6 +31,49 @@
 
 ---
 
+## 2026-08-12
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-logic + invest-ui + qa（记录归档）
+
+**任务**：7.5.4 复审通过并合入
+
+**审查结论**：
+- 数据层：`convert` / `validateConvert` 已加 `toCost`；买入侧 `amount` 存转入成本，手续费只记转出侧；退回流水同 batchId；`_recomputeHolding` 兼容旧记录
+- 新增 `updateConversion` / `deleteConversion` / `getTransactionsByBatchId`，整批原子更新/删除并重算双方持仓与投资账户市值
+- UI：转换弹窗新增「转入成本」；A/B 两页转换行统一显示「转换」，可整批编辑/删除；编辑页预填七个字段 + 日期/备注
+- 全量 `flutter test`：756 passed / 1 skipped / 0 failed；改动文件 analyze 无新增 issue（仅 2 条既有 dangling doc info）
+- 已合入并编译 Android APK
+
+**遗留/风险**：
+- 若 B 持仓完全由本次转换创建，删除转换后 B 持仓行会保留为 0 份额空持仓，需实机确认是否接受；如需自动清理可另派任务
+- 整批编辑的可转出上限按「当前份额 + 原转出份额」推算，若转换后 A 又发生多次买卖，复杂历史下该上限是近似值，建议实机验证核心场景
+
+**git 状态**：当前分支 main，7.5.4 已合入
+
+---
+
+## 2026-08-12
+
+**移交角色**：invest-logic + invest-ui + qa
+**接收角色**：PM（审查合入）
+
+**任务**：7.5.4 基金转换记录一体化 + 转入成本
+
+**完成工作**：
+- 数据层：`convert` / `validateConvert` 新增 `toCost`（必填 >0）；转换买入侧 `amount` 存转入成本、`investFee` 置 null（手续费只记转出侧）；退回流水写入同一 batchId；`_recomputeHolding` 转换买入按 `amount>0 ? amount : 份额×净值` 兼容旧记录
+- 新增 `updateConversion(batchId, ...)` / `deleteConversion(batchId)` / `getTransactionsByBatchId`：整批原子更新/删除（A 卖出 + B 买入 + 关联退回），重算双方持仓与投资账户市值
+- UI：转换弹窗 B 组件新增「转入成本」必填 >0；编辑模式预填转出/转入份额净值、转入成本、手续费、退回金额/账户、日期、备注，保存调 `updateConversion`；明细页 A/B 两页转换行统一显示「转换」标签，买入侧展示实际转入成本，点击任意一侧进入整批编辑，删除提示「删除完整的转换记录」
+- 测试：更新仓库/服务/转换弹窗/明细行/删除测试；新增 B 成本口径、update/deleteConversion、旧记录回退、A/B 两侧整批编辑/删除 UI 集成测试
+
+**验证**：
+- 全量 `flutter test`：756 passed / 1 skipped / 0 failed
+- 改动文件 `flutter analyze` 无新增 issue（2 条为既有 dangling doc info）
+
+**git 状态**：当前分支 main，改动未提交，待 PM 审查合入
+
+---
+
 ## 2026-08-11
 
 **移交角色**：项目经理（PM）

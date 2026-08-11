@@ -54,6 +54,8 @@ abstract class InvestmentRepository {
   /// 基金转换（A → B）。
   ///
   /// 同一事务内执行 A 卖出 + B 买入，两笔交易共享 batchId。
+  /// [toCost] 为转入成本（确认的转入金额，必填且 >0），B 持仓成本与
+  /// 买入侧交易 amount 均以它为准；手续费只记在转出侧。
   /// [refundAmount] 为转换确认后退回金额（>=0），[refundAccountId] 为退回账户，
   /// refundAmount > 0 时必填；退回差额生成独立 transfer 记录，不进持仓。
   /// [toHoldingId] 为空时支持手填新目标基金：[fundCode] / [fundName] 必填，
@@ -66,6 +68,7 @@ abstract class InvestmentRepository {
     required double fromNav,
     required double toShares,
     required double toNav,
+    required double toCost,
     double fee = 0,
     double refundAmount = 0,
     int? refundAccountId,
@@ -75,6 +78,33 @@ abstract class InvestmentRepository {
     DateTime? navDate,
     String? note,
   });
+
+  /// 更新一整笔转换（A 卖出 + B 买入 + 关联退回），按 batchId 原子更新。
+  ///
+  /// 仅允许调整确认份额/净值、转入成本、手续费、退回金额/账户、日期与备注；
+  /// 不改变双方基金与持仓归属。保存后重算双方持仓并联动投资账户市值。
+  Future<void> updateConversion(
+    String batchId, {
+    required double fromShares,
+    required double fromNav,
+    required double toShares,
+    required double toNav,
+    required double toCost,
+    double fee = 0,
+    double refundAmount = 0,
+    int? refundAccountId,
+    DateTime? happenedAt,
+    String? note,
+    bool clearNote = false,
+  });
+
+  /// 删除一整笔转换（A 卖出 + B 买入 + 关联退回），按 batchId 原子删除。
+  ///
+  /// 删除后重算双方持仓并联动投资账户市值；与单笔流水删除一样清理标签/附件。
+  Future<void> deleteConversion(String batchId);
+
+  /// 按 batchId 取转换批次下的全部交易（卖出/买入/退回），供编辑预填。
+  Future<List<Transaction>> getTransactionsByBatchId(String batchId);
 
   /// 更新持仓净值，同时重算市值（marketValue = totalShares × nav）。
   Future<void> updateNav(int holdingId, double nav, {DateTime? navDate});

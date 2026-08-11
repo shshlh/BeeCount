@@ -349,6 +349,7 @@ void main() {
       fromNav: 1.2,
       toShares: 480,
       toNav: 1.25,
+      toCost: 600,
       fee: 5,
     );
 
@@ -796,6 +797,7 @@ void main() {
       fromNav: 1.2,
       toShares: 480,
       toNav: 1.25,
+      toCost: 600,
       fee: 5,
     );
 
@@ -848,6 +850,7 @@ void main() {
       fromNav: 1.2,
       toShares: 480,
       toNav: 1.25,
+      toCost: 600,
       fee: 5,
       refundAmount: 100,
       refundAccountId: 20,
@@ -855,19 +858,19 @@ void main() {
 
     final txs = await db.select(db.transactions).get();
     final batchTxs = txs.where((t) => t.batchId != null).toList();
-    expect(batchTxs.length, 2); // 卖出 + 买入共享 batchId
+    expect(batchTxs.length, 3); // 卖出 + 买入 + 退回共享 batchId
 
     final sell = batchTxs.singleWhere((t) => t.investType == 'sell');
     expect(sell.amount, 0); // 投资账户内部记账，不产生资金流水
     final buy = batchTxs.singleWhere((t) => t.investType == 'buy');
-    expect(buy.amount, 0); // 投资账户内部记账，不产生资金流水
+    expect(buy.amount, 600); // 7.5.4: 买入侧 amount = 转入成本
 
     final refunds = txs.where((t) => t.note == '基金转换退回').toList();
     expect(refunds.length, 1);
     final refund = refunds.single;
     expect(refund.investType, isNull);
     expect(refund.holdingId, isNull);
-    expect(refund.batchId, isNull);
+    expect(refund.batchId, sell.batchId); // 7.5.4: 退回属于同一批次
     expect(refund.accountId, 10);
     expect(refund.toAccountId, 20);
     expect(refund.amount, 100.0);
@@ -915,6 +918,7 @@ void main() {
       fromNav: 1.2,
       toShares: 480,
       toNav: 1.25,
+      toCost: 600,
       refundAmount: 0,
     );
 
@@ -948,6 +952,7 @@ void main() {
         fromNav: 1.2,
         toShares: 480,
         toNav: 1.25,
+        toCost: 600,
         refundAmount: -1,
         refundAccountId: 20,
       ),
@@ -961,6 +966,7 @@ void main() {
         fromNav: 1.2,
         toShares: 480,
         toNav: 1.25,
+        toCost: 600,
         refundAmount: 1,
       ),
       throwsArgumentError,
@@ -986,6 +992,7 @@ void main() {
       fromNav: 1.2,
       toShares: 480,
       toNav: 1.25,
+      toCost: 600,
       fee: 5,
     );
 
@@ -1004,7 +1011,7 @@ void main() {
     final buyTx =
         txs.singleWhere((t) => t.investType == 'buy' && t.batchId != null);
     expect(sellTx.amount, 0);
-    expect(buyTx.amount, 0);
+    expect(buyTx.amount, 600); // 7.5.4: 买入侧 amount = 转入成本
     expect(buyTx.holdingId, target.id);
     expect(sellTx.batchId, buyTx.batchId);
   });
@@ -1039,6 +1046,7 @@ void main() {
       fromNav: 1.2,
       toShares: 480,
       toNav: 1.25,
+      toCost: 600,
     );
 
     final holdings = await db.select(db.investmentHoldings).get();
@@ -1068,6 +1076,7 @@ void main() {
         fromNav: 1.2,
         toShares: 480,
         toNav: 1.25,
+        toCost: 600,
       ),
       throwsArgumentError,
     );
@@ -1081,9 +1090,230 @@ void main() {
         fromNav: 1.2,
         toShares: 480,
         toNav: 1.25,
+        toCost: 600,
       ),
       throwsArgumentError,
     );
+  });
+
+  test('转换：B 成本以转入成本为准，市值按份额×净值', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '基金B',
+        amount: 500,
+        shares: 500,
+        nav: 1.0);
+
+    await repo.convert(
+      fromHoldingId: 1,
+      toHoldingId: 2,
+      fromShares: 500,
+      fromNav: 1.2,
+      toShares: 480,
+      toNav: 1.25,
+      toCost: 580, // 实际确认成本，与 480×1.25=600 不同
+      fee: 5,
+    );
+
+    final to = await repo.getHolding(2);
+    expect(to!.totalCost, closeTo(1080, 0.01)); // 500 + 580
+    expect(to.marketValue, closeTo(1225, 0.01)); // 980 × 1.25
+
+    final txs = await db.select(db.transactions).get();
+    final buyTx =
+        txs.singleWhere((t) => t.investType == 'buy' && t.batchId != null);
+    expect(buyTx.amount, 580);
+    expect(buyTx.investFee, isNull); // 手续费只记转出侧
+  });
+
+  test('updateConversion：整批更新 A/B/退回并重算双方持仓', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0,
+        happenedAt: DateTime(2026, 8, 1));
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '基金B',
+        amount: 500,
+        shares: 500,
+        nav: 1.0,
+        happenedAt: DateTime(2026, 8, 1));
+
+    await repo.convert(
+      fromHoldingId: 1,
+      toHoldingId: 2,
+      fromShares: 500,
+      fromNav: 1.2,
+      toShares: 480,
+      toNav: 1.25,
+      toCost: 600,
+      fee: 5,
+      refundAmount: 100,
+      refundAccountId: 20,
+      happenedAt: DateTime(2026, 8, 2),
+    );
+    final batchId = (await db.select(db.transactions).get())
+        .firstWhere((t) => t.investType == 'buy' && t.batchId != null)
+        .batchId!;
+
+    final newDate = DateTime(2026, 8, 3, 9, 30);
+    await repo.updateConversion(
+      batchId,
+      fromShares: 400,
+      fromNav: 1.1,
+      toShares: 420,
+      toNav: 1.2,
+      toCost: 500,
+      fee: 8,
+      refundAmount: 120,
+      refundAccountId: 20,
+      happenedAt: newDate,
+      note: '改后备注',
+    );
+
+    final from = await repo.getHolding(1);
+    expect(from!.totalShares, closeTo(600, 0.01)); // 1000 - 400
+    expect(from.totalCost, closeTo(600, 0.01)); // 1000 × 400/1000
+    expect(from.currentNav, 1.1);
+    expect(from.marketValue, closeTo(660, 0.01));
+
+    final to = await repo.getHolding(2);
+    expect(to!.totalShares, closeTo(920, 0.01)); // 500 + 420
+    expect(to.totalCost, closeTo(1000, 0.01)); // 500 + 500
+    expect(to.currentNav, 1.2);
+    expect(to.marketValue, closeTo(1104, 0.01));
+
+    final txs = await db.select(db.transactions).get();
+    final sell = txs.singleWhere((t) => t.investType == 'sell');
+    expect(sell.investShares, -400);
+    expect(sell.investNav, 1.1);
+    expect(sell.investFee, 8);
+    expect(sell.amount, 0);
+    expect(sell.happenedAt, newDate);
+    expect(sell.note, '改后备注');
+
+    final buy =
+        txs.singleWhere((t) => t.investType == 'buy' && t.batchId != null);
+    expect(buy.investShares, 420);
+    expect(buy.investNav, 1.2);
+    expect(buy.amount, 500);
+    expect(buy.investFee, isNull);
+
+    final refund = txs.singleWhere((t) => t.note == '基金转换退回');
+    expect(refund.amount, 120);
+    expect(refund.toAccountId, 20);
+    expect(refund.batchId, batchId);
+  });
+
+  test('deleteConversion：删除整批（含退回）并重算双方持仓', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '基金B',
+        amount: 500,
+        shares: 500,
+        nav: 1.0);
+
+    await repo.convert(
+      fromHoldingId: 1,
+      toHoldingId: 2,
+      fromShares: 500,
+      fromNav: 1.2,
+      toShares: 480,
+      toNav: 1.25,
+      toCost: 600,
+      fee: 5,
+      refundAmount: 100,
+      refundAccountId: 20,
+    );
+    final batchId = (await db.select(db.transactions).get())
+        .firstWhere((t) => t.investType == 'buy' && t.batchId != null)
+        .batchId!;
+
+    await repo.deleteConversion(batchId);
+
+    final remaining = await db.select(db.transactions).get();
+    expect(remaining.where((t) => t.batchId == batchId), isEmpty);
+    expect(remaining.where((t) => t.note == '基金转换退回'), isEmpty);
+
+    final from = await repo.getHolding(1);
+    expect(from!.totalShares, 1000);
+    expect(from.totalCost, closeTo(1000, 0.01));
+    final to = await repo.getHolding(2);
+    expect(to!.totalShares, 500);
+    expect(to.totalCost, closeTo(500, 0.01));
+
+    final account = await (db.select(db.accounts)
+          ..where((a) => a.id.equals(10)))
+        .getSingle();
+    expect(account.initialBalance, closeTo(1500, 0.01));
+  });
+
+  test('转换旧记录兼容：买入侧 amount=0 时成本回退份额×净值', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '基金B',
+        amount: 500,
+        shares: 500,
+        nav: 1.0);
+
+    await repo.convert(
+      fromHoldingId: 1,
+      toHoldingId: 2,
+      fromShares: 500,
+      fromNav: 1.2,
+      toShares: 480,
+      toNav: 1.25,
+      toCost: 600,
+      fee: 5,
+    );
+    final buyTxId = (await db.select(db.transactions).get())
+        .firstWhere((t) => t.investType == 'buy' && t.batchId != null)
+        .id;
+
+    // 模拟 7.5.4 之前的旧数据：买入侧 amount 未写转入成本。
+    await repo.updateTransaction(buyTxId, amount: 0);
+    await repo.recomputeHolding(2);
+
+    final to = await repo.getHolding(2);
+    expect(to!.totalCost, closeTo(1100, 0.01)); // 500 + 480 × 1.25
+    expect(to.marketValue, closeTo(1225, 0.01));
   });
 
   // ---- 净值更新 ----
