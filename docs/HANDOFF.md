@@ -34,6 +34,29 @@
 ## 2026-08-12
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-ui（+ qa）
+
+**任务**：7.5.6 基金记录编辑日期时间合并为单个日期栏
+
+**问题**：
+- 7.5.5 在单笔基金交易编辑和转换整批编辑里加了独立的「日期」+「时间」两行，但日期行显示 `yyyy-MM-dd HH:mm`，时间行又单独可改时/分，交互重复
+- 产品要求与记账页一致：一个「日期」栏，点击后走日期→时间两步选择器，只选时/分，秒固定 0
+
+**要求**：
+1. `ConvertDialog` 编辑模式：移除独立「时间」行与 `_pickTime`，日期行改用 `showWheelDateTimePicker`（`lib/widgets/ui/wheel_date_picker.dart`），显示完整 `yyyy-MM-dd HH:mm`，保存后秒归零
+2. `_TransactionEditDialog`（单笔基金交易编辑）：同样移除独立「时间」行，日期行改用 `showWheelDateTimePicker`
+3. 删除这两个文件里不再使用的 `showWheelTimePicker` 引用（提醒设置等其他页面不受影响）
+4. 测试：
+   - 更新 `holding_detail_transaction_edit_test.dart` / 转换编辑测试：不再出现独立「时间」行，日期行可打开组合选择器，保存后时/分保留、秒归零
+   - 全量 `flutter test` 0 failed，改动文件 analyze 无新增 issue
+
+**git 状态**：当前分支 main，HEAD be4f636，工作区干净
+
+---
+
+## 2026-08-12
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-logic + invest-ui + qa + architect（记录归档）
 
 **任务**：7.5.5 复审通过并合入
