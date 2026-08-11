@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """生成 Android adaptive icon 素材(前景 / monochrome 线框版)。
 
+⚠️ 已废弃(2026-08-11,7.5.2 品牌图标切换):本脚本会重新生成**旧蜜蜂**图标并
+覆盖 assets/icon/*,与当前「托」字品牌图冲突。当前图标由用户原图 +
+`dart run flutter_launcher_icons` 生成,不要再运行本脚本。
+
 产出(1024×1024,内容缩进 adaptive 安全区 ~62%):
   assets/icon/adaptive_foreground.png  — 全彩蜜蜂(透明底),adaptive 前景层
   assets/icon/adaptive_monochrome.png  — 线框蜜蜂(黑色+透明镂空),Android 13 themed icon 用
@@ -17,6 +21,7 @@
 """
 
 from pathlib import Path
+import sys
 
 from PIL import Image, ImageDraw
 
@@ -202,6 +207,13 @@ def gen_legacy(fg):
 
 
 def main():
+    print(
+        "已废弃: 本脚本会覆盖当前「托」字品牌图标,已禁用;"
+        "请改用 flutter_launcher_icons(配置见 pubspec.yaml)。",
+        file=sys.stderr,
+    )
+    sys.exit(2)
+
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     fg = gen_foreground()
     fg.save(OUT_DIR / "adaptive_foreground.png")

@@ -50,7 +50,8 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 7.5.1 PM 复审合入 | ✅ | PM | HANDOFF 记录 + commit + Android APK 编译 | 2026-08-11 |
 | 7.5.2 App 图标更换「托」字书法标 | ✅ 待实机验证 | kimi（用户直派，跨只读边界） | 三图层接入 + flutter_launcher_icons 重生成 + inset 修正 + HANDOFF 记录 | 2026-08-11 |
 | 7.5.2 PM 复审合入 | ✅ | PM | 像素级复核 + HANDOFF 记录 + 待实机验证清单 | 2026-08-11 |
-| 7.5.3 App 内品牌图替换 | ⬜ 待执行 | invest-ui（+ kimi 可选） | BeeIcon 换新标 + logo2 替换 + 隐藏引用清理 + 测试 | — |
+| 7.5.3 App 内品牌图替换 | ✅ | invest-ui（+ kimi 可选） | BeeIcon 换新标 + logo2 替换 + 隐藏引用清理 + 测试 | 2026-08-11 |
+| 7.5.3 PM 复审合入 | ✅ | PM | 全量测试 0 failed + analyze 0 issue + HANDOFF 记录 + APK | 2026-08-11 |
 
 ### 阶段 7.4：账户备注修复
 

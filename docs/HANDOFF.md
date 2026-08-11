@@ -34,6 +34,53 @@
 ## 2026-08-11
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-ui（记录归档）
+
+**任务**：7.5.3 复审通过并合入
+
+**审查结论**：
+- `BeeIcon` 已切换到 `assets/icon/adaptive_foreground.png`（透明底「托」字）+ `ColorFiltered(srcIn)`，原有 `color` 语义保留；首页/我的/关于/欢迎/锁屏/AI/空状态全部跟随
+- `assets/logo2.png` 已替换为 512×512 透明底「托」字标，启动页与 6 张海报自动跟随；旧 `bee.svg` / `logo.svg` 已从 pubspec 移除且无残留引用
+- 旧图标生成脚本已禁用并登记 `assets/DEPRECATED.md`，避免误覆盖新品牌图标
+- 全量 `flutter test`：748 passed / 1 skipped / 0 failed；改动 Dart 文件 `dart analyze` 0 issue
+- 已合入并编译 Android APK
+
+**遗留/风险**：
+- 未做真机视觉验证，需确认首页/我的/关于/欢迎/锁屏/AI 头像与海报 logo 的实际观感
+- widget 预览图仍未重新生成，实机时一并确认小组件预览是否显示旧图标
+
+**git 状态**：当前分支 main，7.5.3 已合入
+
+---
+
+## 2026-08-11
+
+**移交角色**：invest-ui
+**接收角色**：PM（审查合入）
+
+**任务**：7.5.3 App 内品牌图替换
+
+**完成工作**：
+- `BeeIcon` 改用 `assets/icon/adaptive_foreground.png`（透明底「托」字）+ `ColorFiltered(srcIn)` 保留 color 语义；glyph 放大 1.35 倍保证小尺寸醒目，暗黑模式保留浅色圆形遮罩；首页/我的/关于/欢迎/锁屏/AI/空状态全部自动跟随
+- `assets/logo2.png` 替换为透明底「托」字标（512×512，由 adaptive_foreground 生成）；启动页/6 张海报/年度报告预缓存自动跟随
+- `pubspec.yaml`：移除 `assets/logo.svg` / `assets/bee.svg`，新增 `assets/icon/adaptive_foreground.png` 打包
+- 隐藏引用清理：`logo.svg` / `logo_216.png` / `logo_512.png` / `beeassets_*` / `beedns_logo.png` 仅仓库内历史归档，新增 `assets/DEPRECATED.md` 清单；两个旧图标生成脚本已废弃并禁用，防止误覆盖新品牌图标
+- 新增 `test/widgets/bee_icon_brand_test.dart`：锁定新资产路径 + ColorFiltered 着色 + 暗黑遮罩
+
+**验证**：
+- 全量 `flutter test`：748 passed / 1 skipped / 0 failed
+- 改动 Dart 文件 `flutter analyze` 0 issue
+
+**遗留**：
+- 未做真机/截图视觉验证，建议 PM 编译 APK 时确认首页/我的/关于/欢迎/锁屏/AI 头像与海报 logo 的实际观感
+
+**git 状态**：当前分支 main，改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-11
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-ui（+ kimi 可选，用户直派）
 
 **任务**：7.5.3 App 内品牌图替换（7.5.2 返工）

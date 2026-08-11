@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """
 批量为Android图标添加白色背景
+
+⚠️ 已废弃(2026-08-11,7.5.2 品牌图标切换):本脚本会把旧蜜蜂图标加上白底后覆盖
+android/app/src/main/res/mipmap-*/ic_launcher.png,与当前「托」字品牌图标冲突。
+当前图标由 `dart run flutter_launcher_icons` 生成,不要再运行本脚本。
 """
 import os
 import sys
@@ -48,6 +52,13 @@ def add_white_background(input_path, output_path, size):
     background.save(output_path, 'PNG', quality=100)
 
 def main():
+    print(
+        "已废弃: 本脚本会覆盖当前「托」字品牌图标,已禁用;"
+        "请改用 flutter_launcher_icons(配置见 pubspec.yaml)。",
+        file=sys.stderr,
+    )
+    sys.exit(2)
+
     print("开始批量生成白底Android图标...")
 
     if not os.path.exists(SOURCE_ICON):

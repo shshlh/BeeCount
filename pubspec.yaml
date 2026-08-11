@@ -118,8 +118,7 @@ flutter:
   uses-material-design: true
   generate: true
   assets:
-    - assets/logo.svg
-    - assets/bee.svg
+    - assets/icon/adaptive_foreground.png
     - assets/logo2.png
     - assets/icons/
     - assets/images/
