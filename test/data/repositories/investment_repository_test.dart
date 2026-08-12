@@ -9,6 +9,7 @@ import 'package:beecount/data/db.dart';
 import 'package:beecount/data/repositories/local/local_investment_repository.dart';
 import 'package:beecount/data/repositories/local/local_account_repository.dart';
 import 'package:beecount/data/repositories/local/local_transaction_repository.dart';
+import 'package:beecount/data/repositories/local/local_repository.dart';
 
 class _FakePathProviderPlatform extends PathProviderPlatform {
   final String docsDir;
@@ -1369,6 +1370,121 @@ void main() {
     final to = await repo.getHolding(2);
     expect(to!.totalCost, closeTo(1100, 0.01)); // 500 + 480 × 1.25
     expect(to.marketValue, closeTo(1225, 0.01));
+  });
+
+  // ---- 7.6.1 删除转换后清理空持仓 ----
+
+  test('deleteConversion：纯转换新建的 B 空持仓被清理', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+
+    await repo.convert(
+      fromHoldingId: 1,
+      toHoldingId: null,
+      fundCode: '000009',
+      fundName: '新基金',
+      fromShares: 500,
+      fromNav: 1.2,
+      toShares: 480,
+      toNav: 1.25,
+      toCost: 600,
+      fee: 5,
+    );
+    final batchId = (await db.select(db.transactions).get())
+        .firstWhere((t) => t.investType == 'buy' && t.batchId != null)
+        .batchId!;
+
+    final before = await db.select(db.investmentHoldings).get();
+    expect(before.any((h) => h.fundCode == '000009'), isTrue);
+
+    await repo.deleteConversion(batchId);
+
+    final after = await db.select(db.investmentHoldings).get();
+    expect(after.any((h) => h.fundCode == '000009'), isFalse);
+    final from = await repo.getHolding(1);
+    expect(from!.totalShares, 1000);
+    expect(from.totalCost, closeTo(1000, 0.01));
+
+    final account = await (db.select(db.accounts)
+          ..where((a) => a.id.equals(10)))
+        .getSingle();
+    expect(account.initialBalance, closeTo(1000, 0.01));
+  });
+
+  // ---- 7.6.2 通用更新投资流水兜底重算 ----
+
+  test('通用 updateTransaction 改备注/加标签不改变持仓', () async {
+    final txId = await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+    final before = await repo.getHolding(1);
+
+    await LocalTransactionRepository(db).updateTransaction(
+      id: txId,
+      type: 'transfer',
+      amount: 1000,
+      categoryId: null,
+      note: '新备注',
+      happenedAt: DateTime(2026, 8, 1, 10, 0),
+      accountId: 10,
+      excludeFromStats: false,
+      excludeFromBudget: true,
+      currencyCode: null,
+      nativeAmount: null,
+    );
+    final tagId = await LocalRepository(db).createTag(name: '测试');
+    await LocalRepository(db).updateTransactionTags(
+      transactionId: txId,
+      tagIds: [tagId],
+    );
+
+    final after = await repo.getHolding(1);
+    expect(after!.totalShares, before!.totalShares);
+    expect(after.totalCost, closeTo(before.totalCost, 0.01));
+    expect(after.marketValue, closeTo(before.marketValue, 0.01));
+
+    final tags = await LocalRepository(db).getTagsForTransaction(txId);
+    expect(tags.single.name, '测试');
+  });
+
+  test('通用 updateTransaction 直接改金额时持仓成本同步重算', () async {
+    final txId = await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+
+    await LocalTransactionRepository(db).updateTransaction(
+      id: txId,
+      type: 'transfer',
+      amount: 1500,
+      categoryId: null,
+      note: null,
+      happenedAt: DateTime(2026, 8, 1, 10, 0),
+      accountId: 10,
+      excludeFromStats: false,
+      excludeFromBudget: true,
+      currencyCode: null,
+      nativeAmount: null,
+    );
+
+    final h = await repo.getHolding(1);
+    expect(h!.totalCost, closeTo(1500, 0.01));
+    expect(h.marketValue, closeTo(1000, 0.01)); // 份额 × 净值不变
   });
 
   // ---- 净值更新 ----

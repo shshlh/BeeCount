@@ -836,6 +836,8 @@ class LocalInvestmentRepository implements InvestmentRepository {
       // 删除后统一重算剩余持仓，保证双方份额/成本/市值一致。
       for (final id in holdingIds) {
         await _recomputeHolding(id);
+        // 7.6.1: 无剩余流水的持仓（纯转换新建）直接清理。
+        await _deleteEmptyHoldingIfOrphan(id);
       }
       for (final id in accountIds) {
         await _syncInvestmentAccountValue(id);
@@ -967,6 +969,22 @@ class LocalInvestmentRepository implements InvestmentRepository {
 
       await _syncInvestmentAccountValue(holding.accountId);
     });
+  }
+
+  /// 7.6.1: 若持仓已无任何剩余流水（如纯转换新建后被整批删除），
+  /// 删除持仓行与分组关联，避免 0 份额空持仓残留。
+  Future<void> _deleteEmptyHoldingIfOrphan(int holdingId) async {
+    final remaining = await (db.select(db.transactions)
+          ..where((t) => t.holdingId.equals(holdingId)))
+        .get();
+    if (remaining.isNotEmpty) return;
+
+    await (db.delete(db.investmentGroupHoldings)
+          ..where((r) => r.holdingId.equals(holdingId)))
+        .go();
+    await (db.delete(db.investmentHoldings)
+          ..where((h) => h.id.equals(holdingId)))
+        .go();
   }
 
   // ---- 基金分组（v6.2）----

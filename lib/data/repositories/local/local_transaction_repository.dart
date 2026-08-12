@@ -615,6 +615,15 @@ class LocalTransactionRepository implements TransactionRepository {
             : d.Value(nativeAmount),
       ),
     );
+
+    // 7.6.2 兜底：投资流水被通用编辑路径更新后，重算持仓并联动投资账户市值，
+    // 避免金额/净值等字段与持仓统计脱钩。
+    final updated = await (db.select(db.transactions)
+          ..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+    if (updated?.investType != null && updated?.holdingId != null) {
+      await _investmentRepo.recomputeHolding(updated!.holdingId!);
+    }
   }
 
   /// 共享账本:在本地标记 tx 的创建人 / 编辑人,让 UI 能立即展示头像。

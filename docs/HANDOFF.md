@@ -34,6 +34,49 @@
 ## 2026-08-12
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-logic + invest-ui + qa（记录归档）
+
+**任务**：7.6.1 / 7.6.2 复审通过并合入
+
+**审查结论**：
+- 7.6.1：`deleteConversion` 删除批次后会清理无剩余流水的孤儿持仓（含分组关联）；已有其他流水的持仓保留
+- 7.6.2 数据层：通用 `updateTransaction` 对投资流水补持仓重算与投资账户市值联动
+- 7.6.2 UI：明细页投资流水改开受限编辑页，仅日期/时间、备注、标签；金额/账户/分类等字段不再暴露
+- 全量 `flutter test`：765 passed / 1 skipped / 0 failed；改动文件 analyze 无新增 issue（local_transaction_repository 为既有 warning/info 基线）
+- 已合入并编译 Android APK
+
+**遗留/风险**：
+- 受限编辑页目前按普通标签保存；共享账本的 synthetic 标签处理未同步（自用账本无影响，共享账本场景建议后续补）
+- 受限编辑页保存后未显式触发统计/小组件刷新与 author 标记，实机确认标签/明细即时刷新是否满足预期
+
+**git 状态**：当前分支 main，7.6.1 / 7.6.2 已合入
+
+---
+
+## 2026-08-12
+
+**移交角色**：invest-logic + invest-ui + qa
+**接收角色**：PM（审查合入）
+
+**任务**：7.6.1 删除转换后清理空持仓 + 7.6.2 投资流水明细编辑安全
+
+**完成工作**：
+- 7.6.1：`deleteConversion` 重算后对受影响持仓做孤儿清理——无任何剩余流水的持仓删除 `investment_holdings` 行与分组关联；已有其他流水的持仓即使 0 份额也保留
+- 7.6.2 数据层：通用 `LocalTransactionRepository.updateTransaction` 更新后若为投资流水（investType + holdingId）调用 `_investmentRepo.recomputeHolding` 联动重算，作为兜底
+- 7.6.2 UI：`TransactionEditUtils.editTransaction` 对投资流水改开受限编辑页（新增 `InvestmentTransactionEditPage`），仅日期/时间、备注、标签；金额/净值/份额/账户/分类/类型保留在持仓详情页维护
+- 测试：纯转换新建 B 删除后持仓行消失、已有 B 持仓删除后保留原份额；通用改备注/加标签不改变持仓、直接改金额成本同步重算；受限编辑无金额/账户/分类字段 UI 测试
+
+**验证**：
+- 全量 `flutter test`：765 passed / 1 skipped / 0 failed
+- 改动文件 `flutter analyze` 无新增 issue（local_transaction_repository 为既有 info/warning 基线）
+
+**git 状态**：当前分支 main，改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-12
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-logic + invest-ui + qa
 
 **任务**：7.6 遗留问题检查与修复

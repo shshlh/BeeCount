@@ -4,6 +4,7 @@ import '../data/db.dart';
 import '../pages/transaction/transaction_editor_page.dart';
 import '../data/repositories/local/local_repository.dart';
 import '../providers/database_providers.dart';
+import '../widgets/transaction/investment_transaction_edit_page.dart';
 import 'shared_ledger_picker_filter.dart' show syntheticIdForSyncId;
 
 class TransactionEditUtils {
@@ -39,10 +40,22 @@ class TransactionEditUtils {
     final int? initialAccountId = transaction.accountSyncIdOverride != null
         ? syntheticIdForSyncId(transaction.accountSyncIdOverride!)
         : transaction.accountId;
-    final int? initialToAccountId =
-        transaction.toAccountSyncIdOverride != null
-            ? syntheticIdForSyncId(transaction.toAccountSyncIdOverride!)
-            : transaction.toAccountId;
+    final int? initialToAccountId = transaction.toAccountSyncIdOverride != null
+        ? syntheticIdForSyncId(transaction.toAccountSyncIdOverride!)
+        : transaction.toAccountId;
+
+    // 7.6.2: 投资流水走受限编辑，避免通用编辑器改动金额/账户/分类后
+    // 与持仓统计脱钩。
+    if (transaction.investType != null && transaction.holdingId != null) {
+      if (!context.mounted) return;
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) =>
+              InvestmentTransactionEditPage(transaction: transaction),
+        ),
+      );
+      return;
+    }
 
     if (!context.mounted) return;
 
