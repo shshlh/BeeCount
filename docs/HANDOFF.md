@@ -29,6 +29,80 @@
 ---
 -->
 
+## 2026-08-13
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-logic + invest-ui + qa + architect
+
+**任务**：7.8 导出数据补齐投资内容
+
+**背景/根因**：
+- 「导出数据」CSV 只导普通流水；7.5.5 后转换内部卖出/买入标记 `excludeFromStats=true`，CSV 里连转换内部流水也看不到
+- 「配置导入导出」YAML 只导账本/分类/账户/标签/周期/预算/设置，不含持仓、分组、分组归属
+
+---
+
+## 2026-08-13
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-logic + invest-ui + qa
+
+**任务**：7.8.1 CSV 导出投资内容
+
+**要求**：
+1. `ExportPage` 导出时同时生成投资 CSV（如 `beecount_investments_<ts>.csv`），与流水 CSV 一起保存/分享
+2. 投资 CSV 至少包含：
+   - 持仓：基金代码、基金名称、所属账户、份额、成本、当前净值、净值日期、市值、备注、所属分组
+   - 投资流水：类型（初始/买入/卖出/转换/退回）、基金代码/名称、份额、净值、转入成本、手续费、退回金额、退回账户、日期、备注
+   - 分组与分组归属
+3. 转换内部卖出/买入也要导出（用于归档核对），但流水 CSV 仍保持用户可见口径（只退回）
+4. 测试：导出文件包含持仓/投资流水/分组；转换后导出能看到内部两笔与退回
+
+---
+
+## 2026-08-13
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-logic + architect + qa
+
+**任务**：7.8.2 配置 YAML 备份投资数据
+
+**要求**：
+1. `ConfigExportService` 增加 investment 区块：持仓、分组、分组归属
+2. `importFromYaml` 支持恢复：按 (ledgerId, fundCode, accountId) 幂等复用持仓；分组按名称幂等；恢复后持仓份额/成本/净值/市值与导出一致
+3. 导出选项/对话框增加「投资数据」勾选项，默认随「账户」一起导出
+4. 测试：YAML 导出→清空→导入 roundtrip，持仓与分组不丢失、不重复
+5. 全量 `flutter test` 0 failed，改动文件 analyze 无新增 issue
+
+---
+
+## 2026-08-13
+
+**移交角色**：architect + invest-logic + qa
+**接收角色**：PM（审查合入）→ 用户（实机回归）
+
+**任务**：7.7 正式版收尾（7.7.1 完成 + 7.7.2 自动化部分完成）
+
+**完成工作**：
+- 7.7.1：`pubspec.yaml` 版本改为 `1.0.0+1`；生成正式 release keystore（RSA 2048 / 10000 天 / alias `beecount`）+ `android/key.properties`
+- 密钥离线备份两份：`D:\mynodes\BeecountReleaseBackup` + `C:\Users\wanji\Documents\BeecountReleaseBackup`（keystore + 密码 + 证书指纹）
+- `android/gradle.properties` 增加 `kotlin.incremental=false`：Kotlin 2.2.0 增量编译缓存跨盘（C: pub 缓存 / D: 项目）相对路径计算失败，release 构建会卡死
+- 修正 `key.properties` 的 `storeFile=release.keystore`（模块级 `file()` 基准目录是 `android/app`）
+- 预置 sqlite3 hook 缓存（arm/arm64/x64 Android so + Windows x64 dll，经 ghfast.top 镜像下载，SHA256 全部校验通过）
+- `flutter build apk --debug --flavor dev` 通过；`flutter build apk --release --flavor prod` 通过
+- apksigner 验证正式签名：证书 CN=Jizhang Zhushou，SHA-256 `03f4b456...`，不再 fallback ci-debug
+- aapt2 验证：versionCode=1 / versionName=1.0.0 / App 名「记账助手」/ native-code arm64-v8a
+- 全量 `flutter test`：766 passed / 1 skipped / 0 failed
+- 正式 APK 归档：`D:\codexproject\releases\beecount-v1.0.0`（arm64 / armeabi-v7a / x86_64 / universal + `SHA256SUMS.txt`）
+
+**下一个任务需要知道的**：
+- 实机回归未执行（当前 adb 无设备/模拟器）：安装 arm64 主包 `app-prod-release-v1.0.0(1).apk`，回归记账、转账、账户、持仓、买入/卖出/转换、初始持仓、标签、AI、小组件、云同步
+- 实机通过后再打 `v1.0.0` tag、push main + tag、把任务板 7.7.2 更新为 ✅
+- 若执行 `flutter clean`，sqlite3 hook 缓存会清空；GitHub 不可达时需要先用 ghfast.top 镜像下载 so/dll 并重新预置到 `.dart_tool/hooks_runner/shared/sqlite3/build/` 对应 hash 目录
+- 本次改动未提交，待 PM 审查合入
+
+**git 状态**：当前分支 main，改动未提交（`pubspec.yaml` + `android/gradle.properties` + `.codex/TEAM.md` + `docs/HANDOFF.md`）
+
 ---
 
 ## 2026-08-12
