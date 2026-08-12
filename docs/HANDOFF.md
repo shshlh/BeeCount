@@ -34,6 +34,29 @@
 ## 2026-08-12
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-ui + qa
+
+**任务**：7.6.3 受限编辑页保存后标签即时刷新
+
+**问题**：`InvestmentTransactionEditPage` 保存标签后没有触发 `tagListRefreshProvider`，明细列表沿用旧标签缓存，重启后才显示新标签。
+
+**要求**：
+1. `_save()` 保存成功后，与通用编辑器对齐，至少执行：
+   - `ref.read(tagListRefreshProvider.notifier).state++`
+   - `PostProcessor.sync(ref, ledgerId: widget.transaction.ledgerId)`
+   - `ref.invalidate(countsForLedgerProvider(ledgerId))`
+   - `statsRefreshProvider` / `budgetRefreshProvider` 刷新
+   - 可选：`TxAuthorService.markEdited`
+2. 测试：受限编辑页改标签保存后，明细列表无需重启即可显示新标签；标签刷新信号已触发
+3. 全量 `flutter test` 0 failed，改动文件 analyze 无新增 issue
+
+**git 状态**：当前分支 main，HEAD 9a0c2fa，工作区干净
+
+---
+
+## 2026-08-12
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-logic + invest-ui + qa（记录归档）
 
 **任务**：7.6.1 / 7.6.2 复审通过并合入

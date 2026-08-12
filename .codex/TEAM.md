@@ -62,6 +62,7 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 7.6.2 投资流水明细编辑安全 | ✅ | invest-logic + invest-ui + qa | 通用更新重算持仓 + 受限编辑 + 测试 | 2026-08-12 |
 | 7.6.1 PM 复审合入 | ✅ | PM | 全量测试 0 failed + HANDOFF 记录 + APK | 2026-08-12 |
 | 7.6.2 PM 复审合入 | ✅ | PM | 全量测试 0 failed + analyze 无新增 + HANDOFF 记录 + APK | 2026-08-12 |
+| 7.6.3 受限编辑页标签即时刷新 | ⬜ 待执行 | invest-ui + qa | 保存后触发 tagListRefresh / sync / 统计刷新 + 测试 | — |
 
 ### 阶段 7.4：账户备注修复
 
