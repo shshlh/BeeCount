@@ -67,7 +67,7 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 7.7.1 版本号 + 正式签名 | ✅ | architect + invest-logic | 1.0.0+1 + release keystore + key.properties + 离线备份 | 2026-08-13 |
 | 7.7.2 release 打包回归 + 归档 | ⬜ 待实机验证 | qa + invest-logic | prod release APK 已出 + 全量测试 766 passed + 待实机回归 + v1.0.0 tag/push | — |
 | 7.8.1 CSV 导出投资内容 | ⬜ 待执行 | invest-logic + invest-ui + qa | 持仓/投资流水/分组 CSV + 测试 | — |
-| 7.8.2 配置 YAML 备份投资数据 | ⬜ 待执行 | invest-logic + architect + qa | investment 区块 + 幂等导入 + roundtrip 测试 | — |
+| 7.8.2 配置 YAML 备份投资数据 | ❌ 取消 | PM | 用户确认投资内容归「导出数据」CSV，配置导出不改 | 2026-08-13 |
 
 ### 阶段 7.4：账户备注修复
 
