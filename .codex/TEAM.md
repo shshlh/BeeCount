@@ -48,7 +48,7 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 |---|---|---|---|---|
 | 7.5.1 同名不同币种账户提示优化 | ✅ | architect + invest-logic + invest-ui | 测试修正 + 重复名提示建议 + 回归 | 2026-08-11 |
 | 7.5.1 PM 复审合入 | ✅ | PM | HANDOFF 记录 + commit + Android APK 编译 | 2026-08-11 |
-| 7.5.2 App 图标更换「托」字书法标 | ✅ 待实机验证 | kimi（用户直派，跨只读边界） | 三图层接入 + flutter_launcher_icons 重生成 + inset 修正 + HANDOFF 记录 | 2026-08-11 |
+| 7.5.2 App 图标更换「托」字书法标 | ✅ | kimi（用户直派，跨只读边界） | 三图层接入 + flutter_launcher_icons 重生成 + inset 修正 + HANDOFF 记录 | 2026-08-11 |
 | 7.5.2 PM 复审合入 | ✅ | PM | 像素级复核 + HANDOFF 记录 + 待实机验证清单 | 2026-08-11 |
 | 7.5.3 App 内品牌图替换 | ✅ | invest-ui（+ kimi 可选） | BeeIcon 换新标 + logo2 替换 + 隐藏引用清理 + 测试 | 2026-08-11 |
 | 7.5.3 PM 复审合入 | ✅ | PM | 全量测试 0 failed + analyze 0 issue + HANDOFF 记录 + APK | 2026-08-11 |
@@ -58,6 +58,8 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 7.5.5 PM 复审合入 | ✅ | PM | 全量测试 0 failed + analyze 无新增 + HANDOFF 记录 + APK | 2026-08-12 |
 | 7.5.6 基金记录编辑日期时间合并 | ✅ | invest-ui + qa | showWheelDateTimePicker 统一 + 移除时间行 + 测试 | 2026-08-12 |
 | 7.5.6 PM 复审合入 | ✅ | PM | 全量测试 0 failed + analyze 0 issue + HANDOFF 记录 + APK | 2026-08-12 |
+| 7.6.1 删除转换后清理空持仓 | ⬜ 待执行 | invest-logic + qa | deleteConversion 空持仓清理 + 测试 | — |
+| 7.6.2 投资流水明细编辑安全 | ⬜ 待执行 | invest-logic + invest-ui + qa | 通用更新重算持仓 + 受限编辑 + 测试 | — |
 
 ### 阶段 7.4：账户备注修复
 

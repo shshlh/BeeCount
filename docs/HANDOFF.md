@@ -34,6 +34,59 @@
 ## 2026-08-12
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-logic + invest-ui + qa
+
+**任务**：7.6 遗留问题检查与修复
+
+**检查结论**：
+- 7.5.2 桌面图标实机验证通过，任务板状态更新为 ✅
+- 小组件选择器预览图：检查 6 个 headless widget View，均无 `BeeIcon` / app logo 引用，预览图不包含旧蜜蜂图标，无需重新生成
+- 问题确认 1：`deleteConversion` 删除整批转换后只重算持仓，不会清理「纯转换新建且已无任何流水」的空持仓
+- 问题确认 2：明细页通用编辑器可编辑投资流水，且通用 `updateTransaction` 不会重算持仓；类型/账户/分类被改后可能与持仓数据脱钩
+
+---
+
+## 2026-08-12
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-logic + qa
+
+**任务**：7.6.1 删除转换后清理空持仓
+
+**问题**：删除一整笔转换后，若 B 持仓完全由该转换创建，持仓行会保留为 0 份额空持仓。
+
+**要求**：
+1. `deleteConversion` 删除批次并重算后，对受影响持仓做清理：若该持仓已无任何剩余交易流水，删除 `investment_holdings` 行及其 `investment_group_holdings` 关联
+2. 已有其他流水的持仓（如 B 原本有初始买入）即使份额为 0 也保留，避免误删历史
+3. 测试：新建 B 的转换删除后 B 持仓行消失；已有 B 持仓的转换删除后 B 保留原份额；A 持仓恢复正常
+4. 全量 `flutter test` 0 failed，改动文件 analyze 无新增 issue
+
+**git 状态**：当前分支 main，HEAD 90b9435，工作区干净
+
+---
+
+## 2026-08-12
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-logic + invest-ui + qa
+
+**任务**：7.6.2 投资流水明细编辑安全
+
+**问题**：明细页通过通用编辑器可改投资流水的金额/账户/类型/分类，但通用 `updateTransaction` 不重算持仓，可能造成持仓与流水脱钩。
+
+**要求**：
+1. 数据层：通用 `LocalTransactionRepository.updateTransaction` 更新后，若 `investType != null && holdingId != null`，调用 `_investmentRepo.recomputeHolding(holdingId)` 并同步投资账户市值，作为兜底
+2. UI：`TransactionEditUtils.editTransaction` 对投资流水（`investType != null && holdingId != null`）不再打开通用编辑器，改为受限编辑，只允许改日期/时间、备注、标签；金额/净值/份额/账户/分类/类型在持仓详情页编辑
+3. 测试：投资流水加标签/改备注不改变持仓；直接改金额时持仓成本同步重算；受限编辑不存在账户/分类/金额字段
+4. 全量 `flutter test` 0 failed，改动文件 analyze 无新增 issue
+
+**git 状态**：当前分支 main，HEAD 90b9435，工作区干净
+
+---
+
+## 2026-08-12
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-ui + qa（记录归档）
 
 **任务**：7.5.6 复审通过并合入
