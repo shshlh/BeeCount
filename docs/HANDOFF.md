@@ -34,6 +34,54 @@
 ## 2026-08-12
 
 **移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic + qa
+
+**任务**：7.7 正式版收尾
+
+**产品决定**：按正式标准发布，自用但逐步正规化。正式签名使用专用 release keystore，不再依赖 `ci-debug.keystore` fallback。
+
+---
+
+## 2026-08-12
+
+**移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic
+
+**任务**：7.7.1 版本号 + 正式签名
+
+**要求**：
+1. `pubspec.yaml` 版本改为 `1.0.0+1`
+2. 在 `android/` 下用 `keytool` 创建正式 release keystore：`android/app/release.keystore`，别名建议 `beecount`，RSA 2048，有效期 ≥ 10000 天
+3. 创建 `android/key.properties`（相对路径：`storeFile=app/release.keystore`），填写 storePassword / keyAlias / keyPassword
+4. `key.properties` 和 keystore 均不入库（`.gitignore` 已覆盖），完成后确认 `git status` 不出现密钥文件
+5. keystore + 密码必须离线备份，至少两份（如密码管理器 / Obsidian / 移动硬盘），不要只存在仓库目录
+6. 验证：`flutter build apk --debug --flavor dev` 仍可构建；release 签名留到 7.7.2 验证
+
+**git 状态**：当前分支 main，HEAD 0503b9f，工作区干净
+
+---
+
+## 2026-08-12
+
+**移交角色**：项目经理（PM）
+**接收角色**：qa + invest-logic
+
+**任务**：7.7.2 release 打包回归 + 归档
+
+**要求**：
+1. `flutter build apk --release --flavor prod`，确认 `key.properties` 生效（不再 fallback ci-debug）
+2. 手机安装 arm64 主包 `app-prod-release-v1.0.0(1).apk`，不确定 ABI 用 universal
+3. release（R8/minify）实机回归：记账、转账、账户、持仓、买入/卖出/转换、初始持仓、标签、AI、小组件、云同步
+4. 通过后更新 HANDOFF/TEAM，打 `v1.0.0` tag，push main + tag，留存正式 APK 到可靠位置
+5. 全量 `flutter test` 0 failed 作为发布前最终确认
+
+**git 状态**：当前分支 main，HEAD 0503b9f，工作区干净
+
+---
+
+## 2026-08-12
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-ui + qa（记录归档）
 
 **任务**：7.6.3 复审通过并合入
