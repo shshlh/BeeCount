@@ -14,6 +14,7 @@ import 'package:beecount/data/repositories/local/local_repository.dart';
 import 'package:beecount/l10n/app_localizations.dart';
 import 'package:beecount/providers.dart';
 import 'package:beecount/utils/transaction_edit_utils.dart';
+import 'package:beecount/widgets/transaction/investment_transaction_edit_page.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -92,6 +93,58 @@ void main() {
       expect(find.text('份额'), findsNothing);
       expect(find.text('净值'), findsNothing);
       expect(find.text('手续费'), findsNothing);
+
+      // 卸载 ProviderScope 并冲刷 Drift stream 取消产生的零时长 timer
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 10));
+    });
+  });
+
+  testWidgets('改标签保存后触发标签刷新且新标签立即可查', (tester) async {
+    await tester.runAsync(() async {
+      final tx = (await investmentRepo.watchTransactions(1).first).single;
+      final tagId = await LocalRepository(db).createTag(name: '测试');
+      late ProviderContainer scopeContainer;
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            investmentRepositoryProvider.overrideWithValue(investmentRepo),
+            repositoryProvider.overrideWithValue(LocalRepository(db)),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Consumer(
+              builder: (context, ref, _) {
+                scopeContainer = ProviderScope.containerOf(context);
+                return InvestmentTransactionEditPage(transaction: tx);
+              },
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final refreshBefore = scopeContainer.read(tagListRefreshProvider);
+
+      await tester.tap(
+        find
+            .ancestor(of: find.text('标签'), matching: find.byType(InkWell))
+            .first,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('测试'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, '确定'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(FilledButton, '保存'));
+      await tester.pumpAndSettle();
+
+      expect(scopeContainer.read(tagListRefreshProvider), refreshBefore + 1);
+      final tags = await LocalRepository(db).getTagsForTransaction(tx.id);
+      expect(tags.map((t) => t.id), contains(tagId));
 
       // 卸载 ProviderScope 并冲刷 Drift stream 取消产生的零时长 timer
       await tester.pumpWidget(const SizedBox.shrink());

@@ -5,6 +5,9 @@ import 'package:intl/intl.dart';
 import '../../data/db.dart';
 import '../../pages/tag/widgets/tag_selector.dart';
 import '../../providers.dart';
+import '../../providers/budget_providers.dart';
+import '../../services/billing/post_processor.dart';
+import '../../services/data/tx_author_service.dart';
 import '../../styles/tokens.dart';
 import '../ui/wheel_date_picker.dart';
 
@@ -106,6 +109,13 @@ class _InvestmentTransactionEditPageState
       } else {
         await repo.removeAllTagsFromTransaction(tx.id);
       }
+      // 7.6.3: 与通用编辑器对齐，保存后立即刷新标签与相关页面缓存。
+      ref.read(tagListRefreshProvider.notifier).state++;
+      await TxAuthorService.markEdited(ref, tx.id);
+      PostProcessor.sync(ref, ledgerId: tx.ledgerId);
+      ref.invalidate(countsForLedgerProvider(tx.ledgerId));
+      ref.read(statsRefreshProvider.notifier).state++;
+      ref.read(budgetRefreshProvider.notifier).state++;
 
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {

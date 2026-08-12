@@ -34,6 +34,42 @@
 ## 2026-08-12
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-ui + qa（记录归档）
+
+**任务**：7.6.3 复审通过并合入
+
+**审查结论**：
+- `InvestmentTransactionEditPage._save` 保存后已触发 `tagListRefreshProvider`、`PostProcessor.sync`、`countsForLedgerProvider` invalidate、统计/预算刷新，并补 `TxAuthorService.markEdited`
+- 新增 UI 测试验证标签刷新信号 +1 且新标签立即可查
+- 全量 `flutter test`：766 passed / 1 skipped / 0 failed；改动文件 analyze 0 issue
+- 已合入并编译 Android APK
+
+**git 状态**：当前分支 main，7.6.3 已合入
+
+---
+
+## 2026-08-12
+
+**移交角色**：invest-ui + qa
+**接收角色**：PM（审查合入）
+
+**任务**：7.6.3 受限编辑页保存后标签即时刷新
+
+**完成工作**：
+- `InvestmentTransactionEditPage._save` 保存成功后与通用编辑器对齐：触发 `tagListRefreshProvider`、`PostProcessor.sync(ledgerId)`、`countsForLedgerProvider` invalidate、`statsRefreshProvider` / `budgetRefreshProvider`，并补 `TxAuthorService.markEdited`
+- 新增测试：受限编辑页改标签保存后 `tagListRefreshProvider` 信号 +1，且新标签立即可查
+
+**验证**：
+- 全量 `flutter test`：766 passed / 1 skipped / 0 failed
+- 改动文件 `flutter analyze` 0 issue
+
+**git 状态**：当前分支 main，改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-12
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-ui + qa
 
 **任务**：7.6.3 受限编辑页保存后标签即时刷新
