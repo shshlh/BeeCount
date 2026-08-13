@@ -31,6 +31,26 @@
 
 ## 2026-08-14
 
+**移交角色**：architect + qa
+**接收角色**：PM（审查合入）
+
+**任务**：7.11.4 返工：余额口径修正 + 迁移反推补强
+
+**完成工作**：
+- 7.11.4-1 余额口径：`getAllAccountBalances(ledgerId)` 改用 `getAccountBalanceInLedger`；同时修正 `getAccountBalanceInLedger` 为账本语义（含账户初始资金，估值/投资账户返回缓存市值），避免资产构成/抽屉余额丢初始资金
+- 7.11.4-2 迁移反推补强：`migrateAccountLedgerIds()` 反推来源增加 `investment_holdings` 与 `recurring_transactions`，按三类关联出现次数最多者回填；删除孤儿账户前确认三类关联均为空
+- 7.11.4-3 回归测试：新增「有持仓无流水按持仓 ledger_id 回填」「有周期交易无流水按周期 ledger_id 回填」「账本维度余额口径（含初始资金/排除他账本流水）」「估值账户按缓存市值计入」
+
+**验证**：
+- 全量 `flutter test`：796 passed / 1 skipped / 0 failed
+- 改动文件 `dart analyze` 无新增 issue；全仓 analyze 859 项既有 info/warning，无 error
+
+**git 状态**：当前分支 main，改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-14
+
 **移交角色**：PM
 **接收角色**：architect + qa
 

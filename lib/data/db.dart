@@ -1449,10 +1449,11 @@ class BeeDatabase extends _$BeeDatabase {
   ///
   /// 7.10.1 将账户改为按账本绑定，但存量账户 ledger_id 可能是 legacy 值
   /// （旧版 CSV 导入写死 0）或指向已删账本。规则：
-  /// - 按 transactions.account_id / to_account_id 反推归属账本（取出现最多）；
+  /// - 按 transactions / investment_holdings / recurring_transactions 关联
+  ///   反推归属账本（取出现次数最多）；
   /// - 无法反推且当前仅一个账本 → 归到该账本；
-  /// - 无关联流水且无可用账本 → 删除；
-  /// - 有流水但归属账本已删且多账本 → 保留原值并告警（避免误删数据）。
+  /// - 无任何关联且无可用账本 → 删除；
+  /// - 有关联但归属账本已删且多账本 → 保留原值并告警（避免误删数据）。
   Future<void> migrateAccountLedgerIds() async {
     final ledgerRows = await customSelect('SELECT id FROM ledgers').get();
     final ledgerIds = <int>{for (final r in ledgerRows) _dbInt(r.data['id'])};
@@ -1469,15 +1470,41 @@ class BeeDatabase extends _$BeeDatabase {
       final txRows = await customSelect(
         'SELECT ledger_id, COUNT(*) AS c FROM transactions '
         'WHERE account_id = ?1 OR to_account_id = ?1 '
-        'GROUP BY ledger_id ORDER BY c DESC, ledger_id ASC',
+        'GROUP BY ledger_id',
         variables: [Variable<int>(accountId)],
         readsFrom: {transactions},
       ).get();
+      final holdingRows = await customSelect(
+        'SELECT ledger_id, COUNT(*) AS c FROM investment_holdings '
+        'WHERE account_id = ?1 GROUP BY ledger_id',
+        variables: [Variable<int>(accountId)],
+        readsFrom: {investmentHoldings},
+      ).get();
+      final recurringRows = await customSelect(
+        'SELECT ledger_id, COUNT(*) AS c FROM recurring_transactions '
+        'WHERE account_id = ?1 OR to_account_id = ?1 GROUP BY ledger_id',
+        variables: [Variable<int>(accountId)],
+        readsFrom: {recurringTransactions},
+      ).get();
 
-      int? inferred;
-      if (txRows.isNotEmpty) {
-        inferred = _dbInt(txRows.first.data['ledger_id']);
+      final counts = <int, int>{};
+      for (final rows in [txRows, holdingRows, recurringRows]) {
+        for (final r in rows) {
+          final lid = _dbInt(r.data['ledger_id']);
+          final c = _dbInt(r.data['c']);
+          counts[lid] = (counts[lid] ?? 0) + c;
+        }
       }
+      int? inferred;
+      var best = 0;
+      for (final lid in counts.keys.toList()..sort()) {
+        final c = counts[lid] ?? 0;
+        if (c > best) {
+          best = c;
+          inferred = lid;
+        }
+      }
+      final hasAnyReference = counts.isNotEmpty;
 
       if (inferred != null && ledgerIds.contains(inferred)) {
         await customUpdate(
@@ -1486,7 +1513,7 @@ class BeeDatabase extends _$BeeDatabase {
           updates: {accounts},
         );
         logger.info(
-            'DBMigration', 'v40 账户 $accountId → $inferred（按流水反推）');
+            'DBMigration', 'v40 账户 $accountId → $inferred（按关联反推）');
       } else if (ledgerIds.length == 1) {
         final only = ledgerIds.first;
         await customUpdate(
@@ -1495,7 +1522,7 @@ class BeeDatabase extends _$BeeDatabase {
           updates: {accounts},
         );
         logger.info('DBMigration', 'v40 账户 $accountId → 唯一账本 $only');
-      } else if (txRows.isEmpty) {
+      } else if (!hasAnyReference) {
         await customUpdate(
           'DELETE FROM accounts WHERE id = ?1',
           variables: [Variable<int>(accountId)],
@@ -1505,7 +1532,7 @@ class BeeDatabase extends _$BeeDatabase {
       } else {
         logger.warning(
             'DBMigration',
-            'v40 账户 $accountId 有流水但归属账本已删且多账本，'
+            'v40 账户 $accountId 有关联但归属账本已删且多账本，'
             '保留原 ledger_id=$originalLedgerId');
       }
     }

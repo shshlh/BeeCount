@@ -384,13 +384,22 @@ class LocalAccountRepository implements AccountRepository {
 
   @override
   Future<double> getAccountBalanceInLedger(int accountId, int ledgerId) async {
+    final account = await (db.select(db.accounts)
+          ..where((a) => a.id.equals(accountId)))
+        .getSingleOrNull();
+    if (account == null) return 0.0;
+    // 估值/投资账户余额 = 缓存市值（initialBalance），不叠加交易流水。
+    if (isValuationOrInvestmentType(account.type)) {
+      return account.initialBalance;
+    }
+
     final transactions = await (db.select(db.transactions)
           ..where((t) =>
               (t.accountId.equals(accountId) | t.toAccountId.equals(accountId)) &
               t.ledgerId.equals(ledgerId)))
         .get();
 
-    double balance = 0.0;
+    double balance = account.initialBalance;
 
     for (final tx in transactions) {
       if (tx.accountId == accountId) {
@@ -421,7 +430,9 @@ class LocalAccountRepository implements AccountRepository {
 
     final Map<int, double> balances = {};
     for (final account in accounts) {
-      balances[account.id] = await getAccountBalance(account.id);
+      // 7.11.4-1: 账本维度余额口径，避免把其他账本流水计入当前账本。
+      balances[account.id] =
+          await getAccountBalanceInLedger(account.id, ledgerId);
     }
 
     return balances;

@@ -110,4 +110,36 @@ void main() {
     expect(second, first);
     expect(second[14], 1);
   });
+
+  test('有持仓无流水的账户按持仓 ledger_id 回填', () async {
+    await db.customStatement(
+        "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
+    await db.customStatement(
+        "INSERT INTO accounts (id, ledger_id, name, type, currency) "
+        "VALUES (15, 0, '投资账户', 'investment', 'CNY')");
+    await db.customStatement(
+        "INSERT INTO investment_holdings "
+        "(id, ledger_id, fund_code, fund_name, account_id) "
+        "VALUES (100, 1, '000001', '基金A', 15)");
+
+    await db.migrateAccountLedgerIds();
+
+    expect((await accountLedgerIds())[15], 1);
+  });
+
+  test('有周期交易无流水的账户按周期交易 ledger_id 回填', () async {
+    await db.customStatement(
+        "INSERT INTO ledgers (id, name, currency) VALUES (1, 'L', 'CNY')");
+    await db.customStatement(
+        "INSERT INTO accounts (id, ledger_id, name, type, currency) "
+        "VALUES (16, 0, '现金', 'cash', 'CNY')");
+    await db.customStatement(
+        "INSERT INTO recurring_transactions "
+        "(id, ledger_id, type, amount, account_id, frequency, start_date) "
+        "VALUES (200, 1, 'expense', 10, 16, 'monthly', 1700000000)");
+
+    await db.migrateAccountLedgerIds();
+
+    expect((await accountLedgerIds())[16], 1);
+  });
 }
