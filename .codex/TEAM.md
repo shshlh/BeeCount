@@ -70,6 +70,9 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 7.8.1 返工：旧退回流水兼容 | ✅ | invest-logic + qa | 查询/识别兼容无 batchId 退回 + 测试 | 2026-08-13 |
 | 7.8.1 PM 复审合入 | ✅ | PM | 全量测试 0 failed + analyze 无新增 + HANDOFF 记录 + APK | 2026-08-13 |
 | 7.8.2 配置 YAML 备份投资数据 | ❌ 取消 | PM | 用户确认投资内容归「导出数据」CSV，配置导出不改 | 2026-08-13 |
+| 7.9.1 导出投资与明细一一对应 | ⬜ 待执行 | invest-logic + qa + architect | 普通 CSV 排除投资流水 + 投资 CSV 唯一出处 + 测试 | — |
+| 7.9.2 明细流水批量删除 | ⬜ 待执行 | invest-ui + qa + invest-logic | 多选模式 + 批量删除 + 持仓重算 + 测试 | — |
+| 7.9.3 账本初始化/清空全部数据 | ⬜ 待执行 | architect + invest-logic + invest-ui + qa | resetLedger 清流水/持仓/分组/附件 + UI + 测试 | — |
 
 ### 阶段 7.4：账户备注修复
 
