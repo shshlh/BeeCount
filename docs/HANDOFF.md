@@ -32,6 +32,24 @@
 ## 2026-08-13
 
 **移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic + invest-ui + qa
+
+**任务**：7.9.3 返工：初始化账本同时清空账户
+
+**问题**：当前 `resetLedger` 只清流水/持仓/分组/附件，账户仍保留，不符合“初始化账本”预期。
+
+**要求**：
+1. `resetLedger` 在清完流水、持仓、分组后，同时删除该账本下全部账户
+2. 清空 `default_income_account_id` / `default_expense_account_id` SharedPreferences，并 invalidate 对应 Provider
+3. 分类与标签本次保持保留；如后续需要一起清空再单独调整
+4. 测试：初始化后账户列表为空；默认收支账户偏好为空；账本/分类/标签保留
+5. 全量 `flutter test` 0 failed，改动文件 analyze 无新增 issue
+
+---
+
+## 2026-08-13
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-logic + invest-ui + qa + architect（记录归档）
 
 **任务**：7.9.1-7.9.5 复审通过并合入

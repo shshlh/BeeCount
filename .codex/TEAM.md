@@ -76,6 +76,7 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 7.9.4 重复导入同一份导出数据去重 | ✅ | architect + invest-logic + qa | 流水ID 列 + syncId 幂等导入 + skipped 统计 + 测试 | 2026-08-13 |
 | 7.9.5 明细投资流水显示基金代码/名称 | ✅ | invest-ui + qa + invest-logic | holdingId 映射 + 基金标识 + 不占用备注 + 测试 | 2026-08-13 |
 | 7.9 PM 复审合入 | ✅ | PM | 全量测试 0 failed + analyze 无新增 error + HANDOFF 记录 + APK | 2026-08-13 |
+| 7.9.3 返工：初始化账本同时清空账户 | ⬜ 待执行 | architect + invest-logic + invest-ui + qa | resetLedger 删账户 + 清默认账户偏好 + 测试 | — |
 
 ### 阶段 7.4：账户备注修复
 
