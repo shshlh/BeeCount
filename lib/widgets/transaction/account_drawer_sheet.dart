@@ -94,6 +94,10 @@ class _AccountDrawerSheetState extends ConsumerState<_AccountDrawerSheet> {
       final ledgerId = ref.read(currentLedgerIdProvider);
       final ctx = await repo.db.loadLedgerPickerContext(ledgerId);
       accounts = await repo.db.filterAccountsForLedger(all, ctx);
+      // 7.10.1: 账户强绑定账本，非共享账本视角只显示当前账本账户。
+      if (ctx == null || !ctx.isEditorInShared) {
+        accounts = accounts.where((a) => a.ledgerId == ledgerId).toList();
+      }
       final ledger = await repo.getLedgerById(ledgerId);
       currency = ledger?.currency ?? 'CNY';
     } else {

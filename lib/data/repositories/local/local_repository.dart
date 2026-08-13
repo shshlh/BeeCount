@@ -167,6 +167,9 @@ class LocalRepository extends BaseRepository {
       final budgets = await (db.select(db.budgets)
             ..where((b) => b.ledgerId.equals(id)))
           .get();
+      final accounts = await (db.select(db.accounts)
+            ..where((a) => a.ledgerId.equals(id)))
+          .get();
 
       await _ledgerRepo.deleteLedger(id);
       // 顺便把残留的 budgets 一起清,见上面注释。
@@ -192,6 +195,16 @@ class LocalRepository extends BaseRepository {
           entityId: b.id,
           entitySyncId: b.syncId!,
           ledgerId: id,
+          action: 'delete',
+        );
+      }
+      // 7.10.1: 账户强绑定账本，删除账本时同步登记账户 delete 变更。
+      for (final a in accounts) {
+        if (a.syncId == null) continue;
+        await changeTracker!.recordUserGlobalChange(
+          entityType: 'account',
+          entityId: a.id,
+          entitySyncId: a.syncId!,
           action: 'delete',
         );
       }
@@ -236,6 +249,9 @@ class LocalRepository extends BaseRepository {
       final txs = await (db.select(db.transactions)
             ..where((t) => t.ledgerId.equals(ledgerId)))
           .get();
+      final accounts = await (db.select(db.accounts)
+            ..where((a) => a.ledgerId.equals(ledgerId)))
+          .get();
       final n = await _ledgerRepo.clearLedgerTransactions(ledgerId);
       for (final tx in txs) {
         if (tx.syncId == null) continue;
@@ -244,6 +260,15 @@ class LocalRepository extends BaseRepository {
           entityId: tx.id,
           entitySyncId: tx.syncId!,
           ledgerId: ledgerId,
+          action: 'delete',
+        );
+      }
+      for (final a in accounts) {
+        if (a.syncId == null) continue;
+        await changeTracker!.recordUserGlobalChange(
+          entityType: 'account',
+          entityId: a.id,
+          entitySyncId: a.syncId!,
           action: 'delete',
         );
       }
@@ -261,6 +286,9 @@ class LocalRepository extends BaseRepository {
       final txs = await (db.select(db.transactions)
             ..where((t) => t.ledgerId.equals(ledgerId)))
           .get();
+      final accounts = await (db.select(db.accounts)
+            ..where((a) => a.ledgerId.equals(ledgerId)))
+          .get();
       await _ledgerRepo.resetLedger(ledgerId);
       for (final tx in txs) {
         if (tx.syncId == null) continue;
@@ -269,6 +297,15 @@ class LocalRepository extends BaseRepository {
           entityId: tx.id,
           entitySyncId: tx.syncId!,
           ledgerId: ledgerId,
+          action: 'delete',
+        );
+      }
+      for (final a in accounts) {
+        if (a.syncId == null) continue;
+        await changeTracker!.recordUserGlobalChange(
+          entityType: 'account',
+          entityId: a.id,
+          entitySyncId: a.syncId!,
           action: 'delete',
         );
       }
@@ -868,6 +905,10 @@ class LocalRepository extends BaseRepository {
   @override
   Future<List<Transaction>> getTransactionsByLedger(int ledgerId) =>
       _transactionRepo.getTransactionsByLedger(ledgerId);
+
+  @override
+  Future<Set<String>> getTransactionSyncIdsForLedger(int ledgerId) =>
+      _transactionRepo.getTransactionSyncIdsForLedger(ledgerId);
 
   @override
   Future<List<Transaction>> getTransactionsByLedgerInRange({
@@ -1800,10 +1841,10 @@ class LocalRepository extends BaseRepository {
     String currency = 'CNY',
     double initialBalance = 0.0,
   }) async {
-    // 委托底层 upsert(同名复用)。新建分支会自动记 sync change(走 createAccount
-    // 已有逻辑);复用分支已有 syncId、不需要再记 create。
+    // 7.10.1: 按 (ledgerId, name) 复用；新建分支自动记 sync change。
     final existing = await _accountRepo.getAllAccounts();
-    final hit = existing.where((a) => a.name == name).toList();
+    final hit =
+        existing.where((a) => a.ledgerId == ledgerId && a.name == name).toList();
     if (hit.isNotEmpty) return hit.first.id;
     return createAccount(
       ledgerId: ledgerId,

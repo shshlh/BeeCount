@@ -8,6 +8,7 @@ import '../../utils/xlsx_reader.dart';
 import '../../services/import/file_reader.dart';
 import '../../styles/tokens.dart';
 import 'import_confirm_page.dart';
+import 'investment_import_page.dart';
 
 /// 账单类型
 enum BillSourceType {
@@ -168,14 +169,19 @@ class _ImportPageState extends ConsumerState<ImportPage> {
     }
     if (csvText.isEmpty) return; // 可能读取被取消
     if (!mounted) return;
+    // 7.10.3: 文件名含 _investments_ 时走专用投资 CSV 导入。
+    final isInvestmentCsv =
+        _picked?.name.toLowerCase().contains('_investments_') ?? false;
     // 跳转到确认映射页，批量导入在新页面执行
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => ImportConfirmPage(
-          csvText: csvText,
-          hasHeader: _hasHeader,
-          billType: _billType,
-        ),
+        builder: (_) => isInvestmentCsv
+            ? InvestmentImportPage(csvText: csvText)
+            : ImportConfirmPage(
+                csvText: csvText,
+                hasHeader: _hasHeader,
+                billType: _billType,
+              ),
       ),
     );
     if (!mounted) return;

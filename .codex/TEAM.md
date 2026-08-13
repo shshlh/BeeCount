@@ -80,7 +80,7 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 7.10.1 账户与账本强绑定 | ✅ | architect + invest-logic + qa | reset/clear/delete 级联删账户 + 清默认偏好 + 按账本过滤账户 + 测试 | 2026-08-13 |
 | 7.10.2 导出文件名前缀改名 | ✅ | invest-ui + qa | jizhang_zhushou 前缀 + 命名/导入兼容测试 | 2026-08-13 |
 | 7.10.3 投资 CSV 可导入 | ✅ | invest-logic + architect + invest-ui + qa | 专用投资导入 + 幂等恢复持仓/流水/分组 + 测试 | 2026-08-13 |
-| 7.10.1 返工：清空账本同时清投资数据 | ⬜ 待执行 | architect + qa | clearLedgerTransactions 级联清投资 + 测试 | — |
+| 7.10.1 返工：清空账本同时清投资数据 | ✅ | architect + qa | clearLedgerTransactions 级联清投资 + 测试 | 2026-08-13 |
 
 ### 阶段 7.4：账户备注修复
 

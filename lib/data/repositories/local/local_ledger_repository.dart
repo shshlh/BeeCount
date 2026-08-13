@@ -3,7 +3,6 @@ import 'package:uuid/uuid.dart';
 
 import '../../db.dart';
 import '../ledger_repository.dart';
-import '../../../utils/account_type_utils.dart';
 
 const _uuid = Uuid();
 
@@ -183,10 +182,24 @@ class LocalLedgerRepository implements LedgerRepository {
 
   @override
   Future<void> deleteLedger(int id) async {
-    // 先删除该账本下的所有交易，再删除账本本身
     await db.transaction(() async {
+      // 7.10.1: 账本强绑定 — 删除该账本全部交易及关联、投资数据与账户。
+      final txIds = await (db.select(db.transactions)
+            ..where((t) => t.ledgerId.equals(id)))
+          .map((t) => t.id)
+          .get();
+      if (txIds.isNotEmpty) {
+        await (db.delete(db.transactionTags)
+              ..where((tt) => tt.transactionId.isIn(txIds)))
+            .go();
+        await (db.delete(db.transactionAttachments)
+              ..where((a) => a.transactionId.isIn(txIds)))
+            .go();
+      }
       await (db.delete(db.transactions)..where((t) => t.ledgerId.equals(id)))
           .go();
+      await _deleteInvestmentDataForLedger(id);
+      await _deleteAccountsForLedger(id);
       await (db.delete(db.ledgers)..where((tbl) => tbl.id.equals(id))).go();
     });
   }
@@ -266,6 +279,11 @@ class LocalLedgerRepository implements LedgerRepository {
     final count = await (db.delete(db.transactions)
           ..where((t) => t.ledgerId.equals(ledgerId)))
         .go();
+    // 7.10.1 返工：清空账本同时清投资持仓/分组/归属，避免留下
+    // 指向已删账户的悬空投资数据。
+    await _deleteInvestmentDataForLedger(ledgerId);
+    // 7.10.1: 清空账本同样级联删除该账本账户，避免跨账本残留。
+    await _deleteAccountsForLedger(ledgerId);
     return count;
   }
 
@@ -306,21 +324,34 @@ class LocalLedgerRepository implements LedgerRepository {
             ..where((g) => g.ledgerId.equals(ledgerId)))
           .go();
 
-      // 投资账户 initial_balance 是持仓市值缓存，清空持仓后同步归零，
-      // 避免资产页继续显示旧市值；普通账户的初始资金属于配置，保留。
-      final investmentAccounts = await (db.select(db.accounts)
-            ..where((a) =>
-                a.ledgerId.equals(ledgerId) &
-                a.type.equals(accountTypeInvestment)))
-          .get();
-      for (final acc in investmentAccounts) {
-        await (db.update(db.accounts)..where((a) => a.id.equals(acc.id)))
-            .write(AccountsCompanion(
-          initialBalance: const d.Value(0.0),
-          updatedAt: d.Value(DateTime.now()),
-        ));
-      }
+      // 7.10.1: 初始化账本级联删除该账本账户（含投资账户市值缓存）。
+      await _deleteAccountsForLedger(ledgerId);
     });
+  }
+
+  /// 删除该账本的投资持仓、分组及分组归属（本地数据，不进同步）。
+  Future<void> _deleteInvestmentDataForLedger(int ledgerId) async {
+    final holdingIds = await (db.select(db.investmentHoldings)
+          ..where((h) => h.ledgerId.equals(ledgerId)))
+        .map((h) => h.id)
+        .get();
+    if (holdingIds.isNotEmpty) {
+      await (db.delete(db.investmentGroupHoldings)
+            ..where((r) => r.holdingId.isIn(holdingIds)))
+          .go();
+    }
+    await (db.delete(db.investmentHoldings)
+          ..where((h) => h.ledgerId.equals(ledgerId)))
+        .go();
+    await (db.delete(db.investmentGroups)
+          ..where((g) => g.ledgerId.equals(ledgerId)))
+        .go();
+  }
+
+  /// 删除该账本下全部账户（7.10.1 账户强绑定账本）。
+  Future<void> _deleteAccountsForLedger(int ledgerId) async {
+    await (db.delete(db.accounts)..where((a) => a.ledgerId.equals(ledgerId)))
+        .go();
   }
 
   @override

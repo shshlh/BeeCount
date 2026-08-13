@@ -74,12 +74,14 @@ class InvestmentCsvExportService {
     rows.add(const [
       '类型',
       '流水ID',
+      '批次ID',
       '基金代码',
       '基金名称',
       '份额',
       '净值',
       '转入成本',
       '手续费',
+      '金额',
       '退回金额',
       '退回账户',
       '转出账户',
@@ -94,6 +96,7 @@ class InvestmentCsvExportService {
       rows.add([
         _typeLabel(t),
         t.syncId ?? '',
+        t.batchId ?? '',
         h?.fundCode ?? '',
         h?.fundName ?? '',
         (t.investShares?.abs() ?? 0).toStringAsFixed(4),
@@ -102,6 +105,7 @@ class InvestmentCsvExportService {
             ? t.amount.toStringAsFixed(2)
             : '',
         t.investFee?.toStringAsFixed(2) ?? '',
+        t.amount.toStringAsFixed(2),
         isRefund ? t.amount.toStringAsFixed(2) : '',
         isRefund
             ? (t.toAccountId != null ? accountName[t.toAccountId] ?? '' : '')

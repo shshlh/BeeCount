@@ -508,6 +508,24 @@
       }
     }
   },
+  "importInvestmentTitle": "Investment Data Import",
+  "importInvestmentRunning": "Importing investment data...",
+  "importInvestmentResult": "Imported {holdings} holdings, {flows} flows ({skipped} skipped duplicates), {groups} groups",
+  "@importInvestmentResult": {
+    "placeholders": {
+      "holdings": {"type": "int"},
+      "flows": {"type": "int"},
+      "skipped": {"type": "int"},
+      "groups": {"type": "int"}
+    }
+  },
+  "importInvestmentDone": "Done",
+  "importInvestmentFailed": "Investment data import failed: {error}",
+  "@importInvestmentFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
   "importFileOpenError": "Unable to open file picker: {error}",
   "@importFileOpenError": {
     "placeholders": {

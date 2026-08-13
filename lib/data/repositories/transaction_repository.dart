@@ -241,6 +241,10 @@ abstract class TransactionRepository {
   /// 获取账本的所有交易记录
   Future<List<Transaction>> getTransactionsByLedger(int ledgerId);
 
+  /// 获取账本全部交易的 syncId 集合（7.10.3：不过滤 excludeFromStats，
+  /// 保证投资 CSV 幂等导入能覆盖转换内部流水）。
+  Future<Set<String>> getTransactionSyncIdsForLedger(int ledgerId);
+
   /// 获取账本在指定时间范围内的交易记录
   Future<List<Transaction>> getTransactionsByLedgerInRange({
     required int ledgerId,

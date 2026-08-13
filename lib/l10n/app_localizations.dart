@@ -2076,6 +2076,37 @@ abstract class AppLocalizations {
   /// **'Delete the {count} selected records? This cannot be undone.'**
   String transactionListBatchDeleteConfirm(int count);
 
+  /// No description provided for @importInvestmentTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Investment Data Import'**
+  String get importInvestmentTitle;
+
+  /// No description provided for @importInvestmentRunning.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing investment data...'**
+  String get importInvestmentRunning;
+
+  /// No description provided for @importInvestmentResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported {holdings} holdings, {flows} flows ({skipped} skipped duplicates), {groups} groups'**
+  String importInvestmentResult(
+      int holdings, int flows, int skipped, int groups);
+
+  /// No description provided for @importInvestmentDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get importInvestmentDone;
+
+  /// No description provided for @importInvestmentFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Investment data import failed: {error}'**
+  String importInvestmentFailed(String error);
+
   /// No description provided for @importFileOpenError.
   ///
   /// In en, this message translates to:

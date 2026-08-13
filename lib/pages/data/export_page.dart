@@ -13,6 +13,7 @@ import '../../widgets/ui/ui.dart';
 import '../../utils/category_utils.dart';
 import '../../services/export/investment_csv_export_service.dart';
 import '../../services/export/transaction_csv_export_service.dart';
+import '../../services/export/export_file_names.dart';
 
 class ExportPage extends ConsumerStatefulWidget {
   const ExportPage({super.key});
@@ -130,7 +131,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
         },
       );
       final ts = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-      final path = p.join(directory, 'beecount_$ts.csv');
+      final path = p.join(directory, normalCsvFileName(ts));
 
       // 添加UTF-8 BOM标记，确保Excel正确识别中文编码
       const utf8Bom = '\uFEFF';
@@ -142,7 +143,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
         investmentRepo: ref.read(investmentRepositoryProvider),
         repo: repo,
       ).buildCsv(ledgerId: ledgerId);
-      final investmentPath = p.join(directory, 'beecount_investments_$ts.csv');
+      final investmentPath = p.join(directory, investmentCsvFileName(ts));
       await File(investmentPath).writeAsString(utf8Bom + investmentCsv,
           encoding: Encoding.getByName('utf-8')!);
 

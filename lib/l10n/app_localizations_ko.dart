@@ -1096,6 +1096,26 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String get importInvestmentTitle => 'Investment Data Import';
+
+  @override
+  String get importInvestmentRunning => 'Importing investment data...';
+
+  @override
+  String importInvestmentResult(
+      int holdings, int flows, int skipped, int groups) {
+    return 'Imported $holdings holdings, $flows flows ($skipped skipped duplicates), $groups groups';
+  }
+
+  @override
+  String get importInvestmentDone => 'Done';
+
+  @override
+  String importInvestmentFailed(String error) {
+    return 'Investment data import failed: $error';
+  }
+
+  @override
   String importFileOpenError(String error) {
     return '파일 선택기를 열 수 없습니다: $error';
   }

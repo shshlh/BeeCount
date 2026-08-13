@@ -15,6 +15,7 @@ import '../../providers/font_scale_provider.dart';
 import '../../providers.dart';
 import '../../l10n/app_localizations.dart';
 import '../../services/export/config_export_service.dart';
+import '../../services/export/export_file_names.dart';
 import '../../services/system/logger_service.dart';
 
 /// 配置导入导出页面
@@ -89,7 +90,7 @@ class _ConfigImportExportPageState
 
       // Step 4: 执行导出
       final timestamp = DateTime.now().toIso8601String().replaceAll(':', '-');
-      final fileName = 'beecount_config_$timestamp.yml';
+      final fileName = configYamlFileName(timestamp);
 
       if (Platform.isAndroid) {
         // Android: 直接保存到 Download/BeeCount 目录

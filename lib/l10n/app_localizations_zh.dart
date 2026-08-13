@@ -1092,6 +1092,26 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get importInvestmentTitle => '投资数据导入';
+
+  @override
+  String get importInvestmentRunning => '正在导入投资数据…';
+
+  @override
+  String importInvestmentResult(
+      int holdings, int flows, int skipped, int groups) {
+    return '导入完成：持仓 $holdings 条，流水 $flows 条（跳过重复 $skipped 条），分组 $groups 个';
+  }
+
+  @override
+  String get importInvestmentDone => '完成';
+
+  @override
+  String importInvestmentFailed(String error) {
+    return '投资数据导入失败：$error';
+  }
+
+  @override
   String importFileOpenError(String error) {
     return '无法打开文件选择器：$error';
   }

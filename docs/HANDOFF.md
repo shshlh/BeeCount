@@ -31,6 +31,26 @@
 
 ## 2026-08-13
 
+**移交角色**：architect + qa
+**接收角色**：PM（审查合入）
+
+**任务**：7.10.1 返工：清空账本同时清投资数据
+
+**完成工作**：
+- `LocalLedgerRepository.clearLedgerTransactions` 删除账户前调用 `_deleteInvestmentDataForLedger`，清空持仓/分组/归属，避免悬空投资数据
+- 保持 `resetLedger` / `deleteLedger` 行为不变
+- 新增测试：创建持仓/分组后 `clearLedgerTransactions`，断言持仓/分组/归属/账户全部为空、账本保留
+
+**验证**：
+- 全量 `flutter test`：785 passed / 1 skipped / 0 failed
+- 改动文件 `dart analyze` 无 issue；全仓 analyze 859 项既有 info/warning，无 error
+
+**git 状态**：当前分支 main，7.10 改动仍未提交，待 PM 审查合入
+
+---
+
+## 2026-08-13
+
 **移交角色**：项目经理（PM）
 **接收角色**：architect + qa
 

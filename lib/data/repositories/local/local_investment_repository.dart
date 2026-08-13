@@ -1126,4 +1126,68 @@ class LocalInvestmentRepository implements InvestmentRepository {
           ]))
         .watch();
   }
+
+  @override
+  Future<int> upsertHoldingForImport({
+    required int ledgerId,
+    required int accountId,
+    required String fundCode,
+    required String fundName,
+    required double totalShares,
+    required double totalCost,
+    double currentNav = 0,
+    DateTime? navDate,
+    double marketValue = 0,
+    String? note,
+  }) async {
+    final existing = await _findHolding(ledgerId, fundCode, accountId);
+    if (existing != null) {
+      await (db.update(db.investmentHoldings)
+            ..where((h) => h.id.equals(existing.id)))
+          .write(InvestmentHoldingsCompanion(
+        fundName: d.Value(fundName),
+        totalShares: d.Value(totalShares),
+        totalCost: d.Value(totalCost),
+        currentNav: d.Value(currentNav),
+        navDate: navDate != null ? d.Value(navDate) : const d.Value.absent(),
+        marketValue: d.Value(marketValue),
+        note: note != null ? d.Value(note) : const d.Value.absent(),
+        updatedAt: d.Value(DateTime.now()),
+      ));
+      return existing.id;
+    }
+    return db.into(db.investmentHoldings).insert(
+          InvestmentHoldingsCompanion.insert(
+            ledgerId: ledgerId,
+            fundCode: fundCode,
+            fundName: fundName,
+            accountId: accountId,
+            totalShares: d.Value(totalShares),
+            totalCost: d.Value(totalCost),
+            currentNav: d.Value(currentNav),
+            navDate: d.Value(navDate),
+            marketValue: d.Value(marketValue),
+            note: d.Value(note),
+            createdAt: d.Value(DateTime.now()),
+            updatedAt: d.Value(DateTime.now()),
+          ),
+        );
+  }
+
+  @override
+  Future<int> ensureGroupForImport({
+    required int ledgerId,
+    required String name,
+    int sortOrder = 0,
+  }) async {
+    final existing = await (db.select(db.investmentGroups)
+          ..where((g) => g.ledgerId.equals(ledgerId) & g.name.equals(name)))
+        .getSingleOrNull();
+    if (existing != null) return existing.id;
+    return createGroup(ledgerId: ledgerId, name: name, sortOrder: sortOrder);
+  }
+
+  @override
+  Future<void> syncInvestmentAccountValue(int accountId) =>
+      _syncInvestmentAccountValue(accountId);
 }

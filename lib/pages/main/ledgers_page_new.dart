@@ -23,6 +23,7 @@ import '../budget/budget_page.dart';
 import '../../styles/tokens.dart';
 import '../../utils/currencies.dart';
 import '../../services/attachment_service.dart';
+import '../../services/account_default_prefs_service.dart';
 import '../../services/system/logger_service.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../../utils/format_utils.dart';
@@ -799,6 +800,24 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
     }
   }
 
+  /// 7.10.1: 账户随账本删除前，清空指向被删账户的默认收支偏好并 invalidate。
+  Future<void> _clearDefaultAccountPrefsForLedger(int ledgerId) async {
+    final repo = ref.read(repositoryProvider);
+    final accounts = await repo.getAllAccounts();
+    final deletedIds =
+        accounts.where((a) => a.ledgerId == ledgerId).map((a) => a.id).toSet();
+    if (deletedIds.isEmpty) return;
+
+    final cleared =
+        await AccountDefaultPrefsService().clearIfDeleted(deletedIds);
+    if (cleared.contains(AccountDefaultPrefsService.incomeKey)) {
+      ref.invalidate(defaultIncomeAccountIdProvider);
+    }
+    if (cleared.contains(AccountDefaultPrefsService.expenseKey)) {
+      ref.invalidate(defaultExpenseAccountIdProvider);
+    }
+  }
+
   /// 清空账本（删除所有账单，保留账本）
   Future<void> _handleClearLedger(BuildContext context, LedgerDisplayItem ledger) async {
     final l10n = AppLocalizations.of(context);
@@ -816,6 +835,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       // 删账单前先收集该账本附件 fileName(删行后就查不到了)
       final attachmentFiles =
           await repo.getAttachmentFileNamesByLedger(ledger.id);
+      // 7.10.1: 清空账本级联删除账户，先清理默认账户偏好。
+      await _clearDefaultAccountPrefsForLedger(ledger.id);
       // 删除该账本的所有账单(批量删行不删物理文件)
       await repo.clearLedgerTransactions(ledger.id);
       // 删行后精准清理这些附件的物理文件(引用计数)
@@ -861,6 +882,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       // 清数据前先收集该账本附件 fileName（删行后就查不到了）。
       final attachmentFiles =
           await repo.getAttachmentFileNamesByLedger(ledger.id);
+      await _clearDefaultAccountPrefsForLedger(ledger.id);
       await repo.resetLedger(ledger.id);
       await _cleanupLedgerAttachmentFiles(attachmentFiles);
 
@@ -934,6 +956,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       // 删账本前先收集其附件 fileName(删行后查不到)
       final attachmentFiles =
           await repo.getAttachmentFileNamesByLedger(ledger.id);
+      await _clearDefaultAccountPrefsForLedger(ledger.id);
       // 只删除本地账本，不删除云端备份
       await repo.deleteLedger(ledger.id);
       await _cleanupLedgerAttachmentFiles(attachmentFiles);
@@ -1003,6 +1026,7 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       // 删账本前先收集其附件 fileName(删行后查不到)
       final attachmentFiles =
           await repo.getAttachmentFileNamesByLedger(deletedLedgerId);
+      await _clearDefaultAccountPrefsForLedger(deletedLedgerId);
       await repo.deleteLedger(deletedLedgerId);
       await _cleanupLedgerAttachmentFiles(attachmentFiles);
 

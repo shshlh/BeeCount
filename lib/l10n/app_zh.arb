@@ -1036,6 +1036,24 @@
       }
     }
   },
+  "importInvestmentTitle": "投资数据导入",
+  "importInvestmentRunning": "正在导入投资数据…",
+  "importInvestmentResult": "导入完成：持仓 {holdings} 条，流水 {flows} 条（跳过重复 {skipped} 条），分组 {groups} 个",
+  "@importInvestmentResult": {
+    "placeholders": {
+      "holdings": {"type": "int"},
+      "flows": {"type": "int"},
+      "skipped": {"type": "int"},
+      "groups": {"type": "int"}
+    }
+  },
+  "importInvestmentDone": "完成",
+  "importInvestmentFailed": "投资数据导入失败：{error}",
+  "@importInvestmentFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
   "mineImportCompleteAllSuccess": "全部成功",
   "mineCheckUpdateDetecting": "检测更新中...",
   "mineCheckUpdateSubtitleDetecting": "正在检查最新版本",

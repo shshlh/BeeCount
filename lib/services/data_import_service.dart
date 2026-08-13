@@ -200,6 +200,7 @@ class DataImportService {
     final accountNameToId = await importAccounts(
       repo,
       data.accounts,
+      ledgerId: ledgerId,
       defaultCurrency: data.currency ?? defaultCurrency,
     );
 
@@ -228,7 +229,7 @@ class DataImportService {
   Future<Map<String, int>> importAccounts(
     BaseRepository repo,
     List<ImportAccount> accounts,
-    {String defaultCurrency = 'CNY'}
+    {int? ledgerId = 0, String defaultCurrency = 'CNY'}
   ) async {
     final accountNameToId = <String, int>{};
 
@@ -246,7 +247,7 @@ class DataImportService {
       for (final acc in accounts) {
         if (!accountNameToId.containsKey(acc.name)) {
           final id = await repo.createAccount(
-            ledgerId: 0, // 账户独立,不绑定账本
+            ledgerId: ledgerId ?? 0, // 7.10.1: 账户绑定目标账本
             name: acc.name,
             type: acc.type ?? 'cash',
             currency: acc.currency ?? defaultCurrency,

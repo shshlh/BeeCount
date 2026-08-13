@@ -199,4 +199,28 @@ abstract class InvestmentRepository {
 
   /// 监听某个分组包含的持仓 ID。
   Stream<List<int>> watchGroupHoldingIds(int groupId);
+
+  /// 7.10.3 投资 CSV 导入：按 (ledgerId, fundCode, accountId) 幂等恢复持仓。
+  Future<int> upsertHoldingForImport({
+    required int ledgerId,
+    required int accountId,
+    required String fundCode,
+    required String fundName,
+    required double totalShares,
+    required double totalCost,
+    double currentNav = 0,
+    DateTime? navDate,
+    double marketValue = 0,
+    String? note,
+  });
+
+  /// 7.10.3 投资 CSV 导入：按名称查找分组，不存在则创建并返回 ID。
+  Future<int> ensureGroupForImport({
+    required int ledgerId,
+    required String name,
+    int sortOrder = 0,
+  });
+
+  /// 7.10.3 投资 CSV 导入后刷新投资账户市值缓存。
+  Future<void> syncInvestmentAccountValue(int accountId);
 }

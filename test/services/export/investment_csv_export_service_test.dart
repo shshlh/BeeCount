@@ -88,6 +88,8 @@ void main() {
 
     expect(csv, contains('【投资流水】'));
     expect(csv, contains('流水ID'));
+    expect(csv, contains('批次ID'));
+    expect(csv, contains('金额'));
     expect(csv, contains('转出账户'));
     expect(csv, contains('转入账户'));
     expect(csv, contains('投资账户'));

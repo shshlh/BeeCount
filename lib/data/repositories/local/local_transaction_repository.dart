@@ -889,6 +889,20 @@ class LocalTransactionRepository implements TransactionRepository {
   }
 
   @override
+  Future<Set<String>> getTransactionSyncIdsForLedger(int ledgerId) async {
+    final rows = await (db.selectOnly(db.transactions)
+          ..addColumns([db.transactions.syncId])
+          ..where(db.transactions.ledgerId.equals(ledgerId)))
+        .get();
+    final result = <String>{};
+    for (final r in rows) {
+      final sid = r.read(db.transactions.syncId);
+      if (sid != null && sid.isNotEmpty) result.add(sid);
+    }
+    return result;
+  }
+
+  @override
   Future<List<Transaction>> getTransactionsByLedgerInRange({
     required int ledgerId,
     required DateTime start,

@@ -291,6 +291,7 @@ class SyncDiffService {
     final accountNameToId = await dataImportService.importAccounts(
       repo,
       importData.accounts,
+      ledgerId: ledgerId,
       defaultCurrency: importData.currency ?? 'CNY',
     );
     final tagNameToId =

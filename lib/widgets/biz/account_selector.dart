@@ -88,6 +88,11 @@ class _AccountSelectorState extends ConsumerState<AccountSelector> {
       if (repo is LocalRepository) {
         final ctx = await repo.db.loadLedgerPickerContext(widget.ledgerId);
         allAccounts = await repo.db.filterAccountsForLedger(allAccounts, ctx);
+        // 7.10.1: 账户强绑定账本，非共享账本视角只显示当前账本账户。
+        if (ctx == null || !ctx.isEditorInShared) {
+          allAccounts =
+              allAccounts.where((a) => a.ledgerId == widget.ledgerId).toList();
+        }
       }
 
       // v30:过滤币种 = 显式传入(记账所选币种)?? 账本本位币(旧行为)

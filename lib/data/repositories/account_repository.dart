@@ -24,7 +24,8 @@ abstract class AccountRepository {
   /// 按币种分组获取账户统计
   Future<Map<String, List<Account>>> getAccountsGroupedByCurrency();
 
-  /// 创建账户。撞同名抛 [DuplicateNameException](name 全局唯一)。
+  /// 创建账户。7.10.1: 账户强绑定账本，同一账本内撞同名抛
+  /// [DuplicateNameException]；不同账本允许同名。
   /// 静默路径(import / app-link 等)请用 [upsertAccount](get-or-create 语义)。
   /// [syncId] 可选:seed 类路径显式塞确定性 id,UI 不传走 auto v4。
   /// [initialDate] 初始资金生效日期,缺省保持 null(净值趋势不做日期截断;
@@ -49,11 +50,11 @@ abstract class AccountRepository {
     String? customIconPath,
   });
 
-  /// 按 name 取账户(name 全局唯一,账户跨账本可用);不存在则建一条。
+  /// 按 (ledgerId, name) 取账户(7.10.1: 账户按账本隔离);不存在则建一条。
   /// 给 import / app-link 等 get-or-create 语义的静默路径用 —— 不会抛
   /// [DuplicateNameException]。
   ///
-  /// [ledgerId] 是 legacy 字段(早期 schema 残留),账户实际跨账本可用,默认 0。
+  /// [ledgerId] 为账户归属账本,默认 0 仅用于 legacy 调用方。
   Future<int> upsertAccount({
     required String name,
     int ledgerId = 0,

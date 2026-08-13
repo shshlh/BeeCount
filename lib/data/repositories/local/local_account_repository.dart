@@ -101,10 +101,10 @@ class LocalAccountRepository implements AccountRepository {
     String? iconType,
     String? customIconPath,
   }) async {
-    // 撞同名抛 DuplicateNameException(name 全局唯一)。静默路径(import /
-    // app-link 等)请改用 [upsertAccount]。
-    final existingByName =
-        await (db.select(db.accounts)..where((a) => a.name.equals(name))).get();
+    // 7.10.1: 账户按 (ledgerId, name) 判重，不同账本允许同名。
+    final existingByName = await (db.select(db.accounts)
+          ..where((a) => a.ledgerId.equals(ledgerId) & a.name.equals(name)))
+        .get();
     if (existingByName.isNotEmpty) {
       throw DuplicateNameException(
         entityType: 'account',
@@ -167,7 +167,7 @@ class LocalAccountRepository implements AccountRepository {
     double initialBalance = 0.0,
   }) async {
     final existing = await (db.select(db.accounts)
-          ..where((a) => a.name.equals(name)))
+          ..where((a) => a.ledgerId.equals(ledgerId) & a.name.equals(name)))
         .get();
     if (existing.isNotEmpty) return existing.first.id;
     // 复用 createAccount(此时 name 不冲突,不会抛)
