@@ -32,6 +32,45 @@
 ## 2026-08-13
 
 **移交角色**：项目经理（PM）
+**接收角色**：architect + qa
+
+**任务**：7.10.1 返工：清空账本同时清投资数据
+
+**问题**：`clearLedgerTransactions` 已级联删除账户，但没有清投资持仓/分组，清空账本后会留下指向已删账户的悬空投资数据。
+
+**要求**：
+1. `LocalLedgerRepository.clearLedgerTransactions` 在删除账户前，同时调用 `_deleteInvestmentDataForLedger(ledgerId)`
+2. 保持 `resetLedger` / `deleteLedger` 行为不变
+3. 新增测试：创建投资持仓后调用 `clearLedgerTransactions`，断言持仓/分组/归属/账户全部为空
+4. 全量 `flutter test` 0 failed，改动文件 analyze 无新增 issue
+
+---
+
+## 2026-08-13
+
+**移交角色**：architect + invest-logic + invest-ui + qa
+**接收角色**：PM（审查合入）
+
+**任务**：7.10.1-7.10.3 完成
+
+**完成工作**：
+- 7.10.1 账户与账本强绑定：`resetLedger` / `clearLedgerTransactions` / `deleteLedger` 均级联删除该账本账户；删除账本同时清理投资持仓/分组/归属；账户唯一性从全局改为 `(ledgerId, name)`；账户选择器/抽屉/周期交易编辑按当前账本过滤账户；删除前清空指向被删账户的默认收支偏好并 invalidate Provider
+- 7.10.2 导出文件名前缀：普通 CSV → `jizhang_zhushou_<ts>.csv`，投资 CSV → `jizhang_zhushou_investments_<ts>.csv`，配置导出 → `jizhang_zhushou_config_<ts>.yml`；导入仍按内容识别不受影响
+- 7.10.3 投资 CSV 可导入：新增 `InvestmentCsvImportService` 解析持仓/投资流水/分组/归属，按账户名复用/创建投资与普通账户，流水按 `流水ID` 幂等；导出 CSV 增加 `批次ID` / `金额` 列保证转换批次与卖出金额可恢复；导入页检测 `_investments_` 文件名进入专用导入页
+
+**下一个任务需要知道的**：
+- 全量 `flutter test`：784 passed / 1 skipped / 0 failed；全仓 analyze 859 项既有 info/warning，无 error，改动文件无新增 issue
+- 账户按 `(ledgerId, name)` 判重后，同一名字可在不同账本共存；普通 CSV 导入也改为按目标账本创建账户
+- 投资 CSV 导入会重建账户、持仓、分组与流水；重复导入按 syncId 跳过；转换内部流水通过 `批次ID` 恢复批次关联
+- 工作区另有 7.7 未提交改动（`android/gradle.properties`、`pubspec.yaml`、`.codex/config.toml`、`.codex/environments/`），非本任务范围
+
+**git 状态**：当前分支 main，改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-13
+
+**移交角色**：项目经理（PM）
 **接收角色**：architect + invest-logic + invest-ui + qa
 
 **任务**：7.10 账本清理/导出文件名/投资 CSV 导入
