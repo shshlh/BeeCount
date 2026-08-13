@@ -31,6 +31,27 @@
 
 ## 2026-08-13
 
+**移交角色**：PM
+**接收角色**：归档 / 待实机验证
+
+**任务**：7.10.1 返工复审 + 7.10 全量合入
+
+**完成工作**：
+- 复审通过：`clearLedgerTransactions` 删账户前先清投资持仓/分组/归属，`resetLedger` / `deleteLedger` 级联删账户与投资数据
+- 账户唯一性按 `(ledgerId, name)` 判重；账户选择器/抽屉/周期交易编辑按账本过滤；删除前清空默认收支偏好
+- 全量 `flutter test`：785 passed / 1 skipped / 0 failed；改动文件 analyze 无 error（全仓仅既有 warning/info）
+- 合入 main：`c667ee1`，已 push `origin/main`
+- 构建双 APK：dev 测试版 + prod 正式版
+
+**遗留**：
+- 投资 CSV 导入在目标账本缺少非投资账户时，会以 `cash` 类型重建（支付宝/银行卡等的 `type`、自定义图标、不计入资产标记未随 CSV 归档），属 roundtrip 保真度已知限制，可后续补强
+
+**git 状态**：当前分支 main，已提交 `c667ee1`
+
+---
+
+## 2026-08-13
+
 **移交角色**：architect + qa
 **接收角色**：PM（审查合入）
 
