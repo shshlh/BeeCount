@@ -5,10 +5,12 @@ import '../providers.dart';
 
 /// 所有信用卡账户
 final creditCardAccountsProvider = FutureProvider<List<Account>>((ref) async {
-  // 监听账户变化
-  ref.watch(allAccountsStreamProvider);
+  // 7.11.2: 按当前账本隔离。
+  final ledgerId = ref.watch(currentLedgerIdProvider);
+  ref.watch(accountsStreamProvider(ledgerId));
   final repo = ref.watch(repositoryProvider);
-  return repo.getCreditCardAccounts();
+  final all = await repo.getCreditCardAccounts();
+  return all.where((a) => a.ledgerId == ledgerId).toList();
 });
 
 /// 信用卡已用额度（per account）

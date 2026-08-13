@@ -53,7 +53,9 @@ class _InitialHoldingDialogState extends ConsumerState<_InitialHoldingDialog> {
   }
 
   void _loadAccounts() {
-    final accountsAsync = ref.read(allAccountsStreamProvider);
+    final int ledgerId =
+        widget.ledgerId ?? ref.read(currentLedgerIdProvider);
+    final accountsAsync = ref.read(accountsStreamProvider(ledgerId));
     final accounts = accountsAsync.asData?.value ?? [];
     // 只显示投资类账户
     _investmentAccounts = accounts

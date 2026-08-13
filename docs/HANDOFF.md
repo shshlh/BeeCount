@@ -29,6 +29,30 @@
 ---
 -->
 
+## 2026-08-14
+
+**移交角色**：architect + invest-ui + qa
+**接收角色**：PM（审查合入）
+
+**任务**：7.11.1-7.11.3 完成
+
+**完成工作**：
+- 7.11.1 数据迁移：`schemaVersion` 39 → 40，`BeeDatabase.migrateAccountLedgerIds()` 将 `ledger_id=0` 或指向已删账本的账户按流水反推回填、无流水且单账本回填、真正孤儿删除；幂等且记日志
+- 7.11.2 账户列表按账本过滤：`accounts_page` 改用 `accountsStreamProvider(ledgerId)`，资产构成新增 `assetCompositionForLedgerProvider`；`AccountPicker` / 初始持仓弹窗 / 信用卡 provider 同步按当前账本隔离
+- 7.11.3 回归测试：新增 v40 迁移测试（反推/孤儿删除/单账本回填/幂等）与 accounts_page 账本过滤 widget 测试；更新既有 schemaVersion 断言到 40
+
+**验证**：
+- 全量 `flutter test`：792 passed / 1 skipped / 0 failed
+- 改动文件 `dart analyze` 无新增 issue；全仓 analyze 859 项既有 info/warning，无 error
+
+**下一个任务需要知道的**：
+- 存量真机库升级到 v40 时会自动回填账户 `ledger_id`，随后 7.10.1 的级联删除（`WHERE ledger_id = 当前账本`）才能命中
+- accounts_page 测试用普通流覆盖 `accountsStreamProvider` / `assetCompositionForLedgerProvider`，避免 Drift QueryStream 在 widget 测试 teardown 挂起
+
+**git 状态**：当前分支 main，改动未提交，待 PM 审查合入
+
+---
+
 ## 2026-08-13
 
 **移交角色**：PM

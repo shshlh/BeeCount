@@ -195,3 +195,23 @@ final assetCompositionProvider = FutureProvider.autoDispose<List<({String type, 
   ref.onDispose(() => link.close());
   return repo.getAssetCompositionByType();
 });
+
+// 统计：资产构成（按账本隔离，7.11.2）。余额用账本维度的账户余额。
+final assetCompositionForLedgerProvider = FutureProvider.family
+    .autoDispose<List<({String type, double totalBalance})>, int>(
+        (ref, ledgerId) async {
+  final repo = ref.watch(repositoryProvider);
+  ref.watch(statsRefreshProvider);
+  final link = ref.keepAlive();
+  ref.onDispose(() => link.close());
+  final accounts = await repo.watchAccountsForLedger(ledgerId).first;
+  final balances = await repo.getAllAccountBalances(ledgerId);
+  final byType = <String, double>{};
+  for (final a in accounts.where((a) => !a.excludeFromAssets)) {
+    final balance = balances[a.id] ?? 0;
+    byType.update(a.type, (v) => v + balance, ifAbsent: () => balance);
+  }
+  return byType.entries
+      .map((e) => (type: e.key, totalBalance: e.value))
+      .toList();
+});

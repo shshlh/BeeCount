@@ -15,6 +15,9 @@ void main() {
           allAccountsStreamProvider.overrideWith(
             (ref) => Stream.value(const <Account>[]),
           ),
+          accountsStreamProvider.overrideWith(
+            (ref, ledgerId) => Stream.value(const <Account>[]),
+          ),
         ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,

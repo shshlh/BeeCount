@@ -58,7 +58,12 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
     // 乐观更新：用本地状态锁住当前排序，防止 stream 刷新导致闪烁
     setState(() {
       _reorderingGroups ??= _groupAccounts(
-        ref.read(allAccountsStreamProvider).asData?.value ?? [],
+        ref
+                .read(accountsStreamProvider(
+                    ref.read(currentLedgerIdProvider)))
+                .asData
+                ?.value ??
+            [],
       );
       final list = _reorderingGroups![type]!;
       final item = list.removeAt(oldIndex);
@@ -90,12 +95,13 @@ class _AccountsPageState extends ConsumerState<AccountsPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final ledgerId = ref.watch(currentLedgerIdProvider);
-    final accountsAsync = ref.watch(allAccountsStreamProvider);
+    final accountsAsync = ref.watch(accountsStreamProvider(ledgerId));
     final accountFeatureAsync = ref.watch(accountFeatureEnabledProvider);
     final primaryColor = ref.watch(primaryColorProvider);
     final allStatsAsync = ref.watch(allAccountStatsProvider);
     // 资产构成数据
-    final compositionAsync = ref.watch(assetCompositionProvider);
+    final compositionAsync =
+        ref.watch(assetCompositionForLedgerProvider(ledgerId));
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),

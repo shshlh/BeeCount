@@ -552,7 +552,7 @@ class BeeDatabase extends _$BeeDatabase {
 
   @override
   int get schemaVersion =>
-      39; // v31: 账户隐藏 / v32: 投资数据层 / v33: 账户体系改造 / v34: 账户初始资金日期 / v35: 账户不计入资产 / v36: 基金分组 / v37: 投资净值日期 / v38: 表外账户 / v39: 转换内部流水不进明细
+      40; // v31: 账户隐藏 / v32: 投资数据层 / v33: 账户体系改造 / v34: 账户初始资金日期 / v35: 账户不计入资产 / v36: 基金分组 / v37: 投资净值日期 / v38: 表外账户 / v39: 转换内部流水不进明细 / v40: 账户 ledger_id 回填/孤儿清理
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1413,6 +1413,11 @@ class BeeDatabase extends _$BeeDatabase {
                 "AND invest_type IN ('sell', 'buy');");
             logger.info('DBMigration', 'v39 迁移完成');
           }
+          if (from < 40) {
+            logger.info('DBMigration', '开始迁移到 v40: 账户 ledger_id 回填/孤儿清理');
+            await migrateAccountLedgerIds();
+            logger.info('DBMigration', 'v40 迁移完成');
+          }
         },
         onCreate: (m) async {
           await m.createAll();
@@ -1439,6 +1444,72 @@ class BeeDatabase extends _$BeeDatabase {
               'ON investment_group_holdings (holding_id);');
         },
       );
+
+  /// v40 迁移（7.11.1）：账户 ledger_id 回填 / 孤儿清理。
+  ///
+  /// 7.10.1 将账户改为按账本绑定，但存量账户 ledger_id 可能是 legacy 值
+  /// （旧版 CSV 导入写死 0）或指向已删账本。规则：
+  /// - 按 transactions.account_id / to_account_id 反推归属账本（取出现最多）；
+  /// - 无法反推且当前仅一个账本 → 归到该账本；
+  /// - 无关联流水且无可用账本 → 删除；
+  /// - 有流水但归属账本已删且多账本 → 保留原值并告警（避免误删数据）。
+  Future<void> migrateAccountLedgerIds() async {
+    final ledgerRows = await customSelect('SELECT id FROM ledgers').get();
+    final ledgerIds = <int>{for (final r in ledgerRows) _dbInt(r.data['id'])};
+
+    final orphanRows = await customSelect(
+      "SELECT id, ledger_id FROM accounts WHERE ledger_id = 0 "
+      "OR ledger_id NOT IN (SELECT id FROM ledgers)",
+      readsFrom: {accounts, ledgers},
+    ).get();
+
+    for (final row in orphanRows) {
+      final accountId = _dbInt(row.data['id']);
+      final originalLedgerId = _dbInt(row.data['ledger_id']);
+      final txRows = await customSelect(
+        'SELECT ledger_id, COUNT(*) AS c FROM transactions '
+        'WHERE account_id = ?1 OR to_account_id = ?1 '
+        'GROUP BY ledger_id ORDER BY c DESC, ledger_id ASC',
+        variables: [Variable<int>(accountId)],
+        readsFrom: {transactions},
+      ).get();
+
+      int? inferred;
+      if (txRows.isNotEmpty) {
+        inferred = _dbInt(txRows.first.data['ledger_id']);
+      }
+
+      if (inferred != null && ledgerIds.contains(inferred)) {
+        await customUpdate(
+          'UPDATE accounts SET ledger_id = ?1 WHERE id = ?2',
+          variables: [Variable<int>(inferred), Variable<int>(accountId)],
+          updates: {accounts},
+        );
+        logger.info(
+            'DBMigration', 'v40 账户 $accountId → $inferred（按流水反推）');
+      } else if (ledgerIds.length == 1) {
+        final only = ledgerIds.first;
+        await customUpdate(
+          'UPDATE accounts SET ledger_id = ?1 WHERE id = ?2',
+          variables: [Variable<int>(only), Variable<int>(accountId)],
+          updates: {accounts},
+        );
+        logger.info('DBMigration', 'v40 账户 $accountId → 唯一账本 $only');
+      } else if (txRows.isEmpty) {
+        await customUpdate(
+          'DELETE FROM accounts WHERE id = ?1',
+          variables: [Variable<int>(accountId)],
+          updates: {accounts},
+        );
+        logger.info('DBMigration', 'v40 孤儿账户 $accountId 已删除');
+      } else {
+        logger.warning(
+            'DBMigration',
+            'v40 账户 $accountId 有流水但归属账本已删且多账本，'
+            '保留原 ledger_id=$originalLedgerId');
+      }
+    }
+  }
 
   /// Migration helper: 列不存在再 ALTER ADD,避免 partial state 重跑时
   /// "duplicate column" 把启动卡死。
@@ -1470,6 +1541,13 @@ class BeeDatabase extends _$BeeDatabase {
       return;
     }
     await m.createTable(table);
+  }
+
+  /// SQLite 整数列统一转 int（native 驱动可能返回 int 或 BigInt）。
+  static int _dbInt(dynamic v) {
+    if (v is int) return v;
+    if (v is BigInt) return v.toInt();
+    return 0;
   }
 
   // Seed minimal data

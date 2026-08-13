@@ -62,8 +62,8 @@ void main() {
     };
   }
 
-  test('schemaVersion = 39', () {
-    expect(db.schemaVersion, 39);
+  test('schemaVersion = 40', () {
+    expect(db.schemaVersion, 40);
   });
 
   test('回填：旧转换卖出/买入 exclude_from_stats=1，退回与普通流水保持 0', () async {

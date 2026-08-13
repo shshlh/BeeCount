@@ -69,6 +69,12 @@ void main() {
           allAccountsStreamProvider.overrideWith(
             (ref) => Stream<List<Account>>.value(accounts),
           ),
+        if (overrideAccountsStream)
+          accountsStreamProvider.overrideWith(
+            (ref, ledgerId) => Stream<List<Account>>.value(
+              accounts.where((a) => a.ledgerId == ledgerId).toList(),
+            ),
+          ),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
