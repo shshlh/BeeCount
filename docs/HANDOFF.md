@@ -32,6 +32,35 @@
 ## 2026-08-14
 
 **移交角色**：PM
+**接收角色**：architect + qa
+
+**任务**：7.11.4 返工：余额口径修正 + 迁移反推补强
+
+**背景**：PM 复审 7.11 发现两项 P3，按「改完再合入」原则安排返工，不留遗留。
+
+**要求**：
+
+7.11.4-1 余额口径（architect）：
+- `lib/data/repositories/local/local_account_repository.dart` 的 `getAllAccountBalances(ledgerId)` 内部从 `getAccountBalance(account.id)` 改为 `getAccountBalanceInLedger(account.id, ledgerId)`。
+- 三处调用点（记账抽屉余额 / 资产构成 / AI 上下文）均为账本语义，修正后更准确；确认无调用方依赖旧全局口径。
+
+7.11.4-2 迁移反推补强（architect）：
+- `lib/data/db.dart` 的 `migrateAccountLedgerIds()` 增加按 `investment_holdings.ledger_id` 与 `recurring_transactions.ledger_id` 反推账户归属。
+- 删除孤儿账户前，确认该账户无 `investment_holdings` / `recurring_transactions` 关联，避免悬空引用。
+
+7.11.4-3 回归测试（qa）：
+- 补「有持仓无流水账户按持仓 ledger_id 回填」测试。
+- 补账本维度余额口径测试。
+
+**约束**：全量 `flutter test` 0 failed；改动文件 analyze 无新增 error；HANDOFF/TEAM 只增不减。
+
+**git 状态**：当前分支 main，基线 `25dfacc`，待返工
+
+---
+
+## 2026-08-14
+
+**移交角色**：PM
 **接收角色**：归档 / 待实机验证
 
 **任务**：7.11 复审合入
