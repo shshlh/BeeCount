@@ -31,6 +31,23 @@
 
 ## 2026-08-14
 
+**移交角色**：PM
+**接收角色**：归档 / 待实机验证
+
+**任务**：7.11.4 复审合入
+
+**完成工作**：
+- 审查通过：余额口径改为账本维度（含初始资金，估值/投资账户返回缓存市值，与 `getAccountGlobalBalance` 语义对齐）
+- 迁移反推补强正确：transactions / investment_holdings / recurring_transactions 三类关联合并计数反推，删除孤儿账户前确认无关联
+- 全量 `flutter test`：796 passed / 1 skipped / 0 failed；改动文件 analyze 无 error
+- 合入 main：`1030a30`
+
+**git 状态**：当前分支 main，已提交 `1030a30`
+
+---
+
+## 2026-08-14
+
 **移交角色**：architect + qa
 **接收角色**：PM（审查合入）
 
