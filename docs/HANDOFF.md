@@ -31,6 +31,26 @@
 
 ## 2026-08-14
 
+**移交角色**：PM
+**接收角色**：归档 / 待实机验证
+
+**任务**：7.11 复审合入
+
+**完成工作**：
+- 审查通过：v40 迁移回填/孤儿清理/幂等正确；账户列表/资产构成/信用卡/账户选择器统一按账本过滤
+- 全量 `flutter test`：792 passed / 1 skipped / 0 failed；改动文件 analyze 无 error
+- 合入 main：`32b124d`
+
+**遗留（P3，非阻塞）**：
+- `assetCompositionForLedgerProvider` 余额用全局 `getAccountBalance` 而非账本维度 `getAccountBalanceInLedger`，账户绑定后影响极小
+- 迁移删除孤儿账户时，若有持仓但无流水的投资账户（极端）会悬空引用
+
+**git 状态**：当前分支 main，已提交 `32b124d`
+
+---
+
+## 2026-08-14
+
 **移交角色**：architect + invest-ui + qa
 **接收角色**：PM（审查合入）
 
