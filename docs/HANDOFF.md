@@ -32,6 +32,25 @@
 ## 2026-08-13
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-logic + qa
+
+**任务**：7.8.1 返工：旧退回流水兼容
+
+**审查发现**：
+- 7.8.1 主体实现正确，全量测试 768 passed / 1 skipped / 0 failed，新增文件 analyze 无问题
+- 但 `getInvestmentTransactionsForLedger` 按 `investType IS NOT NULL OR batchId IS NOT NULL` 过滤；7.5.4 之前的旧转换退回流水 `investType=null` 且 `batchId=null`，只有 note='基金转换退回'，会被漏掉
+
+**要求**：
+1. 查询条件增加 `note = '基金转换退回'` 兜底
+2. `InvestmentCsvExportService` 识别退回时同样兼容：`investType == null && (batchId != null || note == '基金转换退回')`
+3. 新增测试：插入旧版退回流水（无 batchId、note='基金转换退回'），断言导出 CSV 包含「退回」及退回金额/账户
+4. 全量 `flutter test` 0 failed，改动文件 analyze 无新增 issue
+
+---
+
+## 2026-08-13
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-logic + invest-ui + qa
 
 **任务**：7.8 范围调整
@@ -40,6 +59,27 @@
 - 投资内容属于业务数据，归「数据管理 → 导出数据」CSV 导出，不放进「配置导入导出」YAML
 - 7.8.1 按原要求执行：CSV 同时生成投资文件，包含持仓、投资流水、分组归属
 - 7.8.2 取消：配置 YAML 不增加 investment 区块
+
+---
+
+## 2026-08-13
+
+**移交角色**：invest-logic + invest-ui + qa
+**接收角色**：PM（审查合入）
+
+**任务**：7.8.1 CSV 导出投资内容（7.8.2 已按范围调整取消）
+
+**完成工作**：
+- 投资 Repository 新增 `getHoldingsForLedger` / `getInvestmentTransactionsForLedger`，导出归档取全部持仓（含 0 份额）与全部投资流水（含转换内部卖出/买入与退回）
+- 新增 `InvestmentCsvExportService`：生成持仓（基金代码/名称/账户/份额/成本/净值/净值日期/市值/备注/所属分组）、投资流水（类型/份额/净值/转入成本/手续费/退回金额/退回账户/日期/备注）、分组与分组归属三块 CSV
+- `ExportPage` 导出时同时生成 `beecount_investments_<ts>.csv` 并一起保存/分享（iOS 分享两个文件），普通流水 CSV 仍保持用户可见口径（只退回）
+- 测试：导出内容包含持仓/投资流水/分组归属与转换内部两笔、可落盘非空
+
+**验证**：
+- 全量 `flutter test`：768 passed / 1 skipped / 0 failed
+- 新增/改动文件 `flutter analyze` 无新增 issue
+
+**git 状态**：当前分支 main，7.8.1 改动未提交；工作区另有 7.7 的未提交改动（android/gradle.properties、pubspec.yaml、.codex/environments/），非本任务范围
 
 ---
 
