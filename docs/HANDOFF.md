@@ -34,6 +34,69 @@
 **移交角色**：项目经理（PM）
 **接收角色**：architect + invest-logic + invest-ui + qa
 
+**任务**：7.10 账本清理/导出文件名/投资 CSV 导入
+
+---
+
+## 2026-08-13
+
+**移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic + qa
+
+**任务**：7.10.1 账户与账本强绑定
+
+**问题**：初始化/清空/删除账本均未级联删除账户，账户跨账本残留。
+
+**要求**：
+1. 账户绑定账本：`resetLedger` / `clearLedgerTransactions` / `deleteLedger` 都删除该账本下全部账户
+2. 删除账户后清空 `default_income_account_id` / `default_expense_account_id` 偏好，并 invalidate 对应 Provider
+3. 删除账本时同时清理投资持仓/分组/归属，避免跨账本残留
+4. 分类与标签保持全局；账本与账户不再跨账本共享
+5. 测试：删除/清空/初始化后账户为空；切换账本后账户列表只显示当前账本账户；默认账户偏好清空
+6. 全量 `flutter test` 0 failed，改动文件 analyze 无新增 issue
+
+---
+
+## 2026-08-13
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-ui + qa
+
+**任务**：7.10.2 导出文件名前缀改名
+
+**问题**：导出文件仍使用 `beecount_` 前缀，与项目定位不符。
+
+**要求**：
+1. `ExportPage` 普通流水文件名改为 `jizhang_zhushou_<ts>.csv`，投资文件改为 `jizhang_zhushou_investments_<ts>.csv`
+2. 配置导出 `beecount_config_` 如仍暴露给用户，也同步改为 `jizhang_zhushou_config_`
+3. 导入按文件内容/扩展名识别，不依赖文件名，因此改名不破坏现有导入；补测试确认可正常读取改名后的 CSV
+
+---
+
+## 2026-08-13
+
+**移交角色**：项目经理（PM）
+**接收角色**：invest-logic + architect + invest-ui + qa
+
+**任务**：7.10.3 投资 CSV 可导入
+
+**问题**：`jizhang_zhushou_investments_*.csv` 是多段归档格式，当前通用 CSV 导入把它当普通流水解析，出现“请先选分类列再继续”。
+
+**要求**：
+1. 根据文件名包含 `_investments_` 或在导入页增加「投资数据」入口，走专用投资 CSV 导入
+2. 解析持仓、投资流水、分组与分组归属三块；恢复持仓/分组，投资流水按 `流水ID` 幂等
+3. 导入时按账户名复用/创建投资账户与退回账户；不自动创建普通收支流水
+4. 普通 CSV 导入路径保持不变
+5. 测试：投资 CSV 导入 roundtrip，持仓/流水/分组恢复；重复导入不重复
+6. 全量 `flutter test` 0 failed，改动文件 analyze 无新增 issue
+
+---
+
+## 2026-08-13
+
+**移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic + invest-ui + qa
+
 **任务**：7.9.3 返工：初始化账本同时清空账户
 
 **问题**：当前 `resetLedger` 只清流水/持仓/分组/附件，账户仍保留，不符合“初始化账本”预期。
