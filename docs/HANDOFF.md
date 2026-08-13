@@ -32,6 +32,33 @@
 ## 2026-08-14
 
 **移交角色**：PM
+**接收角色**：architect + invest-logic + invest-ui + qa
+
+**任务**：7.12 首页资产概览按账本过滤 + 账户数据导出/导入 roundtrip
+
+**背景**：实机回归发现两个根源问题。
+
+**要求**：
+
+7.12.1 首页资产概览按账本过滤（问题1）：
+- 新增 `getNetWorthBreakdownByLedger(ledgerId)`，只统计该账本账户，余额用账本维度 `getAccountBalanceInLedger`；`netWorthBreakdownProvider` 改为按 `currentLedgerIdProvider` 过滤（或新增 family provider）。
+- 排查首页/其他使用 `netWorthBreakdownProvider` / `getAllAccountsTotalStats` / `allAccountStatsProvider` 的展示，凡应随账本走的统一按账本隔离。
+
+7.12.2 账户数据导出/导入 roundtrip（问题2/3）：
+- 导出：投资 CSV 增加【账户】段，归档账户 `type` / `currency` / `initialBalance` / `sortOrder` / `hidden` / `excludeFromAssets` / `isOffBalance` / `iconType` / `customIconPath`（至少覆盖前四者，能完整恢复账户结构）。
+- 导入：`InvestmentCsvImportService` 先解析【账户】段，按 `(ledgerId, name)` 恢复账户（保留 type/initialBalance/sortOrder），再导入持仓/流水；持仓/流水的账户解析优先复用已恢复账户。
+- 普通 CSV 导入的账户类型兜底：不再硬编码 `cash`，能识别账户 type 时优先恢复（与投资 CSV 账户段口径一致）。
+- 回归测试：导出→清空→导入后，账户 type / 初始资金 / 排序完整恢复；首页净资产随账本删除清零。
+
+**约束**：全量 `flutter test` 0 failed；改动文件 analyze 无新增 error；HANDOFF/TEAM 只增不减。
+
+**git 状态**：当前分支 main，基线 `0b43d7d`，待派工
+
+---
+
+## 2026-08-14
+
+**移交角色**：PM
 **接收角色**：归档 / 待实机验证
 
 **任务**：7.11.4 复审合入

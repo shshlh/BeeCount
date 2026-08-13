@@ -93,6 +93,13 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 7.11.4 返工：余额口径 + 迁移反推补强 | ✅ | architect + qa | getAllAccountBalances 账本维度 + 迁移按持仓/周期反推 + 测试 | 2026-08-14 |
 | 7.11.4 PM 复审合入 | ✅ | PM | 全量测试 796 passed + analyze 无 error + HANDOFF 记录 | 2026-08-14 |
 
+### 阶段 7.12：首页资产概览按账本 + 账户导出导入
+
+| 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
+|---|---|---|---|---|
+| 7.12.1 首页资产概览按账本过滤 | ⬜ 待执行 | architect + invest-logic | getNetWorthBreakdownByLedger + 账本维度 provider + 调用点排查 | — |
+| 7.12.2 账户数据导出/导入 roundtrip | ⬜ 待执行 | architect + invest-logic + invest-ui + qa | 投资 CSV 账户段 + 导入恢复 type/初始资金/排序 + 测试 | — |
+
 ### 阶段 7.4：账户备注修复
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
