@@ -32,6 +32,45 @@
 ## 2026-08-13
 
 **移交角色**：PM
+**接收角色**：architect + invest-ui + qa
+
+**任务**：7.11 账户级联删除失效修复（数据迁移 + 列表过滤 + 回归）
+
+**背景/根源**：
+- 7.10.1 把账户改成「按账本绑定」，但只改业务代码，未做数据迁移。存量账户 `ledger_id` 仍是 legacy 值（旧版 CSV 导入写死 0，见 `data_import_service.dart` 历史版本），级联删除 `WHERE ledger_id = 当前账本id` 匹配不到这些账户。
+- 账户列表页 `accounts_page.dart` 仍用全局 `allAccountsStreamProvider`（底层 `watchAllAccounts` 不过滤账本），导致残留账户在「无账本」状态下仍可见。
+- 单测通过是因为用全新内存库；真机是存量库，暴露出迁移缺口。
+
+**要求**：
+
+7.11.1 数据迁移（architect）：
+- `lib/data/db.dart` 的 `schemaVersion` 39 → 40。
+- `onUpgrade` 写迁移，把 `ledger_id = 0` 或指向已删账本的孤儿账户回填到正确账本：
+  - 按 `transactions.account_id = accounts.id` 或 `to_account_id = accounts.id` 反推归属账本，取出现次数最多的账本。
+  - 无法反推且当前仅一个账本 → 归到该账本。
+  - 真正无主（无关联流水、且无可用账本）→ 删除。
+  - 投资账户、表外账户、隐藏账户一并处理。
+- 迁移幂等、记日志；遵守现有 `onUpgrade` 按 `from < N` 分块写法。
+
+7.11.2 账户列表按账本过滤（invest-ui）：
+- `lib/pages/account/accounts_page.dart:93` 从 `allAccountsStreamProvider` 改为按 `currentLedgerIdProvider` 过滤。
+- 排查 `allAccountsStreamProvider` 所有调用点，账户列表/资产构成等 UI 统一按账本隔离。
+
+7.11.3 回归测试（qa）：
+- 迁移测试：构造 `ledger_id=0` 账户 + 关联流水 → 断言回填到正确账本；构造孤儿账户 → 断言被删。
+- 回归：删除/清空/初始化账本后账户列表为空。
+
+**约束**：
+- schema 迁移只增不改；HANDOFF/TEAM 只增不减。
+- 全量 `flutter test` 0 failed；改动文件 `dart analyze` 无新增 error。
+
+**git 状态**：当前分支 main，基线 `c667ee1` / `a7d7200`，待派工
+
+---
+
+## 2026-08-13
+
+**移交角色**：PM
 **接收角色**：归档 / 待实机验证
 
 **任务**：7.10.1 返工复审 + 7.10 全量合入
