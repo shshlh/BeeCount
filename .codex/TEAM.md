@@ -73,6 +73,7 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 7.9.1 导出投资与明细一一对应 | ⬜ 待执行 | invest-logic + qa + architect | 普通 CSV 排除投资流水 + 投资 CSV 唯一出处 + 测试 | — |
 | 7.9.2 明细流水批量删除 | ⬜ 待执行 | invest-ui + qa + invest-logic | 多选模式 + 批量删除 + 持仓重算 + 测试 | — |
 | 7.9.3 账本初始化/清空全部数据 | ⬜ 待执行 | architect + invest-logic + invest-ui + qa | resetLedger 清流水/持仓/分组/附件 + UI + 测试 | — |
+| 7.9.4 重复导入同一份导出数据去重 | ⬜ 待执行 | architect + invest-logic + qa | 流水ID 列 + syncId 幂等导入 + skipped 统计 + 测试 | — |
 
 ### 阶段 7.4：账户备注修复
 

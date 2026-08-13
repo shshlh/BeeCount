@@ -32,6 +32,25 @@
 ## 2026-08-13
 
 **移交角色**：项目经理（PM）
+**接收角色**：architect + invest-logic + qa
+
+**任务**：7.9.4 重复导入同一份导出数据去重
+
+**问题**：同一份数据在不同时间导出后，分别导入新空账本，会重复插入相同流水。根因是导出 CSV 没有稳定 `流水ID`，导入也不按 ID 幂等。
+
+**要求**：
+1. 普通流水 CSV 增加 `流水ID` 列，值为交易 `syncId`（稳定不变）；投资 CSV 的投资流水也增加 `流水ID`
+2. 导入字段映射增加「流水ID」可选映射，解析写入 `ImportTransaction.syncId`
+3. `DataImportService.importTransactions` 在导入前预载目标账本已存在的 syncId；`syncId` 已存在时跳过，并单独统计 `skipped`，不重复插入
+4. 旧 CSV 没有 `流水ID` 时保持旧行为（不自动去重），新导出文件走 ID 幂等
+5. 测试：同一 CSV 导入两次，第二次 skipped，流水只存在一份；导入结果包含 skipped 统计
+6. 全量 `flutter test` 0 failed，改动文件 analyze 无新增 issue
+
+---
+
+## 2026-08-13
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-logic + invest-ui + qa + architect
 
 **任务**：7.9 导出/删除/初始化三处体验补齐
