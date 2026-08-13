@@ -147,10 +147,12 @@ class ImportData {
 class ImportResult {
   final int inserted;
   final int failed;
+  final int skipped;
 
   const ImportResult({
     required this.inserted,
     required this.failed,
+    this.skipped = 0,
   });
 }
 
@@ -434,10 +436,17 @@ class DataImportService {
   }) async {
     int inserted = 0;
     int failed = 0;
+    int skipped = 0;
     int processed = 0;
     final total = transactions.length;
     logger.info('TxImport',
         '开始导入交易: $total 条 (recordChanges=$recordChanges)');
+
+    // 7.9.4: 预载目标账本已存在的 syncId，导入时按「流水ID」幂等跳过。
+    final existingSyncIds = <String>{
+      for (final t in await repo.getTransactionsByLedger(ledgerId))
+        if (t.syncId != null && t.syncId!.isNotEmpty) t.syncId!,
+    };
 
     // v30 交易级多币种(02 §六导入修补):批量预取本位币/账户币种/有效汇率,
     // 逐条填 currencyCode + nativeAmount,不再落 NULL(NULL 行 L11 检测
@@ -490,6 +499,10 @@ class DataImportService {
           recordChanges: recordChanges,
         );
         inserted += ids.length;
+        for (final item in batchTx) {
+          final sid = item.syncId.value;
+          if (sid != null && sid.isNotEmpty) existingSyncIds.add(sid);
+        }
         logger.info('TxImport',
             'flush 批次: size=$size 耗时=${batchSw.elapsedMilliseconds}ms 累计=${processed + size}/$total');
       } catch (e, st) {
@@ -504,6 +517,16 @@ class DataImportService {
     }
 
     for (final tx in transactions) {
+      // 7.9.4: 已有相同流水ID 的记录直接跳过，不重复插入。
+      final txSyncId = tx.syncId;
+      if (txSyncId != null &&
+          txSyncId.isNotEmpty &&
+          existingSyncIds.contains(txSyncId)) {
+        skipped++;
+        processed++;
+        continue;
+      }
+
       // 解析分类ID
       int? categoryId;
       if (tx.categoryId != null) {
@@ -631,8 +654,9 @@ class DataImportService {
     await flush();
 
     logger.info('TxImport',
-        '交易导入完成: 总数=$total 成功=$inserted 失败=$failed 总耗时=${overallSw.elapsedMilliseconds}ms');
-    return ImportResult(inserted: inserted, failed: failed);
+        '交易导入完成: 总数=$total 成功=$inserted 失败=$failed 跳过=$skipped 总耗时=${overallSw.elapsedMilliseconds}ms');
+    return ImportResult(
+        inserted: inserted, failed: failed, skipped: skipped);
   }
 }
 

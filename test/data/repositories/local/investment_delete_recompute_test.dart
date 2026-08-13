@@ -153,4 +153,69 @@ void main() {
     expect(h2!.totalShares, 0);
     expect(await accountValue(), 0);
   });
+
+  test('批量按本地 id 删除投资流水后重算持仓与账户市值（7.9.2）', () async {
+    final tx1 = await investmentRepo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000001',
+      fundName: '基金A',
+      amount: 1000,
+      shares: 1000,
+      nav: 1.0,
+    );
+    final tx2 = await investmentRepo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000002',
+      fundName: '基金B',
+      amount: 2000,
+      shares: 2000,
+      nav: 1.0,
+    );
+
+    final deleted =
+        await transactionRepo.deleteTransactionsBatchByIds([tx1, tx2]);
+    expect(deleted, 2);
+
+    final h1 = await investmentRepo.getHolding(1);
+    final h2 = await investmentRepo.getHolding(2);
+    expect(h1!.totalShares, 0);
+    expect(h1.totalCost, 0);
+    expect(h2!.totalShares, 0);
+    expect(h2.totalCost, 0);
+    expect(await accountValue(), 0);
+  });
+
+  test('批量删除混合普通/投资流水后投资持仓正确重算（7.9.2）', () async {
+    final buyTx = await investmentRepo.buy(
+      ledgerId: 1,
+      accountId: 10,
+      fundCode: '000001',
+      fundName: '基金A',
+      amount: 2000,
+      shares: 1000,
+      nav: 2.0,
+    );
+    final normalTx = await transactionRepo.addTransaction(
+      ledgerId: 1,
+      type: 'expense',
+      amount: 30,
+      accountId: 10,
+      happenedAt: DateTime(2026, 8, 1),
+      note: '普通支出',
+    );
+
+    final deleted = await transactionRepo.deleteTransactionsBatchByIds(
+        [buyTx, normalTx]);
+    expect(deleted, 2);
+
+    final txRows = await (db.select(db.transactions)).get();
+    expect(txRows, isEmpty);
+
+    final holding = await investmentRepo.getHolding(1);
+    expect(holding!.totalShares, 0);
+    expect(holding.totalCost, 0);
+    expect(await accountValue(), 0);
+  });
 }

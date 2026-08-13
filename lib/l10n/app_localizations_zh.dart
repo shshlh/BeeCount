@@ -713,6 +713,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ledgersClearSuccess => '账本已清空';
 
   @override
+  String get ledgersReset => '初始化账本';
+
+  @override
+  String ledgersResetMessage(Object name) {
+    return '确定要初始化账本\"$name\"吗？此操作会清空全部流水、持仓与分组，且不可恢复。\\n账本、账户、分类和标签会保留。';
+  }
+
+  @override
+  String get ledgersResetSuccess => '账本已初始化';
+
+  @override
   String get ledgersDeleteLocal => '仅删除本地账本';
 
   @override
@@ -974,6 +985,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importFieldNote => '备注';
 
   @override
+  String get importFieldSyncId => '流水ID';
+
+  @override
   String get importPreview => '预览：';
 
   @override
@@ -1044,8 +1058,37 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String importSkippedDuplicates(int count) {
+    return '跳过 $count 条重复流水（流水ID 已存在）';
+  }
+
+  @override
   String importTransactionFailed(Object error) {
     return '导入失败，已回滚所有更改：$error';
+  }
+
+  @override
+  String get transactionListMultiSelect => '多选';
+
+  @override
+  String get transactionListSelectAll => '全选';
+
+  @override
+  String get transactionListDeselectAll => '取消全选';
+
+  @override
+  String transactionListSelectedCount(int count) {
+    return '已选 $count 条';
+  }
+
+  @override
+  String transactionListBatchDelete(int count) {
+    return '删除 ($count)';
+  }
+
+  @override
+  String transactionListBatchDeleteConfirm(int count) {
+    return '确定删除选中的 $count 条流水吗？此操作不可恢复。';
   }
 
   @override
@@ -7407,6 +7450,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get importFieldCurrency => '币种';
+
+  @override
+  String get exportCsvHeaderSyncId => '流水ID';
 
   @override
   String get currencyMOP => '澳门元';

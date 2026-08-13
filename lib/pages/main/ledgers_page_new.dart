@@ -515,6 +515,16 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
             ],
             if (isOwner) ...[
               SimpleDialogOption(
+                onPressed: () => Navigator.pop(dctx, 'reset'),
+                child: Row(
+                  children: [
+                    Icon(Icons.restart_alt, color: primary),
+                    const SizedBox(width: 8),
+                    Text(AppLocalizations.of(context).ledgersReset),
+                  ],
+                ),
+              ),
+              SimpleDialogOption(
                 onPressed: () => Navigator.pop(dctx, 'clear'),
                 child: Row(
                   children: [
@@ -604,6 +614,8 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
           ),
         ));
       }
+    } else if (action == 'reset') {
+      await _handleResetLedger(context, ledger);
     } else if (action == 'clear') {
       await _handleClearLedger(context, ledger);
     } else if (action == 'deleteLocal') {
@@ -821,6 +833,64 @@ class _LedgersPageNewState extends ConsumerState<LedgersPageNew> {
       ref.read(statsRefreshProvider.notifier).state++;
 
       showToast(context, l10n.ledgersClearSuccess);
+    } catch (e) {
+      if (!mounted) return;
+      await AppDialog.error(
+        context,
+        title: l10n.commonFailed,
+        message: '$e',
+      );
+    }
+  }
+
+  /// 初始化账本（7.9.3）：清空流水/持仓/分组，保留账本、账户、分类与标签。
+  Future<void> _handleResetLedger(
+      BuildContext context, LedgerDisplayItem ledger) async {
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await AppDialog.confirm<bool>(
+      context,
+      title: l10n.ledgersReset,
+      message: l10n.ledgersResetMessage(translateLedgerName(context, ledger.name)),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final repo = ref.read(repositoryProvider);
+
+      // 清数据前先收集该账本附件 fileName（删行后就查不到了）。
+      final attachmentFiles =
+          await repo.getAttachmentFileNamesByLedger(ledger.id);
+      await repo.resetLedger(ledger.id);
+      await _cleanupLedgerAttachmentFiles(attachmentFiles);
+
+      if (!mounted) return;
+
+      // 清空交易缓存并触发全局刷新：明细、统计、预算、持仓、小组件、同步。
+      ref.read(cachedTransactionsProvider.notifier).state = null;
+      await PostProcessor.sync(ref, ledgerId: ledger.id);
+      ref.read(ledgerListRefreshProvider.notifier).state++;
+      ref.read(statsRefreshProvider.notifier).state++;
+      ref.read(budgetRefreshProvider.notifier).state++;
+      ref.invalidate(currentHoldingsProvider);
+      try {
+        await WidgetManager().updateAllWidgetsLocalized(
+          repo,
+          ledger.id,
+          ref.read(primaryColorProvider),
+          explicitLocale: ref.read(languageProvider),
+          dark: WidgetManager.resolveDarkMode(
+            ref.read(themeModeProvider),
+            WidgetsBinding.instance.platformDispatcher.platformBrightness,
+          ),
+          redForIncome: ref.read(incomeExpenseColorSchemeProvider),
+          baseCurrency: ref.read(baseCurrencyProvider),
+        );
+      } catch (_) {
+        // 小组件刷新失败不阻断初始化完成流程。
+      }
+
+      showToast(context, l10n.ledgersResetSuccess);
     } catch (e) {
       if (!mounted) return;
       await AppDialog.error(

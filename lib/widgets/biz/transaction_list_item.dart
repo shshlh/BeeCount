@@ -49,6 +49,7 @@ class TransactionListItem extends ConsumerWidget {
 
   final bool excludeFromStats; // 不计入收支:第二行显示「不计收支」标签
   final bool excludeFromBudget; // 不计入预算:第二行显示「不计预算」标签
+  final String? fundLabel; // 7.9.5: 投资流水的基金代码/名称小标签
 
   const TransactionListItem({
       super.key,
@@ -79,6 +80,7 @@ class TransactionListItem extends ConsumerWidget {
       this.onAttachmentTap,
       this.excludeFromStats = false,
       this.excludeFromBudget = false,
+      this.fundLabel,
   });
 
 
@@ -95,6 +97,7 @@ class TransactionListItem extends ConsumerWidget {
     return showTime ||
         accountName != null ||
         attachmentCount > 0 ||
+        fundLabel != null ||
         excludeFromStats ||
         excludeFromBudget;
   }
@@ -115,6 +118,27 @@ class TransactionListItem extends ConsumerWidget {
         style: TextStyle(
           fontSize: 11,
           color: BeeTokens.textTertiary(context),
+        ),
+      ),
+    );
+  }
+
+  /// 投资流水基金标识小标签（独立于备注，不覆盖用户备注）。
+  Widget _fundChip(BuildContext context, WidgetRef ref) {
+    final primary = ref.watch(primaryColorProvider);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: primary.withValues(alpha: 0.35)),
+      ),
+      child: Text(
+        fundLabel!,
+        style: TextStyle(
+          fontSize: 11,
+          color: primary,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );
@@ -181,6 +205,7 @@ class TransactionListItem extends ConsumerWidget {
     // 「不计收支 / 不计预算」标签:第二行末尾的次要标签，改为与标签 chip 一致的
     // 中性 pill 样式（de-emphasis，沿用 TagChip 的中性灰底 + pill 圆角）
     final flagTags = <Widget>[
+      if (fundLabel != null) _fundChip(context, ref),
       if (excludeFromStats)
         _flagChip(context, AppLocalizations.of(context).txFlagExcludedTag),
       if (excludeFromBudget)

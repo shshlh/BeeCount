@@ -42,6 +42,7 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
   // StreamBuilder 刷新计数器
   int _streamBuilderKey = 0;
   int? _lastLedgerId;
+  bool _selectionMode = false;
 
   // home build 缓存的 tx stream。repo.transactionsWithCategoryAll 内部每次调
   // 都 new StreamController,如果在 build 里直接调,只要 home 因任何 setState
@@ -664,6 +665,14 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
               compact: true,
               actions: [
                 IconButton(
+                  tooltip: AppLocalizations.of(context).transactionListMultiSelect,
+                  onPressed: _selectionMode
+                      ? () => _transactionListKey.currentState?.exitSelectionMode()
+                      : () => _transactionListKey.currentState?.enterSelectionMode(),
+                  icon: Icon(
+                      _selectionMode ? Icons.close : Icons.checklist_rounded),
+                ),
+                IconButton(
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -824,6 +833,10 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
                   transactionsWithDetails: cachedFullData,
                   hideAmounts: hide,
                   enableVisibilityTracking: true,
+                  enableSelection: true,
+                  onSelectionModeChanged: (value) {
+                    if (mounted) setState(() => _selectionMode = value);
+                  },
                   onDateVisibilityChanged: _onHeaderVisibilityChanged,
                   controller: _listController,
                   emptyWidget: AppEmpty(

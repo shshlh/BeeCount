@@ -51,6 +51,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
     'note': null,
     'tags': null,                // 标签（逗号分隔）
     'attachments': null,         // 附件文件名（逗号分隔）
+    'sync_id': null,             // 7.9.4: 流水ID（syncId），导入幂等去重
   };
   bool importing = false;
   int ok = 0, fail = 0, skipped = 0; // skipped: 跳过的非收支类型记录
@@ -191,6 +192,8 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                           'tags', items()),
                       _mapRow(AppLocalizations.of(context)!.exportCsvHeaderAttachments,
                           'attachments', items()),
+                      _mapRow(AppLocalizations.of(context)!.importFieldSyncId,
+                          'sync_id', items()),
                     ],
                   ),
                   const SizedBox(height: 12),
@@ -481,6 +484,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
 
     // 定义进度变量
     int done = 0;
+    int duplicateSkipped = 0; // 7.9.4: 按流水ID 去重跳过的条数
 
     // 收集跳过的类型（用于提示用户）
     final Map<String, int> skippedTypes = {};
@@ -518,7 +522,9 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
 
       ok = result.inserted;
       fail = result.failed;
-      skipped = skippedTypes.values.fold(0, (a, b) => a + b);
+      skipped =
+          skippedTypes.values.fold(0, (a, b) => a + b) + result.skipped;
+      duplicateSkipped = result.skipped;
       done = total;
 
       // 显式触发一次同步上推。SyncCoordinator 监听 local_changes 表已经会
@@ -615,6 +621,9 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
             .map((e) => '${e.key}(${e.value})')
             .join('、');
         message += '\n${l10nToast.importSkippedNonTransactionTypes(typeSkipped)}\n$skippedList';
+      }
+      if (duplicateSkipped > 0) {
+        message += '\n${l10nToast.importSkippedDuplicates(duplicateSkipped)}';
       }
     }
 
@@ -850,6 +859,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       final note = getBy('note');
       final tagsStr = getBy('tags');
       final attachmentsStr = getBy('attachments');
+      final syncIdStr = getBy('sync_id');
 
       // 类型识别
       final typeStr = typeRaw.trim().toLowerCase();
@@ -938,6 +948,7 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
         toAccountName: type == 'transfer' ? toAccountName : null,
         tagNames: tagNames,
         attachments: attachments,
+        syncId: syncIdStr,
       ));
     }
 

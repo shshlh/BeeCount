@@ -110,6 +110,15 @@ class GenericBillParser implements BillParser {
     if (noSpace == 'currency' || noSpace == 'currencycode') {
       return 'currency';
     }
+    // 7.9.4: 导出 CSV 的「流水ID」列 = 交易 syncId，导入时按它幂等去重。
+    if (noSpace == 'transactionid' ||
+        noSpace == 'txid' ||
+        noSpace == 'syncid' ||
+        noSpace == '流水id' ||
+        noSpace == '流水号' ||
+        noSpace == '流水編號') {
+      return 'sync_id';
+    }
     if (noSpace == 'category' ||
         noSpace == 'cate' ||
         noSpace == 'subject' ||
@@ -136,6 +145,9 @@ class GenericBillParser implements BillParser {
     // 「币种」不含歧义字,顺序无冲突。
     if (_containsAny(s, ['币种', '幣種', '货币', '貨幣'])) {
       return 'currency';
+    }
+    if (_containsAny(s, ['流水ID', '流水Id', '流水号', '流水編號'])) {
+      return 'sync_id';
     }
     // 先匹配"交易类型"等更具体的分类字段（避免被"类型"匹配为type）
     // 优先匹配二级分类相关字段（注意：必须先匹配更长的字符串，避免被短字符串提前匹配）
@@ -178,7 +190,6 @@ class GenericBillParser implements BillParser {
       '账目编号',
       '编号',
       '单号',
-      '流水号',
       '交易号',
       '相关图片',
       '图片',

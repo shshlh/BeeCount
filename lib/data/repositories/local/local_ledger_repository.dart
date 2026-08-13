@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../db.dart';
 import '../ledger_repository.dart';
+import '../../../utils/account_type_utils.dart';
 
 const _uuid = Uuid();
 
@@ -266,6 +267,60 @@ class LocalLedgerRepository implements LedgerRepository {
           ..where((t) => t.ledgerId.equals(ledgerId)))
         .go();
     return count;
+  }
+
+  @override
+  Future<void> resetLedger(int ledgerId) async {
+    await db.transaction(() async {
+      // 清全部交易及关联数据
+      final txIds = await (db.select(db.transactions)
+            ..where((t) => t.ledgerId.equals(ledgerId)))
+          .map((t) => t.id)
+          .get();
+      if (txIds.isNotEmpty) {
+        await (db.delete(db.transactionTags)
+              ..where((tt) => tt.transactionId.isIn(txIds)))
+            .go();
+        await (db.delete(db.transactionAttachments)
+              ..where((a) => a.transactionId.isIn(txIds)))
+            .go();
+      }
+      await (db.delete(db.transactions)
+            ..where((t) => t.ledgerId.equals(ledgerId)))
+          .go();
+
+      // 清投资持仓、分组及分组归属（本地数据，不进同步）。
+      final holdingIds = await (db.select(db.investmentHoldings)
+            ..where((h) => h.ledgerId.equals(ledgerId)))
+          .map((h) => h.id)
+          .get();
+      if (holdingIds.isNotEmpty) {
+        await (db.delete(db.investmentGroupHoldings)
+              ..where((r) => r.holdingId.isIn(holdingIds)))
+            .go();
+      }
+      await (db.delete(db.investmentHoldings)
+            ..where((h) => h.ledgerId.equals(ledgerId)))
+          .go();
+      await (db.delete(db.investmentGroups)
+            ..where((g) => g.ledgerId.equals(ledgerId)))
+          .go();
+
+      // 投资账户 initial_balance 是持仓市值缓存，清空持仓后同步归零，
+      // 避免资产页继续显示旧市值；普通账户的初始资金属于配置，保留。
+      final investmentAccounts = await (db.select(db.accounts)
+            ..where((a) =>
+                a.ledgerId.equals(ledgerId) &
+                a.type.equals(accountTypeInvestment)))
+          .get();
+      for (final acc in investmentAccounts) {
+        await (db.update(db.accounts)..where((a) => a.id.equals(acc.id)))
+            .write(AccountsCompanion(
+          initialBalance: const d.Value(0.0),
+          updatedAt: d.Value(DateTime.now()),
+        ));
+      }
+    });
   }
 
   @override

@@ -87,6 +87,11 @@ void main() {
     expect(csv, contains('000002'));
 
     expect(csv, contains('【投资流水】'));
+    expect(csv, contains('流水ID'));
+    expect(csv, contains('转出账户'));
+    expect(csv, contains('转入账户'));
+    expect(csv, contains('投资账户'));
+    expect(csv, contains('钱包'));
     expect(csv, contains('转换卖出'));
     expect(csv, contains('转换买入'));
     expect(csv, contains('退回'));
@@ -95,6 +100,13 @@ void main() {
     expect(csv, contains('【分组】'));
     expect(csv, contains('核心'));
     expect(csv, contains('【分组归属】'));
+
+    // 7.9.1/7.9.4：投资流水带稳定流水ID（syncId），与明细一一对应。
+    final txs = await investmentRepo.getInvestmentTransactionsForLedger(1);
+    for (final t in txs) {
+      expect(t.syncId, isNotNull);
+      expect(csv, contains(t.syncId!));
+    }
   });
 
   test('导出可落盘为文件且非空', () async {

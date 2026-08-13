@@ -1630,6 +1630,40 @@ class LocalTransactionRepository implements TransactionRepository {
   }
 
   @override
+  Future<int> deleteTransactionsBatchByIds(List<int> ids) async {
+    if (ids.isEmpty) return 0;
+    return db.transaction(() async {
+      final rows = await (db.select(db.transactions)
+            ..where((t) => t.id.isIn(ids)))
+          .get();
+      final txIds = rows.map((r) => r.id).toList();
+      if (txIds.isEmpty) return 0;
+
+      // 清理标签关联与附件（附件走单条路径，按引用计数删除物理文件）。
+      await (db.delete(db.transactionTags)
+            ..where((t) => t.transactionId.isIn(txIds)))
+          .go();
+      for (final txId in txIds) {
+        await _deleteAttachmentsForTransaction(txId);
+      }
+
+      final deleted = await (db.delete(db.transactions)
+            ..where((t) => t.id.isIn(txIds)))
+          .go();
+
+      // 批量删除可能包含投资流水，统一重算受影响的持仓。
+      final investHoldingIds = rows
+          .where((t) => t.investType != null && t.holdingId != null)
+          .map((t) => t.holdingId!)
+          .toSet();
+      for (final holdingId in investHoldingIds) {
+        await _investmentRepo.recomputeHolding(holdingId);
+      }
+      return deleted;
+    });
+  }
+
+  @override
   Future<int> createAdjustmentTransaction({
     required int ledgerId,
     required int accountId,

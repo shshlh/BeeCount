@@ -11,6 +11,7 @@ import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/biz.dart';
 import '../../styles/tokens.dart';
 import '../../services/billing/post_processor.dart';
+import '../../widget/widget_manager.dart';
 import '../../utils/transaction_edit_utils.dart';
 import '../../utils/category_utils.dart';
 import '../category_icon.dart';
@@ -45,6 +46,12 @@ class TransactionList extends ConsumerStatefulWidget {
   /// 列表控制器（可选，用于精准跳转）
   final FlutterListViewController? controller;
 
+  /// 是否启用多选/批量删除模式（7.9.2，仅明细页开启）。
+  final bool enableSelection;
+
+  /// 选择模式切换回调（用于页面同步顶部入口按钮状态）。
+  final ValueChanged<bool>? onSelectionModeChanged;
+
   const TransactionList({
     super.key,
     this.transactionsWithDetails,
@@ -54,6 +61,8 @@ class TransactionList extends ConsumerStatefulWidget {
     this.onDateVisibilityChanged,
     this.emptyWidget,
     this.controller,
+    this.enableSelection = false,
+    this.onSelectionModeChanged,
   }) : assert(transactionsWithDetails != null || transactions != null,
             'Either transactionsWithDetails or transactions must be provided');
 
@@ -74,6 +83,14 @@ class TransactionListState extends ConsumerState<TransactionList> {
   // 缓存附件数量（仅用于非预加载模式）
   Map<int, int> _cachedAttachmentCounts = {};
   int _lastAttachmentRefreshVersion = 0;
+
+  // 7.9.5: holdingId → 基金代码/名称映射（含 0 份额历史持仓）。
+  Map<int, ({String fundCode, String fundName})> _fundByHoldingId = {};
+  int? _fundMapLedgerId;
+
+  // 7.9.2: 多选批量删除状态。
+  bool _selectionMode = false;
+  final Set<int> _selectedIds = {};
 
   // D 方案后:不再需要 _cachedAccountNames / _cachedToAccountNames /
   // _lastSharedResourceRefreshVersion — 账户对象由 watchTransactionsWith*
@@ -105,6 +122,7 @@ class TransactionListState extends ConsumerState<TransactionList> {
     // 始终加载标签和附件（用于非预加载范围的交易）
     _loadTags();
     _loadAttachmentCounts();
+    _loadFundMap();
   }
 
   @override
@@ -125,8 +143,166 @@ class TransactionListState extends ConsumerState<TransactionList> {
       if (!_listEquals(newIds, _cachedTransactionIds)) {
         _loadTags();
         _loadAttachmentCounts();
+        _loadFundMap();
       }
     }
+  }
+
+  Future<void> _loadFundMap() async {
+    final ledgerId = ref.read(currentLedgerIdProvider);
+    if (_fundMapLedgerId == ledgerId) return;
+    _fundMapLedgerId = ledgerId;
+
+    final investmentRepo = ref.read(investmentRepositoryProvider);
+    final holdings = await investmentRepo.getHoldingsForLedger(ledgerId);
+    if (!mounted || ref.read(currentLedgerIdProvider) != ledgerId) return;
+    setState(() {
+      _fundByHoldingId = {
+        for (final h in holdings)
+          h.id: (fundCode: h.fundCode, fundName: h.fundName),
+      };
+    });
+  }
+
+  /// 进入多选模式（由明细页头部入口调用）。
+  void enterSelectionMode() {
+    if (!widget.enableSelection || _selectionMode) return;
+    setState(() {
+      _selectionMode = true;
+      _selectedIds.clear();
+    });
+    widget.onSelectionModeChanged?.call(true);
+  }
+
+  /// 退出多选模式。
+  void exitSelectionMode() {
+    if (!_selectionMode) return;
+    setState(() {
+      _selectionMode = false;
+      _selectedIds.clear();
+    });
+    widget.onSelectionModeChanged?.call(false);
+  }
+
+  bool get isSelectionMode => _selectionMode;
+
+  void _toggleSelection(int id) {
+    setState(() {
+      if (!_selectedIds.remove(id)) {
+        _selectedIds.add(id);
+      }
+    });
+  }
+
+  bool get _allSelected =>
+      _transactionsList.isNotEmpty &&
+      _transactionsList.every((it) => _selectedIds.contains(it.t.id));
+
+  void _toggleSelectAll() {
+    setState(() {
+      if (_allSelected) {
+        _selectedIds.clear();
+      } else {
+        _selectedIds
+          ..clear()
+          ..addAll(_transactionsList.map((it) => it.t.id));
+      }
+    });
+  }
+
+  Future<void> _confirmBatchDelete() async {
+    final ids = _selectedIds.toList();
+    if (ids.isEmpty) return;
+    final l10n = AppLocalizations.of(context);
+    final confirmed = await AppDialog.confirm<bool>(
+          context,
+          title: l10n.transactionListBatchDelete(ids.length),
+          message: l10n.transactionListBatchDeleteConfirm(ids.length),
+        ) ??
+        false;
+    if (!confirmed || !mounted) return;
+
+    final repo = ref.read(repositoryProvider);
+    await repo.deleteTransactionsBatchByIds(ids);
+    if (!mounted) return;
+
+    final curLedger = ref.read(currentLedgerIdProvider);
+    ref.invalidate(cachedTransactionsProvider);
+    ref.invalidate(countsForLedgerProvider(curLedger));
+    ref.read(statsRefreshProvider.notifier).state++;
+    ref.read(budgetRefreshProvider.notifier).state++;
+    // fire-and-forget：与单条删除一致，删除完成后同步上推云端。
+    // ignore: unawaited_futures
+    PostProcessor.sync(ref, ledgerId: curLedger);
+
+    // 先退出选择模式并提示，小组件刷新不阻塞 UI 状态恢复。
+    if (!mounted) return;
+    setState(() {
+      _selectionMode = false;
+      _selectedIds.clear();
+    });
+    widget.onSelectionModeChanged?.call(false);
+    showToast(context, AppLocalizations.of(context).ledgersDeleted);
+
+    try {
+      await WidgetManager().updateAllWidgetsLocalized(
+        repo,
+        curLedger,
+        ref.read(primaryColorProvider),
+        explicitLocale: ref.read(languageProvider),
+        dark: WidgetManager.resolveDarkMode(
+          ref.read(themeModeProvider),
+          WidgetsBinding.instance.platformDispatcher.platformBrightness,
+        ),
+        redForIncome: ref.read(incomeExpenseColorSchemeProvider),
+        baseCurrency: ref.read(baseCurrencyProvider),
+      );
+    } catch (_) {
+      // 小组件刷新失败不阻断删除完成流程。
+    }
+  }
+
+  Widget _buildSelectionBar(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        border: Border(
+          top: BorderSide(color: BeeTokens.divider(context)),
+        ),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+          child: Row(
+            children: [
+              TextButton(
+                onPressed: _toggleSelectAll,
+                child: Text(_allSelected
+                    ? l10n.transactionListDeselectAll
+                    : l10n.transactionListSelectAll),
+              ),
+              const Spacer(),
+              Text(
+                l10n.transactionListSelectedCount(_selectedIds.length),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(width: 12),
+              FilledButton(
+                onPressed:
+                    _selectedIds.isEmpty ? null : _confirmBatchDelete,
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                ),
+                child: Text(
+                    l10n.transactionListBatchDelete(_selectedIds.length)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   bool _listEquals(List<int> a, List<int> b) {
@@ -354,8 +530,8 @@ class TransactionListState extends ConsumerState<TransactionList> {
         );
     }
 
-    // 使用FlutterListView渲染列表
-    return FlutterListView(
+    // 使用FlutterListView渲染列表；多选模式下底部追加批量操作栏。
+    final listView = FlutterListView(
       controller: _controller,
       physics: const BouncingScrollPhysics(),
       delegate: FlutterListViewDelegate(
@@ -446,39 +622,18 @@ class TransactionListState extends ConsumerState<TransactionList> {
               if (isTransfer) toAccountName = it.toAccount?.name;
             }
 
-            return Dismissible(
-              key: Key('tx-${it.t.id}-$index'), // 添加索引避免key冲突
-              direction: DismissDirection.endToStart,
-              background: Container(
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.only(right: 16),
-                color: Colors.red,
-                child: const Icon(Icons.delete, color: Colors.white),
-              ),
-              confirmDismiss: (direction) async {
-                return await AppDialog.confirm<bool>(
-                      context,
-                      title: AppLocalizations.of(context).deleteConfirmTitle,
-                      message: AppLocalizations.of(context).deleteConfirmMessage,
-                    ) ??
-                    false;
-              },
-              onDismissed: (direction) async {
-                final repo = ref.read(repositoryProvider);
-                await repo.deleteTransaction(it.t.id);
+            // 7.9.5: 投资流水按 holdingId 映射基金代码/名称作为独立小标签。
+            final isSelected =
+                _selectionMode && _selectedIds.contains(it.t.id);
+            final fundInfo =
+                (it.t.investType != null && it.t.holdingId != null)
+                    ? _fundByHoldingId[it.t.holdingId!]
+                    : null;
+            final fundLabel = fundInfo == null
+                ? null
+                : '${fundInfo.fundCode} ${fundInfo.fundName}'.trim();
 
-                if (!context.mounted) return;
-                final curLedger = ref.read(currentLedgerIdProvider);
-                ref.invalidate(countsForLedgerProvider(curLedger));
-                ref.read(statsRefreshProvider.notifier).state++;
-                ref.read(budgetRefreshProvider.notifier).state++;
-                PostProcessor.sync(ref, ledgerId: curLedger);
-
-                if (context.mounted) {
-                  showToast(context, AppLocalizations.of(context).ledgersDeleted);
-                }
-              },
-              child: Column(
+            final row = Column(
                 children: [
                   Builder(
                     builder: (context) {
@@ -524,6 +679,12 @@ class TransactionListState extends ConsumerState<TransactionList> {
                         attachmentCount: attachmentCount,
                         excludeFromStats: it.t.excludeFromStats,
                         excludeFromBudget: it.t.excludeFromBudget,
+                        fundLabel: fundLabel,
+                        isSelectionMode: _selectionMode,
+                        isSelected: isSelected,
+                        onSelectionChanged: _selectionMode
+                            ? () => _toggleSelection(it.t.id)
+                            : null,
                         onAttachmentTap: attachmentCount > 0
                             ? () async {
                                 switchToStreamMode(); // 用户交互，切换到 Stream 模式
@@ -547,15 +708,17 @@ class TransactionListState extends ConsumerState<TransactionList> {
                             ),
                           );
                         },
-                        onTap: () async {
-                          switchToStreamMode(); // 用户交互，切换到 Stream 模式
-                          await TransactionEditUtils.editTransaction(
-                            context,
-                            ref,
-                            it.t,
-                            it.category,
-                          );
-                        },
+                        onTap: _selectionMode
+                            ? () => _toggleSelection(it.t.id)
+                            : () async {
+                                switchToStreamMode(); // 用户交互，切换到 Stream 模式
+                                await TransactionEditUtils.editTransaction(
+                                  context,
+                                  ref,
+                                  it.t,
+                                  it.category,
+                                );
+                              },
                         onCategoryTap: !isTransfer && it.category?.id != null
                             ? () async {
                                 switchToStreamMode(); // 用户交互，切换到 Stream 模式
@@ -575,12 +738,55 @@ class TransactionListState extends ConsumerState<TransactionList> {
                   if (!isLastInGroup)
                     BeeDivider.short(indent: 56 + 16, endIndent: 16),
                 ],
+            );
+
+            if (_selectionMode) return row;
+
+            return Dismissible(
+              key: Key('tx-${it.t.id}-$index'), // 添加索引避免key冲突
+              direction: DismissDirection.endToStart,
+              background: Container(
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 16),
+                color: Colors.red,
+                child: const Icon(Icons.delete, color: Colors.white),
               ),
+              confirmDismiss: (direction) async {
+                return await AppDialog.confirm<bool>(
+                      context,
+                      title: AppLocalizations.of(context).deleteConfirmTitle,
+                      message: AppLocalizations.of(context).deleteConfirmMessage,
+                    ) ??
+                    false;
+              },
+              onDismissed: (direction) async {
+                final repo = ref.read(repositoryProvider);
+                await repo.deleteTransaction(it.t.id);
+
+                if (!context.mounted) return;
+                final curLedger = ref.read(currentLedgerIdProvider);
+                ref.invalidate(countsForLedgerProvider(curLedger));
+                ref.read(statsRefreshProvider.notifier).state++;
+                ref.read(budgetRefreshProvider.notifier).state++;
+                PostProcessor.sync(ref, ledgerId: curLedger);
+
+                if (context.mounted) {
+                  showToast(context, AppLocalizations.of(context).ledgersDeleted);
+                }
+              },
+              child: row,
             );
           }
         },
         childCount: _flatItems.length,
       ),
+    );
+    if (!widget.enableSelection || !_selectionMode) return listView;
+    return Column(
+      children: [
+        Expanded(child: listView),
+        _buildSelectionBar(context),
+      ],
     );
   }
 }

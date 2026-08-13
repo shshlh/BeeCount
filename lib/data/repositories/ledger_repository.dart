@@ -74,6 +74,10 @@ abstract class LedgerRepository {
   /// 清空指定账本的所有交易记录，返回删除的条数
   Future<int> clearLedgerTransactions(int ledgerId);
 
+  /// 初始化账本：清空该账本全部流水、标签/附件关联、投资持仓、投资分组及
+  /// 分组归属；保留账本、账户、分类与标签结构。7.9.3。
+  Future<void> resetLedger(int ledgerId);
+
   /// 获取指定账本的所有账户初始资金总额
   Future<double> getTotalInitialBalance(int ledgerId);
 }

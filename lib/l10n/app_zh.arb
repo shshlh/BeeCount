@@ -333,6 +333,14 @@
     }
   },
   "ledgersClearSuccess": "账本已清空",
+  "ledgersReset": "初始化账本",
+  "ledgersResetMessage": "确定要初始化账本\"{name}\"吗？此操作会清空全部流水、持仓与分组，且不可恢复。\\n账本、账户、分类和标签会保留。",
+  "@ledgersResetMessage": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "ledgersResetSuccess": "账本已初始化",
   "ledgersDeleteLocal": "仅删除本地账本",
   "ledgersDeleteLocalTitle": "删除本地账本",
   "ledgersDeleteLocalMessage": "确定要删除本地账本\"{name}\"吗？\\n云端备份会保留，您可以随时恢复。",
@@ -972,6 +980,7 @@
   "importFieldCategory": "分类",
   "importFieldAccount": "账户",
   "importFieldNote": "备注",
+  "importFieldSyncId": "流水ID",
   "importPreview": "预览：",
   "importPreviewLimit": "仅预览前 {shown} 行，共 {total} 行",
   "importCategoryNotSelected": "未选择\"分类\"列，请点击\"上一步\"返回并设置\"分类\"的列，再继续。",
@@ -991,7 +1000,42 @@
   "importCancelled": "（已取消）",
   "importCompleted": "导入完成{cancelled}：成功 {ok} 条，失败 {fail} 条",
   "importSkippedNonTransactionTypes": "跳过 {count} 条非收支记录（债务等）",
+  "importSkippedDuplicates": "跳过 {count} 条重复流水（流水ID 已存在）",
+  "@importSkippedDuplicates": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "importTransactionFailed": "导入失败，已回滚所有更改：{error}",
+  "transactionListMultiSelect": "多选",
+  "transactionListSelectAll": "全选",
+  "transactionListDeselectAll": "取消全选",
+  "transactionListSelectedCount": "已选 {count} 条",
+  "@transactionListSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "transactionListBatchDelete": "删除 ({count})",
+  "@transactionListBatchDelete": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "transactionListBatchDeleteConfirm": "确定删除选中的 {count} 条流水吗？此操作不可恢复。",
+  "@transactionListBatchDeleteConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "mineImportCompleteAllSuccess": "全部成功",
   "mineCheckUpdateDetecting": "检测更新中...",
   "mineCheckUpdateSubtitleDetecting": "正在检查最新版本",
@@ -3374,6 +3418,7 @@
   },
   "exportCsvHeaderCurrency": "币种",
   "importFieldCurrency": "币种",
+  "exportCsvHeaderSyncId": "流水ID",
   "currencyMOP": "澳门元",
   "currencyMNT": "蒙古图格里克",
   "currencyKPW": "朝鲜元",

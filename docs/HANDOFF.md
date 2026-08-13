@@ -32,6 +32,51 @@
 ## 2026-08-13
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-logic + invest-ui + qa + architect（记录归档）
+
+**任务**：7.9.1-7.9.5 复审通过并合入
+
+**审查结论**：
+- 7.9.1：普通 CSV 已排除投资流水并新增流水ID；投资 CSV 增加流水ID/转出转入账户，投资业务只出现一次
+- 7.9.2：明细页多选批量删除，删除后重算投资持仓并刷新统计/预算/小组件/同步
+- 7.9.3：`resetLedger` 清流水/标签/附件关联/持仓/分组及投资账户市值，保留账本/账户/分类/标签/预算
+- 7.9.4：导出 CSV 增加流水ID，导入按 syncId 幂等跳过并统计 skipped
+- 7.9.5：投资流水在明细显示基金代码/名称小标签，不覆盖备注
+- 全量 `flutter test`：777 passed / 1 skipped / 0 failed；改动文件 analyze 无新增 error
+- 已合入并编译 Android APK
+
+**git 状态**：当前分支 main，7.9 已合入；7.7 代码改动仍待实机回归后审查
+
+---
+
+## 2026-08-13
+
+**移交角色**：invest-logic + invest-ui + qa + architect
+**接收角色**：PM（审查合入）
+
+**任务**：7.9.1-7.9.5 完成
+
+**完成工作**：
+- 7.9.1 导出投资与明细一一对应：新增 `TransactionCsvExportService`，普通流水 CSV 排除投资相关流水（`investType != null` / `batchId != null` / `note='基金转换退回'`）；投资 CSV 增加 `流水ID`、`转出账户`、`转入账户` 列，作为投资流水的唯一出处
+- 7.9.2 明细流水批量删除：`TransactionRepository` 新增 `deleteTransactionsBatchByIds`（清标签/附件并重算持仓）；明细页新增多选模式（全选/取消全选/底部批量删除 + 二次确认），完成后刷新明细/统计/预算/小组件/同步
+- 7.9.3 账本初始化：`LedgerRepository` 新增 `resetLedger`，清流水/标签/附件关联/投资持仓/分组及归属并清投资账户市值缓存；账本管理菜单新增「初始化账本」入口 + 二次确认
+- 7.9.4 导入幂等去重：普通/投资 CSV 增加 `流水ID` = `syncId`；导入字段映射增加「流水ID」；`importTransactions` 预载目标账本 syncId，已存在则跳过并统计 `skipped`
+- 7.9.5 明细投资流水显示基金代码/名称：明细列表预加载 `holdingId → (fundCode, fundName)`，投资流水显示独立小标签，不覆盖备注
+
+**下一个任务需要知道的**：
+- 全量 `flutter test`：777 passed / 1 skipped / 0 failed；改动文件 analyze 无新增 issue（全仓 859 项既有 info/warning，无 error）
+- 普通 CSV 的 `流水ID` 在表头末列；旧 CSV 无该列时导入保持旧行为（不自动去重）
+- `resetLedger` 保留账本/账户/分类/标签与预算，仅清流水/持仓/分组/附件
+- 批量删除按本地 id 走 `deleteTransactionsBatchByIds`，与按 syncId 删除行为一致（含附件物理文件清理）
+- 工作区另有 7.7 未提交改动（`android/gradle.properties`、`pubspec.yaml`、`.codex/environments/`），非本任务范围
+
+**git 状态**：当前分支 main，改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-13
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-ui + qa + invest-logic
 
 **任务**：7.9.5 明细投资流水显示基金代码/名称

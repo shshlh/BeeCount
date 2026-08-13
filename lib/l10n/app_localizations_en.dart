@@ -726,6 +726,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ledgersClearSuccess => 'Ledger cleared';
 
   @override
+  String get ledgersReset => 'Reset Ledger';
+
+  @override
+  String ledgersResetMessage(Object name) {
+    return 'Are you sure you want to reset ledger \"$name\"? All transactions, holdings and groups will be cleared and this cannot be undone.\\nThe ledger, accounts, categories and tags will be kept.';
+  }
+
+  @override
+  String get ledgersResetSuccess => 'Ledger reset';
+
+  @override
   String get ledgersDeleteLocal => 'Delete Local Ledger Only';
 
   @override
@@ -990,6 +1001,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importFieldNote => 'Note';
 
   @override
+  String get importFieldSyncId => 'Transaction ID';
+
+  @override
   String get importPreview => 'Data Preview';
 
   @override
@@ -1060,8 +1074,37 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String importSkippedDuplicates(int count) {
+    return 'Skipped $count duplicate transactions (transaction ID already exists)';
+  }
+
+  @override
   String importTransactionFailed(Object error) {
     return 'Import failed, all changes have been rolled back: $error';
+  }
+
+  @override
+  String get transactionListMultiSelect => 'Multi-select';
+
+  @override
+  String get transactionListSelectAll => 'Select All';
+
+  @override
+  String get transactionListDeselectAll => 'Deselect All';
+
+  @override
+  String transactionListSelectedCount(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String transactionListBatchDelete(int count) {
+    return 'Delete ($count)';
+  }
+
+  @override
+  String transactionListBatchDeleteConfirm(int count) {
+    return 'Delete the $count selected records? This cannot be undone.';
   }
 
   @override
@@ -7712,6 +7755,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get importFieldCurrency => 'Currency';
+
+  @override
+  String get exportCsvHeaderSyncId => 'Transaction ID';
 
   @override
   String get currencyMOP => 'Macau Pataca';

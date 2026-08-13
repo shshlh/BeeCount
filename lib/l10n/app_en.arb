@@ -292,6 +292,14 @@
   "ledgersDeleteFailed": "Delete Failed",
   "ledgersClearTitle": "Clear Ledger",
   "ledgersClearSuccess": "Ledger cleared",
+  "ledgersReset": "Reset Ledger",
+  "ledgersResetMessage": "Are you sure you want to reset ledger \"{name}\"? All transactions, holdings and groups will be cleared and this cannot be undone.\\nThe ledger, accounts, categories and tags will be kept.",
+  "@ledgersResetMessage": {
+    "placeholders": {
+      "name": {}
+    }
+  },
+  "ledgersResetSuccess": "Ledger reset",
   "ledgersDeleteLocal": "Delete Local Ledger Only",
   "ledgersDeleteLocalTitle": "Delete Local Ledger",
   "ledgersDeleteLocalMessage": "Are you sure to delete local ledger \"{name}\"?\\nCloud backup will be kept and you can restore it anytime.",
@@ -444,6 +452,7 @@
   "importFieldCategory": "Category",
   "importFieldAccount": "Account",
   "importFieldNote": "Note",
+  "importFieldSyncId": "Transaction ID",
   "importPreview": "Data Preview",
   "importPreviewLimit": "Showing first {shown} of {total} records",
   "importCategoryNotSelected": "Category not selected",
@@ -463,7 +472,42 @@
   "importCancelled": "Import Cancelled",
   "importCompleted": "Import Completed{cancelled}, success {ok}, failed {fail}",
   "importSkippedNonTransactionTypes": "Skipped {count} non-transaction records (debts, etc.)",
+  "importSkippedDuplicates": "Skipped {count} duplicate transactions (transaction ID already exists)",
+  "@importSkippedDuplicates": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "importTransactionFailed": "Import failed, all changes have been rolled back: {error}",
+  "transactionListMultiSelect": "Multi-select",
+  "transactionListSelectAll": "Select All",
+  "transactionListDeselectAll": "Deselect All",
+  "transactionListSelectedCount": "{count} selected",
+  "@transactionListSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "transactionListBatchDelete": "Delete ({count})",
+  "@transactionListBatchDelete": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "transactionListBatchDeleteConfirm": "Delete the {count} selected records? This cannot be undone.",
+  "@transactionListBatchDeleteConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "importFileOpenError": "Unable to open file picker: {error}",
   "@importFileOpenError": {
     "placeholders": {
@@ -3526,6 +3570,7 @@
   },
   "exportCsvHeaderCurrency": "Currency",
   "importFieldCurrency": "Currency",
+  "exportCsvHeaderSyncId": "Transaction ID",
   "currencyMOP": "Macau Pataca",
   "currencyMNT": "Mongolian Tughrik",
   "currencyKPW": "North Korean Won",

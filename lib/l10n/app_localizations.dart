@@ -1415,6 +1415,24 @@ abstract class AppLocalizations {
   /// **'Ledger cleared'**
   String get ledgersClearSuccess;
 
+  /// No description provided for @ledgersReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Ledger'**
+  String get ledgersReset;
+
+  /// No description provided for @ledgersResetMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to reset ledger \"{name}\"? All transactions, holdings and groups will be cleared and this cannot be undone.\\nThe ledger, accounts, categories and tags will be kept.'**
+  String ledgersResetMessage(Object name);
+
+  /// No description provided for @ledgersResetSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Ledger reset'**
+  String get ledgersResetSuccess;
+
   /// No description provided for @ledgersDeleteLocal.
   ///
   /// In en, this message translates to:
@@ -1889,6 +1907,12 @@ abstract class AppLocalizations {
   /// **'Note'**
   String get importFieldNote;
 
+  /// No description provided for @importFieldSyncId.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction ID'**
+  String get importFieldSyncId;
+
   /// No description provided for @importPreview.
   ///
   /// In en, this message translates to:
@@ -2004,11 +2028,53 @@ abstract class AppLocalizations {
   /// **'Skipped {count} non-transaction records (debts, etc.)'**
   String importSkippedNonTransactionTypes(Object count);
 
+  /// No description provided for @importSkippedDuplicates.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped {count} duplicate transactions (transaction ID already exists)'**
+  String importSkippedDuplicates(int count);
+
   /// No description provided for @importTransactionFailed.
   ///
   /// In en, this message translates to:
   /// **'Import failed, all changes have been rolled back: {error}'**
   String importTransactionFailed(Object error);
+
+  /// No description provided for @transactionListMultiSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Multi-select'**
+  String get transactionListMultiSelect;
+
+  /// No description provided for @transactionListSelectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select All'**
+  String get transactionListSelectAll;
+
+  /// No description provided for @transactionListDeselectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Deselect All'**
+  String get transactionListDeselectAll;
+
+  /// No description provided for @transactionListSelectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String transactionListSelectedCount(int count);
+
+  /// No description provided for @transactionListBatchDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete ({count})'**
+  String transactionListBatchDelete(int count);
+
+  /// No description provided for @transactionListBatchDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the {count} selected records? This cannot be undone.'**
+  String transactionListBatchDeleteConfirm(int count);
 
   /// No description provided for @importFileOpenError.
   ///
@@ -13883,6 +13949,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Currency'**
   String get importFieldCurrency;
+
+  /// No description provided for @exportCsvHeaderSyncId.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction ID'**
+  String get exportCsvHeaderSyncId;
 
   /// No description provided for @currencyMOP.
   ///

@@ -252,6 +252,30 @@ class LocalRepository extends BaseRepository {
   }
 
   @override
+  Future<void> resetLedger(int ledgerId) async {
+    if (changeTracker == null) {
+      await _ledgerRepo.resetLedger(ledgerId);
+      return;
+    }
+    await db.transaction(() async {
+      final txs = await (db.select(db.transactions)
+            ..where((t) => t.ledgerId.equals(ledgerId)))
+          .get();
+      await _ledgerRepo.resetLedger(ledgerId);
+      for (final tx in txs) {
+        if (tx.syncId == null) continue;
+        await changeTracker!.recordLedgerChange(
+          entityType: 'transaction',
+          entityId: tx.id,
+          entitySyncId: tx.syncId!,
+          ledgerId: ledgerId,
+          action: 'delete',
+        );
+      }
+    });
+  }
+
+  @override
   Future<double> getTotalInitialBalance(int ledgerId) =>
       _ledgerRepo.getTotalInitialBalance(ledgerId);
 
@@ -1134,6 +1158,37 @@ class LocalRepository extends BaseRepository {
           await _transactionRepo.deleteTransactionsBatchBySyncIds(syncIds);
       // 一次性 batch insert N 条 transaction:delete change,代替逐条
       // recordLedgerChange,跨 isolate boundary 从 N 次降到 1 次。
+      await db.batch((b) {
+        for (final tx in rows) {
+          if (tx.syncId == null) continue;
+          b.insert(
+            db.localChanges,
+            LocalChangesCompanion.insert(
+              entityType: 'transaction',
+              entityId: tx.id,
+              entitySyncId: tx.syncId!,
+              ledgerId: tx.ledgerId,
+              action: 'delete',
+            ),
+          );
+        }
+      });
+      return deleted;
+    });
+  }
+
+  @override
+  Future<int> deleteTransactionsBatchByIds(List<int> ids) async {
+    if (ids.isEmpty) return 0;
+    if (changeTracker == null) {
+      return _transactionRepo.deleteTransactionsBatchByIds(ids);
+    }
+    return db.transaction(() async {
+      final rows = await (db.select(db.transactions)
+            ..where((t) => t.id.isIn(ids)))
+          .get();
+      if (rows.isEmpty) return 0;
+      final deleted = await _transactionRepo.deleteTransactionsBatchByIds(ids);
       await db.batch((b) {
         for (final tx in rows) {
           if (tx.syncId == null) continue;

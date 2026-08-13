@@ -363,6 +363,12 @@ abstract class TransactionRepository {
     bool recordChanges = true,
   });
 
+  /// 批量按本地 id 删除交易（7.9.2 明细批量删除）。
+  ///
+  /// 与 [deleteTransactionsBatchBySyncIds] 一致：清理标签、附件（含物理文件）
+  /// 并重算受影响投资持仓；调用方通过 wrapper 登记 transaction:delete 变更。
+  Future<int> deleteTransactionsBatchByIds(List<int> ids);
+
   /// 批量按 syncId 更新交易主表字段。同事务内逐条 UPDATE,N 次跨 isolate
   /// boundary 但 BEGIN/COMMIT 只跑一次。
   ///
