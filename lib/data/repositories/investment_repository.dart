@@ -7,6 +7,12 @@ abstract class InvestmentRepository {
   /// 监听账本下所有持仓（持仓份额 > 0 的才返回）。
   Stream<List<InvestmentHolding>> watchHoldings({required int ledgerId});
 
+  /// 获取账本下全部持仓（含 0 份额历史行），供 CSV 导出归档。
+  Future<List<InvestmentHolding>> getHoldingsForLedger(int ledgerId);
+
+  /// 获取账本下全部投资流水（含转换内部卖出/买入与退回），供 CSV 导出归档。
+  Future<List<Transaction>> getInvestmentTransactionsForLedger(int ledgerId);
+
   /// 获取单个持仓。
   Future<InvestmentHolding?> getHolding(int id);
 

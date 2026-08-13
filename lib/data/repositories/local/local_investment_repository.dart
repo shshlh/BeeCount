@@ -36,6 +36,33 @@ class LocalInvestmentRepository implements InvestmentRepository {
   }
 
   @override
+  Future<List<InvestmentHolding>> getHoldingsForLedger(int ledgerId) {
+    return (db.select(db.investmentHoldings)
+          ..where((h) => h.ledgerId.equals(ledgerId))
+          ..orderBy([
+            (h) => d.OrderingTerm(expression: h.fundCode),
+            (h) => d.OrderingTerm(expression: h.id),
+          ]))
+        .get();
+  }
+
+  @override
+  Future<List<Transaction>> getInvestmentTransactionsForLedger(int ledgerId) {
+    return (db.select(db.transactions)
+          ..where((t) =>
+              t.ledgerId.equals(ledgerId) &
+              (t.investType.isNotNull() |
+                  t.batchId.isNotNull() |
+                  // 7.5.4 之前的旧版转换退回流水没有 batchId，仅靠备注识别。
+                  t.note.equals('基金转换退回')))
+          ..orderBy([
+            (t) => d.OrderingTerm(expression: t.happenedAt),
+            (t) => d.OrderingTerm(expression: t.id),
+          ]))
+        .get();
+  }
+
+  @override
   Future<InvestmentHolding?> getHolding(int id) {
     return (db.select(db.investmentHoldings)..where((h) => h.id.equals(id)))
         .getSingleOrNull();

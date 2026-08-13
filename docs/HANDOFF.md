@@ -32,6 +32,23 @@
 ## 2026-08-13
 
 **移交角色**：项目经理（PM）
+**接收角色**：invest-logic + qa（记录归档）
+
+**任务**：7.8.1 返工复审通过并合入
+
+**审查结论**：
+- 查询条件已增加 `note='基金转换退回'` 兜底，旧版无 batchId 退回可导出
+- `InvestmentCsvExportService` 退回识别兼容 `batchId != null || note == '基金转换退回'`
+- 新增旧版退回用例；全量 `flutter test`：769 passed / 1 skipped / 0 failed；改动文件 analyze 无新增 issue
+- 已合入并编译 Android APK
+
+**git 状态**：当前分支 main，7.8.1 已合入；7.7 代码改动仍待实机回归后审查
+
+---
+
+## 2026-08-13
+
+**移交角色**：项目经理（PM）
 **接收角色**：invest-logic + qa
 
 **任务**：7.8.1 返工：旧退回流水兼容
@@ -45,6 +62,26 @@
 2. `InvestmentCsvExportService` 识别退回时同样兼容：`investType == null && (batchId != null || note == '基金转换退回')`
 3. 新增测试：插入旧版退回流水（无 batchId、note='基金转换退回'），断言导出 CSV 包含「退回」及退回金额/账户
 4. 全量 `flutter test` 0 failed，改动文件 analyze 无新增 issue
+
+---
+
+## 2026-08-13
+
+**移交角色**：invest-logic + qa
+**接收角色**：PM（审查合入）
+
+**任务**：7.8.1 返工：旧退回流水兼容
+
+**完成工作**：
+- `getInvestmentTransactionsForLedger` 查询条件增加 `note='基金转换退回'` 兜底，兼容 7.5.4 之前无 batchId 的旧版转换退回
+- `InvestmentCsvExportService` 退回识别改为 `investType == null && (batchId != null || note == '基金转换退回')`，类型标签与退回金额/账户列同步兼容
+- 新增测试：插入无 batchId、note='基金转换退回' 的旧版退回流水，断言导出 CSV 包含「退回」、退回金额与账户
+
+**验证**：
+- 全量 `flutter test`：769 passed / 1 skipped / 0 failed
+- 改动文件 `flutter analyze` 无新增 issue
+
+**git 状态**：当前分支 main，改动未提交；工作区另有 7.7 的未提交改动，非本任务范围
 
 ---
 

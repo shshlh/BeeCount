@@ -13,6 +13,7 @@ import '../../data/repositories/base_repository.dart';
 import '../../data/db.dart';
 import '../../widgets/ui/ui.dart';
 import '../../utils/category_utils.dart';
+import '../../services/export/investment_csv_export_service.dart';
 
 class ExportPage extends ConsumerStatefulWidget {
   const ExportPage({super.key});
@@ -23,7 +24,7 @@ class ExportPage extends ConsumerStatefulWidget {
 class _ExportPageState extends ConsumerState<ExportPage> {
   bool exporting = false;
   double progress = 0;
-  String? savedPath;
+  final List<String> savedPaths = [];
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +33,8 @@ class _ExportPageState extends ConsumerState<ExportPage> {
     return Scaffold(
       body: Column(
         children: [
-          PrimaryHeader(title: AppLocalizations.of(context).exportTitle, showBack: true),
+          PrimaryHeader(
+              title: AppLocalizations.of(context).exportTitle, showBack: true),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -44,7 +46,9 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                   FilledButton.icon(
                     onPressed: exporting ? null : () => _export(repo, ledgerId),
                     icon: const Icon(Icons.save_alt_outlined),
-                    label: Text(Platform.isIOS ? AppLocalizations.of(context).exportButtonIOS : AppLocalizations.of(context).exportButtonAndroid),
+                    label: Text(Platform.isIOS
+                        ? AppLocalizations.of(context).exportButtonIOS
+                        : AppLocalizations.of(context).exportButtonAndroid),
                   ),
                   const SizedBox(height: 16),
                   if (exporting)
@@ -62,9 +66,12 @@ class _ExportPageState extends ConsumerState<ExportPage> {
                         ),
                       ],
                     ),
-                  if (savedPath != null) ...[
+                  if (savedPaths.isNotEmpty) ...[
                     const SizedBox(height: 12),
-                    Text(AppLocalizations.of(context).exportSavedTo(savedPath!)),
+                    for (final path in savedPaths) ...[
+                      Text(AppLocalizations.of(context).exportSavedTo(path)),
+                      const SizedBox(height: 4),
+                    ],
                   ],
                 ],
               ),
@@ -80,7 +87,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       setState(() {
         exporting = true;
         progress = 0;
-        savedPath = null;
+        savedPaths.clear();
       });
       String directory;
       bool shareAfter = false;
@@ -100,7 +107,8 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       }
 
       // 获取交易和分类数据
-      final transactionsWithCategory = await repo.transactionsWithCategoryAll(ledgerId: ledgerId).first;
+      final transactionsWithCategory =
+          await repo.transactionsWithCategoryAll(ledgerId: ledgerId).first;
       final total = transactionsWithCategory.length;
       final rows = <List<dynamic>>[];
       final l10n = AppLocalizations.of(context);
@@ -112,7 +120,7 @@ class _ExportPageState extends ConsumerState<ExportPage> {
         l10n.exportCsvHeaderCurrency, // v30 多币种:交易原币种(反馈10)
         l10n.exportCsvHeaderAccount,
         l10n.exportCsvHeaderFromAccount, // 转出账户
-        l10n.exportCsvHeaderToAccount,   // 转入账户
+        l10n.exportCsvHeaderToAccount, // 转入账户
         l10n.exportCsvHeaderNote,
         l10n.exportCsvHeaderTime,
         l10n.exportCsvHeaderTags,
@@ -120,11 +128,13 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       ]);
 
       // 批量获取所有交易的标签
-      final transactionIds = transactionsWithCategory.map((tx) => tx.t.id).toList();
+      final transactionIds =
+          transactionsWithCategory.map((tx) => tx.t.id).toList();
       final tagsMap = await repo.getTagsForTransactions(transactionIds);
 
       // 批量获取所有交易的附件
-      final attachmentsMap = await repo.getAttachmentsForTransactions(transactionIds);
+      final attachmentsMap =
+          await repo.getAttachmentsForTransactions(transactionIds);
 
       // 缓存所有账户信息，避免重复查询
       final allAccounts = await repo.getAllAccounts();
@@ -133,9 +143,10 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       // v30 多币种:账本本位币(currencyCode 为 NULL 的历史行按账户/本位币兜底,
       // 与统计读取端同语义 —— 导出自包含,回导不丢币种)
       final ledgerData = await repo.getLedgerById(ledgerId);
-      final ledgerBase =
-          ((ledgerData?.currency.isNotEmpty ?? false) ? ledgerData!.currency : 'CNY')
-              .toUpperCase();
+      final ledgerBase = ((ledgerData?.currency.isNotEmpty ?? false)
+              ? ledgerData!.currency
+              : 'CNY')
+          .toUpperCase();
 
       // 缓存所有分类信息（包括父分类）
       final incomeCategories = await repo.getTopLevelCategories('income');
@@ -194,7 +205,8 @@ class _ExportPageState extends ConsumerState<ExportPage> {
             if (c.level == 2 && c.parentId != null) {
               // 二级分类：分类列填一级分类名称，二级分类列填当前分类名称
               final parentCategory = allCategories[c.parentId];
-              categoryName = CategoryUtils.getDisplayName(parentCategory?.name, context);
+              categoryName =
+                  CategoryUtils.getDisplayName(parentCategory?.name, context);
               subCategoryName = CategoryUtils.getDisplayName(c.name, context);
             } else {
               // 一级分类：分类列填当前分类，二级分类列留空
@@ -213,7 +225,8 @@ class _ExportPageState extends ConsumerState<ExportPage> {
 
         // 获取该交易的附件，用逗号分隔文件名
         final transactionAttachments = attachmentsMap[t.id] ?? [];
-        final attachmentsStr = transactionAttachments.map((a) => a.fileName).join(',');
+        final attachmentsStr =
+            transactionAttachments.map((a) => a.fileName).join(',');
 
         final currencyStr = (t.currencyCode ??
                 (a?.currency.isNotEmpty ?? false ? a!.currency : null) ??
@@ -242,12 +255,25 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       final csvStr = const ListToCsvConverter(eol: '\n').convert(rows);
       final ts = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
       final path = p.join(directory, 'beecount_$ts.csv');
-      
+
       // 添加UTF-8 BOM标记，确保Excel正确识别中文编码
       const utf8Bom = '\uFEFF';
-      await File(path).writeAsString(utf8Bom + csvStr, encoding: Encoding.getByName('utf-8')!);
+      await File(path).writeAsString(utf8Bom + csvStr,
+          encoding: Encoding.getByName('utf-8')!);
+
+      // 7.8.1: 同时生成投资 CSV（持仓 / 投资流水 / 分组归属）。
+      final investmentCsv = await InvestmentCsvExportService(
+        investmentRepo: ref.read(investmentRepositoryProvider),
+        repo: repo,
+      ).buildCsv(ledgerId: ledgerId);
+      final investmentPath = p.join(directory, 'beecount_investments_$ts.csv');
+      await File(investmentPath).writeAsString(utf8Bom + investmentCsv,
+          encoding: Encoding.getByName('utf-8')!);
+
       setState(() {
-        savedPath = path;
+        savedPaths
+          ..add(path)
+          ..add(investmentPath);
         exporting = false;
         progress = 1;
       });
@@ -255,17 +281,25 @@ class _ExportPageState extends ConsumerState<ExportPage> {
       final l10nDialog = AppLocalizations.of(context);
       if (shareAfter) {
         // 触发分享面板
-        await Share.shareXFiles([XFile(path)], text: l10nDialog.exportShareText);
+        await Share.shareXFiles(
+          [XFile(path), XFile(investmentPath)],
+          text: l10nDialog.exportShareText,
+        );
         await AppDialog.info(context,
-            title: l10nDialog.exportSuccessTitle, message: l10nDialog.exportSuccessMessageIOS(path));
+            title: l10nDialog.exportSuccessTitle,
+            message: l10nDialog.exportSuccessMessageIOS(savedPaths.join('\n')));
       } else {
-        await AppDialog.info(context, title: l10nDialog.exportSuccessTitle, message: l10nDialog.exportSuccessMessageAndroid(path));
+        await AppDialog.info(context,
+            title: l10nDialog.exportSuccessTitle,
+            message:
+                l10nDialog.exportSuccessMessageAndroid(savedPaths.join('\n')));
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => exporting = false);
       final l10nError = AppLocalizations.of(context);
-      await AppDialog.error(context, title: l10nError.exportFailedTitle, message: e.toString());
+      await AppDialog.error(context,
+          title: l10nError.exportFailedTitle, message: e.toString());
     }
   }
 
