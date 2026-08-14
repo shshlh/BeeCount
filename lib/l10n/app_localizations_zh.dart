@@ -7475,6 +7475,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exportCsvHeaderSyncId => '流水ID';
 
   @override
+  String get exportCsvHeaderAccountType => '账户类型';
+
+  @override
+  String get exportCsvHeaderFromAccountType => '转出账户类型';
+
+  @override
+  String get exportCsvHeaderToAccountType => '转入账户类型';
+
+  @override
+  String get importFieldAccountType => '账户类型';
+
+  @override
+  String get importFieldFromAccountType => '转出账户类型';
+
+  @override
+  String get importFieldToAccountType => '转入账户类型';
+
+  @override
   String get currencyMOP => '澳门元';
 
   @override

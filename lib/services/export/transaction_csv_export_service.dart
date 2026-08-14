@@ -82,23 +82,32 @@ class TransactionCsvExportService {
       final typeStr = typeDisplayName(t.type);
 
       String accountName;
+      String accountType;
       String fromAccountName;
+      String fromAccountType;
       String toAccountName;
+      String toAccountType;
       String categoryName;
       String subCategoryName;
 
       if (t.type == 'transfer') {
         accountName = '';
+        accountType = '';
         final fromAccount = accountMap[t.accountId];
         final toAccount = accountMap[t.toAccountId];
         fromAccountName = fromAccount?.name ?? '';
         toAccountName = toAccount?.name ?? '';
+        fromAccountType = fromAccount?.type ?? '';
+        toAccountType = toAccount?.type ?? '';
         categoryName = '';
         subCategoryName = '';
       } else {
         accountName = a?.name ?? '';
+        accountType = a?.type ?? '';
         fromAccountName = '';
+        fromAccountType = '';
         toAccountName = '';
+        toAccountType = '';
         if (c != null) {
           if (c.level == 2 && c.parentId != null) {
             final parentCategory = allCategories[c.parentId];
@@ -134,8 +143,11 @@ class TransactionCsvExportService {
         t.amount.toStringAsFixed(2),
         currencyStr,
         accountName,
+        accountType,
         fromAccountName,
+        fromAccountType,
         toAccountName,
+        toAccountType,
         t.note ?? '',
         timeStr,
         tagsStr,

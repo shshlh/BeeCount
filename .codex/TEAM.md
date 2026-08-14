@@ -97,8 +97,8 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
 |---|---|---|---|---|
-| 7.12.1 首页资产概览按账本过滤 + orphan 清理 | ⬜ 待执行 | architect + invest-logic | getNetWorthBreakdownByLedger + 账本维度 provider + 删账本级联清 orphan | — |
-| 7.12.2 账户数据导出/导入 roundtrip | ⬜ 待执行 | architect + invest-logic + invest-ui + qa | 投资 CSV 账户段为权威 + 导入恢复 type/初始资金/排序 + 普通 CSV 类型恢复 | — |
+| 7.12.1 首页资产概览按账本过滤 + orphan 清理 | ✅ | architect + invest-logic | getNetWorthBreakdownByLedger + 账本维度 provider + 删账本级联清 orphan | 2026-08-14 |
+| 7.12.2 账户数据导出/导入 roundtrip | ✅ | architect + invest-logic + invest-ui + qa | 投资 CSV 账户段为权威 + 导入恢复 type/初始资金/排序 + 普通 CSV 类型恢复 | 2026-08-14 |
 
 ### 阶段 7.4：账户备注修复
 

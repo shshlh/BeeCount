@@ -100,6 +100,7 @@ class LocalAccountRepository implements AccountRepository {
     bool isOffBalance = false,
     String? iconType,
     String? customIconPath,
+    int? sortOrder,
   }) async {
     // 7.10.1: 账户按 (ledgerId, name) 判重，不同账本允许同名。
     final existingByName = await (db.select(db.accounts)
@@ -113,13 +114,18 @@ class LocalAccountRepository implements AccountRepository {
       );
     }
     try {
-      // 计算同类型最大 sortOrder + 1
-      final maxSortOrderResult = await db.customSelect(
-        'SELECT COALESCE(MAX(sort_order), -1) AS max_order FROM accounts WHERE type = ?1',
-        variables: [d.Variable.withString(type)],
-        readsFrom: {db.accounts},
-      ).getSingle();
-      final nextSortOrder = (maxSortOrderResult.data['max_order'] as int) + 1;
+      // 显式 sortOrder（导入恢复用）优先；否则按同类型最大排序 + 1。
+      final int nextSortOrder;
+      if (sortOrder != null) {
+        nextSortOrder = sortOrder;
+      } else {
+        final maxSortOrderResult = await db.customSelect(
+          'SELECT COALESCE(MAX(sort_order), -1) AS max_order FROM accounts WHERE type = ?1',
+          variables: [d.Variable.withString(type)],
+          readsFrom: {db.accounts},
+        ).getSingle();
+        nextSortOrder = (maxSortOrderResult.data['max_order'] as int) + 1;
+      }
       // 表外/受托账户隐式等同于不计入资产（7.3.1）。
       final effectiveExcludeFromAssets = excludeFromAssets || isOffBalance;
 
@@ -912,6 +918,32 @@ class LocalAccountRepository implements AccountRepository {
 
     for (final account in accounts) {
       final balance = await getAccountBalance(account.id);
+      if (isAssetType(account.type)) {
+        totalAssets += balance;
+      } else {
+        totalLiabilities += balance;
+      }
+    }
+
+    return (
+      totalAssets: totalAssets,
+      totalLiabilities: totalLiabilities,
+      netWorth: totalAssets + totalLiabilities,
+    );
+  }
+
+  @override
+  Future<({double totalAssets, double totalLiabilities, double netWorth})>
+      getNetWorthBreakdownByLedger(int ledgerId) async {
+    final accounts = (await watchAccountsForLedger(ledgerId).first)
+        .where((a) => !a.excludeFromAssets)
+        .toList();
+    double totalAssets = 0.0;
+    double totalLiabilities = 0.0;
+
+    for (final account in accounts) {
+      final balance =
+          await getAccountBalanceInLedger(account.id, ledgerId);
       if (isAssetType(account.type)) {
         totalAssets += balance;
       } else {

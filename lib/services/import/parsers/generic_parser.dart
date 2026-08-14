@@ -146,6 +146,19 @@ class GenericBillParser implements BillParser {
     if (_containsAny(s, ['币种', '幣種', '货币', '貨幣'])) {
       return 'currency';
     }
+    // 7.12.2: 账户类型列优先于「类型」/「账户」匹配，避免误判。
+    if (noSpace == 'fromaccounttype' ||
+        _containsAny(s, ['转出账户类型', 'From Account Type'])) {
+      return 'from_account_type';
+    }
+    if (noSpace == 'toaccounttype' ||
+        _containsAny(s, ['转入账户类型', 'To Account Type'])) {
+      return 'to_account_type';
+    }
+    if (noSpace == 'accounttype' ||
+        _containsAny(s, ['账户类型', 'Account Type'])) {
+      return 'account_type';
+    }
     if (_containsAny(s, ['流水ID', '流水Id', '流水号', '流水編號'])) {
       return 'sync_id';
     }

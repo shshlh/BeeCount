@@ -116,8 +116,11 @@ class _ExportPageState extends ConsumerState<ExportPage> {
         l10n.exportCsvHeaderAmount,
         l10n.exportCsvHeaderCurrency, // v30 多币种:交易原币种(反馈10)
         l10n.exportCsvHeaderAccount,
+        l10n.exportCsvHeaderAccountType,
         l10n.exportCsvHeaderFromAccount, // 转出账户
+        l10n.exportCsvHeaderFromAccountType,
         l10n.exportCsvHeaderToAccount, // 转入账户
+        l10n.exportCsvHeaderToAccountType,
         l10n.exportCsvHeaderNote,
         l10n.exportCsvHeaderTime,
         l10n.exportCsvHeaderTags,

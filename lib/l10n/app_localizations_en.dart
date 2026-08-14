@@ -7780,6 +7780,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exportCsvHeaderSyncId => 'Transaction ID';
 
   @override
+  String get exportCsvHeaderAccountType => 'Account Type';
+
+  @override
+  String get exportCsvHeaderFromAccountType => 'From Account Type';
+
+  @override
+  String get exportCsvHeaderToAccountType => 'To Account Type';
+
+  @override
+  String get importFieldAccountType => 'Account Type';
+
+  @override
+  String get importFieldFromAccountType => 'From Account Type';
+
+  @override
+  String get importFieldToAccountType => 'To Account Type';
+
+  @override
   String get currencyMOP => 'Macau Pataca';
 
   @override

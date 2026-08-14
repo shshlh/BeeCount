@@ -48,7 +48,7 @@ void main() {
                 ),
               }),
           netWorthBreakdownProvider.overrideWith(
-            (ref) async => (
+            (ref, ledgerId) async => (
               totalAssets: 1000.0,
               totalLiabilities: 200.0,
               netWorth: 800.0,

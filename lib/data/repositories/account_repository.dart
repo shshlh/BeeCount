@@ -48,6 +48,7 @@ abstract class AccountRepository {
     bool isOffBalance = false,
     String? iconType,
     String? customIconPath,
+    int? sortOrder,
   });
 
   /// 按 (ledgerId, name) 取账户(7.10.1: 账户按账本隔离);不存在则建一条。
@@ -181,6 +182,10 @@ abstract class AccountRepository {
 
   /// 获取净资产分解（总资产、总负债、净资产）
   Future<({double totalAssets, double totalLiabilities, double netWorth})> getNetWorthBreakdown();
+
+  /// 账本维度净资产分解（7.12.1）：只统计该账本账户，余额用账本口径。
+  Future<({double totalAssets, double totalLiabilities, double netWorth})>
+      getNetWorthBreakdownByLedger(int ledgerId);
 
   /// 按币种分组的净资产分解
   Future<Map<String, ({double totalAssets, double totalLiabilities, double netWorth})>> getNetWorthBreakdownByCurrency();

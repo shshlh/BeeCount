@@ -124,14 +124,15 @@ final allAccountsTotalStatsProvider = FutureProvider.autoDispose<({double totalB
   return stats;
 });
 
-// 统计：净资产分解（总资产、总负债、净资产）
-final netWorthBreakdownProvider = FutureProvider.autoDispose<({double totalAssets, double totalLiabilities, double netWorth})>(
-        (ref) async {
+// 统计：净资产分解（总资产、总负债、净资产；7.12.1 按账本隔离）
+final netWorthBreakdownProvider = FutureProvider.family
+    .autoDispose<({double totalAssets, double totalLiabilities, double netWorth}), int>(
+        (ref, ledgerId) async {
   final repo = ref.watch(repositoryProvider);
   ref.watch(statsRefreshProvider);
   final link = ref.keepAlive();
   ref.onDispose(() => link.close());
-  return repo.getNetWorthBreakdown();
+  return repo.getNetWorthBreakdownByLedger(ledgerId);
 });
 
 // 统计：按币种分组的净资产分解

@@ -201,6 +201,8 @@ class LocalLedgerRepository implements LedgerRepository {
       await _deleteInvestmentDataForLedger(id);
       await _deleteAccountsForLedger(id);
       await (db.delete(db.ledgers)..where((tbl) => tbl.id.equals(id))).go();
+      // 7.12.1: 删账本后清理无主的 orphan 账户（ledger_id=0 或指向已删账本）。
+      await _deleteOrphanAccounts();
     });
   }
 
@@ -284,6 +286,8 @@ class LocalLedgerRepository implements LedgerRepository {
     await _deleteInvestmentDataForLedger(ledgerId);
     // 7.10.1: 清空账本同样级联删除该账本账户，避免跨账本残留。
     await _deleteAccountsForLedger(ledgerId);
+    // 7.12.1: 清空账本后清理无主的 orphan 账户。
+    await _deleteOrphanAccounts();
     return count;
   }
 
@@ -326,6 +330,8 @@ class LocalLedgerRepository implements LedgerRepository {
 
       // 7.10.1: 初始化账本级联删除该账本账户（含投资账户市值缓存）。
       await _deleteAccountsForLedger(ledgerId);
+      // 7.12.1: 初始化账本后清理无主的 orphan 账户。
+      await _deleteOrphanAccounts();
     });
   }
 
@@ -352,6 +358,45 @@ class LocalLedgerRepository implements LedgerRepository {
   Future<void> _deleteAccountsForLedger(int ledgerId) async {
     await (db.delete(db.accounts)..where((a) => a.ledgerId.equals(ledgerId)))
         .go();
+  }
+
+  /// 7.12.1: 删除 ledger_id=0 或指向已不存在账本、且无任何关联的 orphan 账户，
+  /// 避免脏数据残留被全局统计继续计入净资产。
+  Future<void> _deleteOrphanAccounts() async {
+    final orphanRows = await db.customSelect(
+      'SELECT id FROM accounts WHERE ledger_id = 0 '
+      'OR ledger_id NOT IN (SELECT id FROM ledgers)',
+      readsFrom: {db.accounts, db.ledgers},
+    ).get();
+
+    for (final row in orphanRows) {
+      final rawId = row.data['id'];
+      final accountId = rawId is int ? rawId : (rawId as BigInt).toInt();
+      final refRow = await db.customSelect(
+        'SELECT '
+        '(SELECT COUNT(*) FROM transactions '
+        'WHERE account_id = ?1 OR to_account_id = ?1) + '
+        '(SELECT COUNT(*) FROM investment_holdings WHERE account_id = ?1) + '
+        '(SELECT COUNT(*) FROM recurring_transactions '
+        'WHERE account_id = ?1 OR to_account_id = ?1) AS c',
+        variables: [d.Variable<int>(accountId)],
+        readsFrom: {
+          db.transactions,
+          db.investmentHoldings,
+          db.recurringTransactions,
+        },
+      ).getSingle();
+      final rawCount = refRow.data['c'];
+      final count =
+          rawCount is int ? rawCount : (rawCount as BigInt).toInt();
+      if (count > 0) continue;
+
+      await db.customUpdate(
+        'DELETE FROM accounts WHERE id = ?1',
+        variables: [d.Variable<int>(accountId)],
+        updates: {db.accounts},
+      );
+    }
   }
 
   @override

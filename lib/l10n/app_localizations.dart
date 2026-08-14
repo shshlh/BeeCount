@@ -13987,6 +13987,42 @@ abstract class AppLocalizations {
   /// **'Transaction ID'**
   String get exportCsvHeaderSyncId;
 
+  /// No description provided for @exportCsvHeaderAccountType.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Type'**
+  String get exportCsvHeaderAccountType;
+
+  /// No description provided for @exportCsvHeaderFromAccountType.
+  ///
+  /// In en, this message translates to:
+  /// **'From Account Type'**
+  String get exportCsvHeaderFromAccountType;
+
+  /// No description provided for @exportCsvHeaderToAccountType.
+  ///
+  /// In en, this message translates to:
+  /// **'To Account Type'**
+  String get exportCsvHeaderToAccountType;
+
+  /// No description provided for @importFieldAccountType.
+  ///
+  /// In en, this message translates to:
+  /// **'Account Type'**
+  String get importFieldAccountType;
+
+  /// No description provided for @importFieldFromAccountType.
+  ///
+  /// In en, this message translates to:
+  /// **'From Account Type'**
+  String get importFieldFromAccountType;
+
+  /// No description provided for @importFieldToAccountType.
+  ///
+  /// In en, this message translates to:
+  /// **'To Account Type'**
+  String get importFieldToAccountType;
+
   /// No description provided for @currencyMOP.
   ///
   /// In en, this message translates to:

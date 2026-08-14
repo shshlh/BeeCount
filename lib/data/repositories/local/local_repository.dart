@@ -1799,6 +1799,7 @@ class LocalRepository extends BaseRepository {
     bool isOffBalance = false,
     String? iconType,
     String? customIconPath,
+    int? sortOrder,
   }) async {
     final id = await _accountRepo.createAccount(
       ledgerId: ledgerId,
@@ -1818,6 +1819,7 @@ class LocalRepository extends BaseRepository {
       isOffBalance: isOffBalance,
       iconType: iconType,
       customIconPath: customIconPath,
+      sortOrder: sortOrder,
     );
     if (changeTracker != null) {
       final account = await _accountRepo.getAccount(id);
@@ -2094,6 +2096,11 @@ class LocalRepository extends BaseRepository {
   @override
   Future<({double totalAssets, double totalLiabilities, double netWorth})> getNetWorthBreakdown() =>
       _accountRepo.getNetWorthBreakdown();
+
+  @override
+  Future<({double totalAssets, double totalLiabilities, double netWorth})>
+      getNetWorthBreakdownByLedger(int ledgerId) =>
+          _accountRepo.getNetWorthBreakdownByLedger(ledgerId);
 
   @override
   Future<Map<String, ({double totalAssets, double totalLiabilities, double netWorth})>> getNetWorthBreakdownByCurrency() =>

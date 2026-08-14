@@ -83,6 +83,9 @@ void main() {
       investmentRepo: investmentRepo,
       repo: repo,
     ).buildCsv(ledgerId: 1);
+    expect(csv, contains('【账户】'));
+    expect(csv, contains('账户名'));
+    expect(csv, contains('初始资金'));
     final expectedHoldings =
         (await investmentRepo.getHoldingsForLedger(1)).length;
     final expectedFlows =
@@ -102,6 +105,16 @@ void main() {
     expect(result.flowsImported, expectedFlows);
     expect(result.flowsSkipped, 0);
     expect(result.groupsImported, 1);
+
+    // 7.12.2: 账户 type / 初始资金 / 排序 从【账户】段权威恢复。
+    final accounts = await repo.getAllAccounts();
+    final byName = {for (final a in accounts) a.name: a};
+    expect(byName['投资账户']!.type, 'investment');
+    // 投资账户 initialBalance 是市值缓存，导出/导入应原样恢复。
+    expect(byName['投资账户']!.initialBalance, closeTo(1825, 0.01));
+    expect(byName['钱包']!.type, 'cash');
+    expect(byName['钱包']!.initialBalance, 5000);
+    expect(byName['钱包']!.sortOrder, 0);
 
     final holdings = await investmentRepo.getHoldingsForLedger(1);
     expect(holdings.map((h) => h.fundCode).toSet(), {'000001', '000002'});

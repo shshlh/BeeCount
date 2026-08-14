@@ -31,6 +31,30 @@
 
 ## 2026-08-14
 
+**移交角色**：architect + invest-logic + invest-ui + qa
+**接收角色**：PM（审查合入）
+
+**任务**：7.12.1-7.12.2 完成
+
+**完成工作**：
+- 7.12.1 首页资产概览按账本过滤 + orphan 清理：新增 `getNetWorthBreakdownByLedger(ledgerId)`（只统计该账本账户、余额走账本口径）；`netWorthBreakdownProvider` 改为按账本 family，首页资产概览随当前账本切换；删账本/清空/初始化时额外清理 `ledger_id=0` 或指向已删账本且无关联的 orphan 账户
+- 7.12.2 账户数据导出/导入 roundtrip：投资 CSV 新增【账户】段（type/币种/初始资金/排序/隐藏/不计资产/表外/图标），导入先解析账户段再按 `(ledgerId, name)` 权威恢复账户，不再用「持仓账户名猜 type」；`createAccount` 支持显式 `sortOrder`，隐藏账户导入后恢复；普通 CSV 增加 `账户类型`/`转出账户类型`/`转入账户类型` 列，导入映射与解析同步支持，不再全部塌缩成 cash
+
+**验证**：
+- 全量 `flutter test`：800 passed / 1 skipped / 0 failed
+- 改动文件 `dart analyze` 无新增 issue；全仓 analyze 859 项既有 info/warning，无 error
+
+**下一个任务需要知道的**：
+- 普通 CSV 的账户类型列位于账户列之后；旧 CSV 无类型列时仍默认 cash，保持兼容
+- 投资 CSV【账户】段是账户结构唯一权威来源，持仓/流水解析优先复用已恢复账户
+- orphan 清理按 transactions / investment_holdings / recurring_transactions 三类关联判定，有任一关联即保留
+
+**git 状态**：当前分支 main，改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-14
+
 **移交角色**：PM
 **接收角色**：architect + invest-logic + invest-ui + qa
 

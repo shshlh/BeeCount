@@ -166,7 +166,8 @@ class HomePage extends ConsumerWidget {
   }
 
   Widget _buildAssetOverview(BuildContext context, WidgetRef ref, AppLocalizations l10n) {
-    final netWorthAsync = ref.watch(netWorthBreakdownProvider);
+    final ledgerId = ref.watch(currentLedgerIdProvider);
+    final netWorthAsync = ref.watch(netWorthBreakdownProvider(ledgerId));
     return _BentoCard(
       height: 200,
       padding: EdgeInsets.zero,

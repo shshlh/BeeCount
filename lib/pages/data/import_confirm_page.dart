@@ -48,6 +48,9 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
     'account': null,
     'from_account': null,
     'to_account': null,
+    'account_type': null,         // 7.12.2: 账户类型恢复
+    'from_account_type': null,
+    'to_account_type': null,
     'note': null,
     'tags': null,                // 标签（逗号分隔）
     'attachments': null,         // 附件文件名（逗号分隔）
@@ -182,10 +185,16 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
                           'sub_category', items()),
                       _mapRow(AppLocalizations.of(context)!.importFieldAccount,
                           'account', items()),
+                      _mapRow(AppLocalizations.of(context).importFieldAccountType,
+                          'account_type', items()),
                       _mapRow(AppLocalizations.of(context)!.exportCsvHeaderFromAccount,
                           'from_account', items()),
+                      _mapRow(AppLocalizations.of(context).importFieldFromAccountType,
+                          'from_account_type', items()),
                       _mapRow(AppLocalizations.of(context)!.exportCsvHeaderToAccount,
                           'to_account', items()),
+                      _mapRow(AppLocalizations.of(context).importFieldToAccountType,
+                          'to_account_type', items()),
                       _mapRow(AppLocalizations.of(context)!.importFieldNote,
                           'note', items()),
                       _mapRow(AppLocalizations.of(context)!.exportCsvHeaderTags,
@@ -693,6 +702,8 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
     // 收集唯一账户和标签
     final uniqueAccountNames = <String>{};
     final uniqueTagNames = <String>{};
+    // 7.12.2: 账户名 → 账户类型（普通 CSV 恢复 type，不全部塌缩成 cash）
+    final accountTypeByName = <String, String>{};
     // 收集分类信息（用于创建分类）
     final categoryInfoMap = <String, ({String kind, String? icon, String? parentName})>{};
 
@@ -712,15 +723,27 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
       // 收集账户名
       if (accountIdx != null && accountIdx < r.length) {
         final name = r[accountIdx].toString().trim();
-        if (name.isNotEmpty) uniqueAccountNames.add(name);
+        if (name.isNotEmpty) {
+          uniqueAccountNames.add(name);
+          accountTypeByName.putIfAbsent(
+              name, () => getBy('account_type') ?? '');
+        }
       }
       if (fromAccountIdx != null && fromAccountIdx < r.length) {
         final name = r[fromAccountIdx].toString().trim();
-        if (name.isNotEmpty) uniqueAccountNames.add(name);
+        if (name.isNotEmpty) {
+          uniqueAccountNames.add(name);
+          accountTypeByName.putIfAbsent(
+              name, () => getBy('from_account_type') ?? '');
+        }
       }
       if (toAccountIdx != null && toAccountIdx < r.length) {
         final name = r[toAccountIdx].toString().trim();
-        if (name.isNotEmpty) uniqueAccountNames.add(name);
+        if (name.isNotEmpty) {
+          uniqueAccountNames.add(name);
+          accountTypeByName.putIfAbsent(
+              name, () => getBy('to_account_type') ?? '');
+        }
       }
 
       // 收集标签名
@@ -791,7 +814,9 @@ class _ImportConfirmPageState extends ConsumerState<ImportConfirmPage> {
     for (final name in uniqueAccountNames) {
       accounts.add(ImportAccount(
         name: name,
-        type: 'cash',
+        type: (accountTypeByName[name] ?? '').isNotEmpty
+            ? accountTypeByName[name]!
+            : 'cash',
         currency: ledgerCurrency,
       ));
     }

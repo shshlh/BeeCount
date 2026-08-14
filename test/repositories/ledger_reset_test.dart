@@ -153,4 +153,17 @@ void main() {
     expect(await (db.select(db.investmentGroups)).get(), isEmpty);
     expect(await (db.select(db.investmentGroupHoldings)).get(), isEmpty);
   });
+
+  test('删账本后清理 ledger_id=0 无关联的 orphan 账户（7.12.1）', () async {
+    final ledgerId = await repo.createLedger(name: 'L', currency: 'CNY');
+    await db.customStatement(
+        "INSERT INTO accounts (id, ledger_id, name, type, currency) "
+        "VALUES (99, 0, 'orphan', 'cash', 'CNY')");
+
+    await repo.deleteLedger(ledgerId);
+
+    final rows = await db.select(db.accounts).get();
+    final ids = rows.map((a) => a.id).toSet();
+    expect(ids, isNot(contains(99)));
+  });
 }

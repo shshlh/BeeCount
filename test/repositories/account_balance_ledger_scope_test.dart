@@ -69,4 +69,43 @@ void main() {
     final balances = await repo.getAllAccountBalances(ledgerId);
     expect(balances[investmentId], 5000);
   });
+
+  test('净资产按账本隔离，删除账本后清零（7.12.1）', () async {
+    final ledger1 = await repo.createLedger(name: 'L1', currency: 'CNY');
+    final ledger2 = await repo.createLedger(name: 'L2', currency: 'CNY');
+    final cash1 = await repo.createAccount(
+      ledgerId: ledger1,
+      name: '现金1',
+      type: 'cash',
+      currency: 'CNY',
+      initialBalance: 1000,
+    );
+    final cash2 = await repo.createAccount(
+      ledgerId: ledger2,
+      name: '现金2',
+      type: 'cash',
+      currency: 'CNY',
+      initialBalance: 500,
+    );
+    await repo.addTransaction(
+      ledgerId: ledger1,
+      type: 'expense',
+      amount: 100,
+      accountId: cash1,
+      happenedAt: DateTime(2026, 8, 1),
+    );
+
+    final nw1 = await repo.getNetWorthBreakdownByLedger(ledger1);
+    final nw2 = await repo.getNetWorthBreakdownByLedger(ledger2);
+    expect(nw1.netWorth, 900);
+    expect(nw2.netWorth, 500);
+
+    await repo.deleteLedger(ledger1);
+
+    final after = await repo.getNetWorthBreakdownByLedger(ledger1);
+    expect(after.totalAssets, 0);
+    expect(after.totalLiabilities, 0);
+    expect(after.netWorth, 0);
+    expect((await repo.getAllAccounts()).map((a) => a.id), contains(cash2));
+  });
 }

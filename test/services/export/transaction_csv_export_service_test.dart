@@ -100,8 +100,11 @@ void main() {
         '金额',
         '币种',
         '账户',
+        '账户类型',
         '转出账户',
+        '转出账户类型',
         '转入账户',
+        '转入账户类型',
         '备注',
         '时间',
         '标签',
@@ -121,6 +124,9 @@ void main() {
     expect(normalCsv, isNot(contains('卖出备注')));
     expect(normalCsv, isNot(contains('基金转换退回')));
     expect(normalCsv, contains('流水ID'));
+    expect(normalCsv, contains('账户类型'));
+    expect(normalCsv, contains('转出账户类型'));
+    expect(normalCsv, contains('转入账户类型'));
     expect(normalCsv, contains('exp-1'));
 
     final normalRows =
