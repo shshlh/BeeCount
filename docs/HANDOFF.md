@@ -32,6 +32,24 @@
 ## 2026-08-14
 
 **移交角色**：PM
+**接收角色**：invest-ui + qa
+
+**任务**：7.13.7 返工：搜索页转账流水显示对齐流水页
+
+**问题**：搜索页 `TransactionListItem` 调用未传 `isTransfer` 与 `accountName`，转账被当成收入渲染成 `+10元`。
+
+**要求**：
+- `lib/pages/transaction/search_page.dart` 的搜索结果列表，转账行传 `isTransfer: true`、金额不带正负号、中性色；`accountName` 传「转出账户 → 转入账户」（`item.account?.name` / `item.toAccount?.name`），非转账行保持原样；`title` 与流水页口径一致（备注为空时显示「转账」）。
+- 补/更新 widget 测试：转账搜索结果展示 `转出 → 转入` 且金额无正负号。
+- 全量 `flutter test` 0 failed；改动文件 analyze 无新增 error。
+
+**git 状态**：当前分支 main，基线 `ae69221`，待返工
+
+---
+
+## 2026-08-14
+
+**移交角色**：PM
 **接收角色**：invest-logic + qa
 
 **任务**：7.13.6 诊断 + 修复：导入后账户管理页缺账户、记账页可见
