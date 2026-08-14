@@ -32,6 +32,42 @@
 ## 2026-08-14
 
 **移交角色**：PM
+**接收角色**：invest-logic + qa
+
+**任务**：7.13.6 诊断 + 修复：导入后账户管理页缺账户、记账页可见
+
+**现象**：从测试版导出（普通 CSV + 投资 CSV）再导入正式版后，账户管理页只剩现金/余额宝/支付宝基金/天天基金，银行卡/微信/数字人民币/应收款/信用卡/表外等在记账页可选、但账户管理页看不到。
+
+**要求**：
+- 写回归/诊断测试：构造多个不同 type 的账户（bank_card / virtual / receivable / credit_card / loan / investment / 表外），导出→清空→导入，逐一断言每个账户的 `ledgerId` / `type` / `hidden` / `isOffBalance` / `currency` 与导出前一致。
+- 定位是哪个字段在导入后被写错（重点查普通 CSV 导入 `importAccounts` 按全局 name 去重、投资 CSV 导入 `ensureAccount` 的 ledgerId/type 恢复，以及 `hidden` / `isOffBalance` 的解析）。
+- 修复并补测试；全量 `flutter test` 0 failed，改动文件 analyze 无新增 error。
+
+**git 状态**：当前分支 main，基线 `009fbfd`，待诊断修复
+
+---
+
+## 2026-08-14
+
+**移交角色**：PM
+**接收角色**：invest-logic + qa
+
+**任务**：7.13.5 返工：投资 CSV 导入主动恢复【账户】段全部账户
+
+**问题**：`InvestmentCsvImportService.importCsv` 解析了【账户】段到 `accountSpecs`，但 `ensureAccount` 只在持仓/投资流水循环里按需调用，导致无持仓、无投资流水的账户（银行卡/微信/数字人民币/应收款/信用卡/表外等）导入后丢失。
+
+**要求**：
+- 解析完 `accountSpecs` 后，先遍历【账户】段的所有账户名，逐个 `ensureAccount` 建账（复用已有账户、按 spec 恢复 type/初始资金/排序/隐藏/不计资产/表外/图标），再处理持仓/流水。
+- 补测试：构造【账户】段包含无持仓、无流水的账户，导入后断言这些账户也被恢复（type 正确）。
+- 全量 `flutter test` 0 failed；改动文件 analyze 无新增 error；HANDOFF/TEAM 只增不减。
+
+**git 状态**：当前分支 main，基线 `009fbfd`，待返工
+
+---
+
+## 2026-08-14
+
+**移交角色**：PM
 **接收角色**：归档 / 待实机验证
 
 **任务**：7.13 复审合入
