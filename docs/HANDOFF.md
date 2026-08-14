@@ -31,6 +31,22 @@
 
 ## 2026-08-14
 
+**移交角色**：PM
+**接收角色**：归档 / 待实机验证
+
+**任务**：7.12 复审合入
+
+**完成工作**：
+- 审查通过：净资产按账本过滤 + orphan 清理；投资 CSV 账户段 + 普通 CSV 账户类型列恢复
+- 全量 `flutter test`：800 passed / 1 skipped / 0 failed；改动文件 analyze 无 error
+- 合入 main：`0f72b2f`
+
+**git 状态**：当前分支 main，已提交 `0f72b2f`
+
+---
+
+## 2026-08-14
+
 **移交角色**：architect + invest-logic + invest-ui + qa
 **接收角色**：PM（审查合入）
 
