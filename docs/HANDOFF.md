@@ -32,6 +32,38 @@
 ## 2026-08-14
 
 **移交角色**：PM
+**接收角色**：invest-ui + invest-logic + qa
+
+**任务**：7.13 搜索入口迁移 + 搜索三层筛选 + 数据管理页重构
+
+**要求**：
+
+7.13.1 搜索入口迁移（invest-ui）：
+- 搜索入口从首页 `HomeHeaderBar`（`lib/widgets/biz/home_header_bar.dart` 的 `Icons.search`）移除。
+- 明细页 `lib/pages/main/transaction_list_page.dart` 的 `PrimaryHeader.actions` 最右侧新增搜索按钮（进入 `SearchPage`），现有「多选 / 记一笔」按钮向左顺移。
+
+7.13.2 搜索筛选三层结构 + 转账搜索（invest-ui + invest-logic + qa）：
+- 分类筛选改为三层、默认全部收起：第一层收入/支出/转账，第二层收入/支出下的一级分类，第三层一级分类下的二级分类；转账无二级分类，选中即筛 `type == transfer`。
+- 搜索逻辑新增「类型」维度（收入/支出/转账），转账搜索目前缺失，需补上。
+- 不破坏通用 `showCategorySelector` 在其他页面的既有行为；搜索页可新增专用三层选择器，或扩展而不影响既有调用方。
+- 补测试：类型筛选 + 转账筛选 + 二级分类筛选。
+
+7.13.3 数据管理页重构（invest-ui + qa）：
+- `lib/pages/settings/data_management_page.dart` 重排为三个小组件，样式「小标题（左对齐）＋ 组件」：
+  1. 分类与标签：分类管理 / 分类迁移 / 标签管理
+  2. 导入与导出：数据导入 / 数据导出 / 附件导入 / 附件导出 / 配置导入导出
+  3. 空间与清理：存储空间管理 / 数据清理
+- 复用现有页面入口，只重排布局与分组，不改各子页行为。
+
+**约束**：全量 `flutter test` 0 failed；改动文件 analyze 无新增 error；HANDOFF/TEAM 只增不减。
+
+**git 状态**：当前分支 main，基线 `0e04923`，待派工
+
+---
+
+## 2026-08-14
+
+**移交角色**：PM
 **接收角色**：归档 / 待实机验证
 
 **任务**：7.12 复审合入
