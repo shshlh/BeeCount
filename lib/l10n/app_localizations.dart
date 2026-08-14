@@ -13987,6 +13987,36 @@ abstract class AppLocalizations {
   /// **'Transaction ID'**
   String get exportCsvHeaderSyncId;
 
+  /// No description provided for @dataManagementGroupCategoryTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Categories & Tags'**
+  String get dataManagementGroupCategoryTag;
+
+  /// No description provided for @dataManagementGroupImportExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Import & Export'**
+  String get dataManagementGroupImportExport;
+
+  /// No description provided for @dataManagementGroupSpaceCleanup.
+  ///
+  /// In en, this message translates to:
+  /// **'Storage & Cleanup'**
+  String get dataManagementGroupSpaceCleanup;
+
+  /// No description provided for @searchTransferNoCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfers have no categories; filter by type only'**
+  String get searchTransferNoCategory;
+
+  /// No description provided for @searchSelectTypeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select income, expense, or transfer'**
+  String get searchSelectTypeHint;
+
   /// No description provided for @exportCsvHeaderAccountType.
   ///
   /// In en, this message translates to:

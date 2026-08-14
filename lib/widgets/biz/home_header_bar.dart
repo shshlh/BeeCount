@@ -5,13 +5,12 @@ import '../../l10n/app_localizations.dart';
 import '../../pages/ai/ai_chat_page.dart';
 import '../../pages/calendar/calendar_page.dart';
 import '../../pages/main/ledgers_page_new.dart';
-import '../../pages/transaction/search_page.dart';
 import '../../providers.dart';
 import '../../utils/format_utils.dart';
 import 'bee_icon.dart';
 import 'ledger_picker_sheet.dart';
 
-/// 首页顶部操作栏：BeeIcon + 账本切换胶囊 + AI 助手/日历/搜索。
+/// 首页顶部操作栏：BeeIcon + 账本切换胶囊 + AI 助手/日历。
 /// v5.9 从明细页迁到首页，明细页不再重复渲染。
 class HomeHeaderBar extends ConsumerWidget {
   const HomeHeaderBar({super.key});
@@ -176,26 +175,6 @@ class HomeHeaderBar extends ConsumerWidget {
             },
             icon: Icon(
               Icons.calendar_month_outlined,
-              size: 20,
-              color: Theme.of(context).iconTheme.color,
-            ),
-          ),
-          IconButton(
-            tooltip: AppLocalizations.of(context).homeSearch,
-            padding: const EdgeInsets.all(6),
-            style: IconButton.styleFrom(
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              minimumSize: Size.zero,
-            ),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const SearchPage(),
-                ),
-              );
-            },
-            icon: Icon(
-              Icons.search,
               size: 20,
               color: Theme.of(context).iconTheme.color,
             ),

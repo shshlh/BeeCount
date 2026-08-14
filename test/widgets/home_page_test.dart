@@ -70,7 +70,7 @@ void main() {
     expect(find.text('新建账本'), findsOneWidget);
     expect(find.byTooltip('AI助手'), findsOneWidget);
     expect(find.byTooltip('日历'), findsOneWidget);
-    expect(find.byTooltip('搜索'), findsOneWidget);
+    expect(find.byTooltip('搜索'), findsNothing);
     expect(find.text('账户总览'), findsOneWidget);
     expect(find.text('智能记账'), findsOneWidget);
     expect(find.text('数据管理'), findsOneWidget);

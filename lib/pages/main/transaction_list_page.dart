@@ -17,6 +17,7 @@ import '../../utils/month_range.dart';
 import '../../services/export/share_poster_service.dart';
 import '../report/annual_report_page.dart';
 import '../transaction/transaction_editor_page.dart';
+import '../transaction/search_page.dart';
 import '../../widgets/biz/home_budget_summary.dart';
 import '../../providers/shared_ledger_providers.dart';
 
@@ -684,6 +685,15 @@ class _TransactionListPageState extends ConsumerState<TransactionListPage> {
                   ),
                   icon: const Icon(Icons.add),
                   tooltip: '记一笔',
+                ),
+                // 7.13.1: 搜索入口迁到明细页最右侧。
+                IconButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SearchPage()),
+                  ),
+                  icon: const Icon(Icons.search),
+                  tooltip: AppLocalizations.of(context).homeSearch,
                 ),
               ],
               content: Column(

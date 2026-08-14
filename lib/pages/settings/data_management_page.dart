@@ -43,6 +43,7 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
       body: Column(
@@ -67,7 +68,53 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                     ),
                   ),
                 ),
-                // 导入导出
+                // 分组 1：分类与标签
+                _groupTitle(context, l10n.dataManagementGroupCategoryTag),
+                SectionCard(
+                  margin: EdgeInsets.zero,
+                  child: Column(
+                    children: [
+                      AppListTile(
+                        leading: Icons.category_outlined,
+                        title: AppLocalizations.of(context).mineCategoryManagement,
+                        subtitle: AppLocalizations.of(context).mineCategoryManagementSubtitle,
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const CategoryManagePage()),
+                          );
+                        },
+                      ),
+                      BeeTokens.cardDivider(context),
+                      AppListTile(
+                        leading: Icons.swap_horiz,
+                        title: AppLocalizations.of(context).mineCategoryMigration,
+                        subtitle: AppLocalizations.of(context).mineCategoryMigrationSubtitle,
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const CategoryMigrationPage()),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 8.0.scaled(context, ref)),
+                SectionCard(
+                  margin: EdgeInsets.zero,
+                  child: AppListTile(
+                    leading: Icons.label_outline,
+                    title: AppLocalizations.of(context).tagManageTitle,
+                    subtitle: AppLocalizations.of(context).tagManageSubtitle,
+                    onTap: () async {
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const TagManagePage()),
+                      );
+                    },
+                  ),
+                ),
+                SizedBox(height: 16),
+                // 分组 2：导入与导出
+                _groupTitle(context, l10n.dataManagementGroupImportExport),
                 SectionCard(
                   margin: EdgeInsets.zero,
                   child: Column(
@@ -127,71 +174,26 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                 // 附件导出导入
                 _buildAttachmentSection(context, ref),
                 SizedBox(height: 8.0.scaled(context, ref)),
-                // 分类管理
-                SectionCard(
-                  margin: EdgeInsets.zero,
-                  child: Column(
-                    children: [
-                      // 分类管理
-                      AppListTile(
-                        leading: Icons.category_outlined,
-                        title: AppLocalizations.of(context).mineCategoryManagement,
-                        subtitle: AppLocalizations.of(context).mineCategoryManagementSubtitle,
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const CategoryManagePage()),
-                          );
-                        },
-                      ),
-                      BeeTokens.cardDivider(context),
-                      // 分类迁移
-                      AppListTile(
-                        leading: Icons.swap_horiz,
-                        title: AppLocalizations.of(context).mineCategoryMigration,
-                        subtitle: AppLocalizations.of(context).mineCategoryMigrationSubtitle,
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const CategoryMigrationPage()),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 8.0.scaled(context, ref)),
-                // 标签管理
+                // 配置导入导出
                 SectionCard(
                   margin: EdgeInsets.zero,
                   child: AppListTile(
-                    leading: Icons.label_outline,
-                    title: AppLocalizations.of(context).tagManageTitle,
-                    subtitle: AppLocalizations.of(context).tagManageSubtitle,
+                    leading: Icons.settings_backup_restore,
+                    title: AppLocalizations.of(context).configImportExportTitle,
+                    subtitle: AppLocalizations.of(context).configImportExportSubtitle,
                     onTap: () async {
                       await Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const TagManagePage()),
+                        MaterialPageRoute(builder: (_) => const ConfigImportExportPage()),
                       );
                     },
                   ),
                 ),
-                SizedBox(height: 8.0.scaled(context, ref)),
-                // 配置管理
+                // 分组 3：空间与清理
+                _groupTitle(context, l10n.dataManagementGroupSpaceCleanup),
                 SectionCard(
                   margin: EdgeInsets.zero,
                   child: Column(
                     children: [
-                      // 配置导入导出
-                      AppListTile(
-                        leading: Icons.settings_backup_restore,
-                        title: AppLocalizations.of(context).configImportExportTitle,
-                        subtitle: AppLocalizations.of(context).configImportExportSubtitle,
-                        onTap: () async {
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const ConfigImportExportPage()),
-                          );
-                        },
-                      ),
-                      BeeTokens.cardDivider(context),
-                      // 存储空间管理
                       AppListTile(
                         leading: Icons.storage_outlined,
                         title: AppLocalizations.of(context).storageManagementTitle,
@@ -203,7 +205,6 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
                         },
                       ),
                       BeeTokens.cardDivider(context),
-                      // 数据清理(孤儿数据)
                       AppListTile(
                         leading: Icons.cleaning_services_outlined,
                         title: AppLocalizations.of(context)
@@ -232,6 +233,19 @@ class _DataManagementPageState extends ConsumerState<DataManagementPage> {
   // ============================================
   // 附件导出导入相关
   // ============================================
+
+  Widget _groupTitle(BuildContext context, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: BeeTokens.textSecondary(context),
+            ),
+      ),
+    );
+  }
 
   Widget _buildAttachmentSection(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);

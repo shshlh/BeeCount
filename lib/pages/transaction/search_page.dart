@@ -11,7 +11,71 @@ import '../../l10n/app_localizations.dart';
 import '../../utils/transaction_edit_utils.dart';
 import '../../utils/ui_scale_extensions.dart';
 import '../../widgets/category_icon.dart';
+import '../../widgets/biz/search_category_filter_dialog.dart';
 import 'category_detail_page.dart';
+
+/// 搜索筛选纯逻辑（7.13.2 抽出，便于单测类型/转账/二级分类筛选）。
+@visibleForTesting
+bool searchTransactionMatches({
+  required Transaction transaction,
+  required Category? category,
+  required String searchText,
+  required String Function(String?) categoryDisplayName,
+  double? minAmount,
+  double? maxAmount,
+  DateTime? startDate,
+  DateTime? endDate,
+  String? selectedType,
+  Category? selectedCategory,
+}) {
+  // 文本搜索
+  bool textMatch = true;
+  if (searchText.isNotEmpty) {
+    final searchLower = searchText.toLowerCase();
+    final note = transaction.note?.toLowerCase() ?? '';
+    final categoryName =
+        categoryDisplayName(category?.name).toLowerCase();
+    final amountStr = transaction.amount.toString();
+    textMatch = note.contains(searchLower) ||
+        categoryName.contains(searchLower) ||
+        amountStr.contains(searchLower);
+  }
+
+  // 类型筛选（7.13.2）：收入/支出/转账。
+  final typeMatch =
+      selectedType == null || transaction.type == selectedType;
+
+  // 分类筛选：选择一级分类时，同时包含其二级分类交易。
+  final categoryMatch = selectedCategory == null ||
+      category?.id == selectedCategory.id ||
+      category?.parentId == selectedCategory.id;
+
+  // 金额范围搜索
+  bool amountMatch = true;
+  if (minAmount != null || maxAmount != null) {
+    final amount = transaction.amount.abs();
+    if (minAmount != null && amount < minAmount) amountMatch = false;
+    if (maxAmount != null && amount > maxAmount) amountMatch = false;
+  }
+
+  // 时间范围搜索
+  bool dateMatch = true;
+  if (startDate != null || endDate != null) {
+    final happenedAt = transaction.happenedAt;
+    if (startDate != null) {
+      final startOfDay =
+          DateTime(startDate.year, startDate.month, startDate.day);
+      if (happenedAt.isBefore(startOfDay)) dateMatch = false;
+    }
+    if (endDate != null) {
+      final endOfDay = DateTime(
+          endDate.year, endDate.month, endDate.day, 23, 59, 59);
+      if (happenedAt.isAfter(endOfDay)) dateMatch = false;
+    }
+  }
+
+  return textMatch && typeMatch && categoryMatch && amountMatch && dateMatch;
+}
 
 /// 搜索页面
 class SearchPage extends ConsumerStatefulWidget {
@@ -35,6 +99,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   double? _maxAmount;
   DateTime? _startDate;
   DateTime? _endDate;
+  String? _selectedType; // 7.13.2: income / expense / transfer
   Category? _selectedCategory;
   bool _hasScheduledSearch = false; // 防止重复调度搜索
 
@@ -70,7 +135,8 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   void _performSearch() {
     // 如果没有任何搜索条件，清空结果
     if (_searchText.isEmpty && _minAmount == null && _maxAmount == null &&
-        _startDate == null && _endDate == null && _selectedCategory == null) {
+        _startDate == null && _endDate == null &&
+        _selectedType == null && _selectedCategory == null) {
       setState(() {
         _searchResults = [];
         _totalExpense = 0.0;
@@ -86,61 +152,21 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       _hasScheduledSearch = false;
     });
 
-    final results = _allTransactions.where((item) {
-      final transaction = item.t;
-      final category = item.category;
-
-      // 文本搜索
-      bool textMatch = true;
-      if (_searchText.isNotEmpty) {
-        final searchLower = _searchText.toLowerCase();
-        final note = transaction.note?.toLowerCase() ?? '';
-        final categoryName =
-            CategoryUtils.getDisplayName(category?.name, context).toLowerCase();
-        final amountStr = transaction.amount.toString();
-
-        textMatch = note.contains(searchLower) ||
-            categoryName.contains(searchLower) ||
-            amountStr.contains(searchLower);
-      }
-
-      // 分类筛选：选择一级分类时，同时包含其二级分类交易。
-      final categoryMatch = _selectedCategory == null ||
-          category?.id == _selectedCategory!.id ||
-          category?.parentId == _selectedCategory!.id;
-
-      // 金额范围搜索
-      bool amountMatch = true;
-      if (_minAmount != null || _maxAmount != null) {
-        final amount = transaction.amount.abs();
-        if (_minAmount != null && amount < _minAmount!) {
-          amountMatch = false;
-        }
-        if (_maxAmount != null && amount > _maxAmount!) {
-          amountMatch = false;
-        }
-      }
-
-      // 时间范围搜索
-      bool dateMatch = true;
-      if (_startDate != null || _endDate != null) {
-        final happenedAt = transaction.happenedAt;
-        if (_startDate != null) {
-          final startOfDay = DateTime(_startDate!.year, _startDate!.month, _startDate!.day);
-          if (happenedAt.isBefore(startOfDay)) {
-            dateMatch = false;
-          }
-        }
-        if (_endDate != null) {
-          final endOfDay = DateTime(_endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59);
-          if (happenedAt.isAfter(endOfDay)) {
-            dateMatch = false;
-          }
-        }
-      }
-
-      return textMatch && categoryMatch && amountMatch && dateMatch;
-    }).toList();
+    final results = _allTransactions
+        .where((item) => searchTransactionMatches(
+              transaction: item.t,
+              category: item.category,
+              searchText: _searchText,
+              categoryDisplayName: (name) =>
+                  CategoryUtils.getDisplayName(name, context),
+              minAmount: _minAmount,
+              maxAmount: _maxAmount,
+              startDate: _startDate,
+              endDate: _endDate,
+              selectedType: _selectedType,
+              selectedCategory: _selectedCategory,
+            ))
+        .toList();
 
     setState(() {
       _searchResults = results;
@@ -218,6 +244,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     double? tempMaxAmount = _maxAmount;
     DateTime? tempStartDate = _startDate;
     DateTime? tempEndDate = _endDate;
+    String? tempSelectedType = _selectedType;
     Category? tempSelectedCategory = _selectedCategory;
 
     await showDialog(
@@ -235,21 +262,28 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     contentPadding: EdgeInsets.zero,
                     dense: true,
                     title: Text(l10n.searchCategoryFilter),
-                    subtitle: Text(tempSelectedCategory != null
-                        ? CategoryUtils.getDisplayName(tempSelectedCategory!.name, context)
-                        : l10n.searchNotSet),
+                    subtitle: Text(
+                      tempSelectedType != null
+                          ? (tempSelectedType == 'transfer'
+                              ? l10n.transferTitle
+                              : (tempSelectedType == 'income'
+                                  ? l10n.categoryIncome
+                                  : l10n.categoryExpense)) +
+                              (tempSelectedCategory != null
+                                  ? ' · ${CategoryUtils.getDisplayName(tempSelectedCategory!.name, context)}'
+                                  : '')
+                          : l10n.searchNotSet,
+                    ),
                     onTap: () async {
-                      final selected = await showCategorySelector(
+                      final result = await showSearchCategoryFilter(
                         context,
-                        type: 'all',
+                        currentType: tempSelectedType,
                         currentCategoryId: tempSelectedCategory?.id,
-                        includeParentCategories: true,
-                        expandChildrenByDefault: true,
-                        title: l10n.searchCategoryFilter,
                       );
-                      if (selected != null) {
+                      if (result != null) {
                         setState(() {
-                          tempSelectedCategory = selected;
+                          tempSelectedType = result.type;
+                          tempSelectedCategory = result.category;
                         });
                       }
                     },
@@ -409,6 +443,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     tempMaxAmount = null;
                     tempStartDate = null;
                     tempEndDate = null;
+                    tempSelectedType = null;
                     tempSelectedCategory = null;
                   });
                 },
@@ -421,6 +456,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     _maxAmount = tempMaxAmount;
                     _startDate = tempStartDate;
                     _endDate = tempEndDate;
+                    _selectedType = tempSelectedType;
                     _selectedCategory = tempSelectedCategory;
                   });
                   _performSearch();
@@ -770,6 +806,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           Icons.filter_list,
                           color: (_minAmount != null || _maxAmount != null ||
                                   _startDate != null || _endDate != null ||
+                                  _selectedType != null ||
                                   _selectedCategory != null)
                               ? ref.watch(primaryColorProvider)
                               : BeeTokens.iconPrimary(context),
@@ -781,12 +818,30 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   // 显示已选筛选条件
                   if (_minAmount != null || _maxAmount != null ||
                       _startDate != null || _endDate != null ||
+                      _selectedType != null ||
                       _selectedCategory != null) ...[
                     const SizedBox(height: 12),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
                       children: [
+                        if (_selectedType != null)
+                          Chip(
+                            label: Text(
+                              '${l10n.searchCategoryFilter}: ${_selectedType == 'transfer' ? l10n.transferTitle : (_selectedType == 'income' ? l10n.categoryIncome : l10n.categoryExpense)}',
+                              style: TextStyle(fontSize: 12, color: ref.watch(primaryColorProvider)),
+                            ),
+                            backgroundColor: ref.watch(primaryColorProvider).withValues(alpha: 0.1),
+                            side: BorderSide(color: ref.watch(primaryColorProvider), width: 1),
+                            deleteIconColor: ref.watch(primaryColorProvider),
+                            deleteIcon: const Icon(Icons.close, size: 16),
+                            onDeleted: () {
+                              setState(() {
+                                _selectedType = null;
+                              });
+                              _performSearch();
+                            },
+                          ),
                         if (_selectedCategory != null)
                           Chip(
                             label: Text(
@@ -858,6 +913,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                           _maxAmount != null ||
                           _startDate != null ||
                           _endDate != null ||
+                          _selectedType != null ||
                           _selectedCategory != null) &&
                       _searchResults.isEmpty &&
                       !_isSearching &&
@@ -880,6 +936,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                     _maxAmount == null &&
                     _startDate == null &&
                     _endDate == null &&
+                    _selectedType == null &&
                     _selectedCategory == null) {
                   return Center(
                     child: Column(

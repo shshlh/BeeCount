@@ -7780,6 +7780,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exportCsvHeaderSyncId => 'Transaction ID';
 
   @override
+  String get dataManagementGroupCategoryTag => 'Categories & Tags';
+
+  @override
+  String get dataManagementGroupImportExport => 'Import & Export';
+
+  @override
+  String get dataManagementGroupSpaceCleanup => 'Storage & Cleanup';
+
+  @override
+  String get searchTransferNoCategory =>
+      'Transfers have no categories; filter by type only';
+
+  @override
+  String get searchSelectTypeHint => 'Select income, expense, or transfer';
+
+  @override
   String get exportCsvHeaderAccountType => 'Account Type';
 
   @override

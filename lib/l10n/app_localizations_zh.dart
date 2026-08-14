@@ -7475,6 +7475,21 @@ class AppLocalizationsZh extends AppLocalizations {
   String get exportCsvHeaderSyncId => '流水ID';
 
   @override
+  String get dataManagementGroupCategoryTag => '分类与标签';
+
+  @override
+  String get dataManagementGroupImportExport => '导入与导出';
+
+  @override
+  String get dataManagementGroupSpaceCleanup => '空间与清理';
+
+  @override
+  String get searchTransferNoCategory => '转账无分类，直接按类型筛选';
+
+  @override
+  String get searchSelectTypeHint => '请选择收入/支出/转账';
+
+  @override
   String get exportCsvHeaderAccountType => '账户类型';
 
   @override

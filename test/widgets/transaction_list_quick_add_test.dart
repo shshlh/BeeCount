@@ -57,6 +57,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byTooltip('记一笔'), findsOneWidget);
+    expect(find.byTooltip('搜索'), findsOneWidget);
 
     await tester.tap(find.byTooltip('记一笔'));
     await tester.pumpAndSettle();
