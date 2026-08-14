@@ -32,6 +32,51 @@
 ## 2026-08-14
 
 **移交角色**：PM
+**接收角色**：invest-ui + qa
+
+**任务**：7.13.4 返工：数据管理分组顺序 + 三层筛选空态文案
+
+**问题**：
+1. 数据管理页分组顺序错误：现为「导入与导出 → 分类与标签 → 空间与清理」，应改为「分类与标签 → 导入与导出 → 空间与清理」（`lib/pages/settings/data_management_page.dart`）。
+2. 三层筛选弹窗 `_type == null` 时错误显示「转账无分类」文案，应改为中性提示（如「请选择收入/支出/转账」），仅 `_type == 'transfer'` 时显示转账无分类（`lib/widgets/biz/search_category_filter_dialog.dart`）。
+
+**要求**：
+- 调整分组顺序与注释编号，分组内容/入口行为不变。
+- 新增或复用 l10n 空态文案；补/更新 widget 测试覆盖空态与顺序。
+- 全量 `flutter test` 0 failed；改动文件 analyze 无新增 error。
+
+**git 状态**：当前分支 main，基线 `28fc2dd`，待返工
+
+---
+
+## 2026-08-14
+
+**移交角色**：invest-ui + invest-logic + qa
+**接收角色**：PM（审查合入）
+
+**任务**：7.13.1-7.13.3 完成
+
+**完成工作**：
+- 7.13.1 搜索入口迁移：首页 `HomeHeaderBar` 移除搜索按钮；明细页 `PrimaryHeader.actions` 最右侧新增搜索按钮（现有多选/记一笔左移）
+- 7.13.2 搜索三层筛选 + 转账搜索：新增搜索页专用三层选择器 `showSearchCategoryFilter`（收入/支出/转账 → 一级分类 → 二级分类，默认收起，转账无分类）；搜索逻辑抽出 `searchTransactionMatches` 纯函数并新增「类型」维度，转账搜索补齐；通用 `showCategorySelector` 行为不变
+- 7.13.3 数据管理页重构：按「分类与标签 / 导入与导出 / 空间与清理」三组小标题布局，复用全部既有入口，不改子页行为
+
+**验证**：
+- 全量 `flutter test`：806 passed / 1 skipped / 0 failed
+- 改动文件 `dart analyze` 无新增 issue；全仓 analyze 859 项既有 info/warning，无 error
+
+**下一个任务需要知道的**：
+- 搜索类型筛选值即交易原始 `type`（income / expense / transfer）；选中一级分类时仍包含其二级分类交易
+- 三层选择器只影响搜索页；`showCategorySelector` 在分类迁移/周期交易等调用方保持原行为
+- 数据管理页分组仅布局调整，入口与行为未变
+
+**git 状态**：当前分支 main，改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-14
+
+**移交角色**：PM
 **接收角色**：invest-ui + invest-logic + qa
 
 **任务**：7.13 搜索入口迁移 + 搜索三层筛选 + 数据管理页重构
