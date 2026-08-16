@@ -14017,6 +14017,18 @@ abstract class AppLocalizations {
   /// **'Select income, expense, or transfer'**
   String get searchSelectTypeHint;
 
+  /// No description provided for @accountDetailAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get accountDetailAll;
+
+  /// No description provided for @accountRunningBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance'**
+  String get accountRunningBalance;
+
   /// No description provided for @exportCsvHeaderAccountType.
   ///
   /// In en, this message translates to:

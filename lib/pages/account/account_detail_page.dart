@@ -16,6 +16,57 @@ import '../../widgets/charts/account_category_pie_chart.dart';
 import '../transaction/transaction_editor_page.dart';
 import 'account_edit_page.dart';
 
+/// 7.14.1: 详情 tab → flow 映射（0=全部 null，1=支出，2=收入）。
+@visibleForTesting
+String? accountDetailFlowForTab(int tab) {
+  switch (tab) {
+    case 1:
+      return 'expense';
+    case 2:
+      return 'income';
+    default:
+      return null;
+  }
+}
+
+/// 7.14.2: 逐笔余额。按展示顺序（时间倒序）从当前余额反推：
+/// 当前余额 - 比该笔更新的流水影响 = 该笔发生后的余额。
+@visibleForTesting
+Map<int, double> computeAccountRunningBalances({
+  required int accountId,
+  required double currentBalance,
+  required bool isValuation,
+  required List<db.Transaction> transactions,
+}) {
+  final result = <int, double>{};
+  double running = currentBalance;
+  for (final t in transactions) {
+    result[t.id] = running;
+    running -= _accountTxEffect(t, accountId, isValuation);
+  }
+  return result;
+}
+
+double _accountTxEffect(
+    db.Transaction t, int accountId, bool isValuation) {
+  if (isValuation) return 0;
+  if (t.accountId == accountId) {
+    switch (t.type) {
+      case 'income':
+        return t.amount;
+      case 'expense':
+        return -t.amount;
+      case 'transfer':
+        return -t.amount;
+      case 'adjustment':
+        return t.amount;
+    }
+  } else if (t.toAccountId == accountId) {
+    return t.amount;
+  }
+  return 0;
+}
+
 // ============================================
 // Providers
 // ============================================
@@ -146,7 +197,7 @@ class AccountDetailPage extends ConsumerStatefulWidget {
 
 class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
   final ScrollController _scrollController = ScrollController();
-  /// 详情页图表 tab: 0=支出分布, 1=收入分布
+  /// 详情页 tab: 0=全部, 1=支出, 2=收入（默认全部）
   int _detailChartTab = 0;
 
   @override
@@ -162,12 +213,8 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
     super.dispose();
   }
 
-  /// 列表的资金流向过滤,跟随图表 tab:支出=支出+转出,收入=收入+转入。
-  /// 信用卡没有 tab 切换,保持展示全部交易(消费+还款转账)。
-  String? get _listFlow {
-    if (widget.account.type == 'credit_card') return null;
-    return _detailChartTab == 0 ? 'expense' : 'income';
-  }
+  /// 列表的资金流向过滤,跟随 tab:全部=null,支出=支出+转出,收入=收入+转入。
+  String? get _listFlow => accountDetailFlowForTab(_detailChartTab);
 
   void _onScroll() {
     if (_scrollController.position.pixels >=
@@ -201,6 +248,16 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
     final account = widget.account;
     final typeColor = getColorForAccountType(account.type, primaryColor);
     final isValuation = isValuationOrInvestmentType(account.type);
+    // 7.14.2: 仅「全部」模式显示逐笔余额。
+    final runningBalances = _listFlow == null
+        ? computeAccountRunningBalances(
+            accountId: widget.account.id,
+            currentBalance:
+                statsAsync.valueOrNull?.balance ?? account.initialBalance,
+            isValuation: isValuation,
+            transactions: paginationState.transactions,
+          )
+        : null;
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
@@ -289,7 +346,6 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                   _buildDetailChartSection(
                     context, ref, l10n, primaryColor,
                     expenseStatsAsync, incomeStatsAsync, typeColor,
-                    isCreditCard: account.type == 'credit_card',
                   ),
 
                   SizedBox(height: 12.0.scaled(context, ref)),
@@ -303,6 +359,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                     categoriesAsync.asData?.value ?? [],
                     l10n,
                     typeColor,
+                    runningBalances,
                   ),
                 ],
               ],
@@ -812,9 +869,8 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
     Color primaryColor,
     AsyncValue<List<({int? id, String name, String? icon, double total})>> expenseStatsAsync,
     AsyncValue<List<({int? id, String name, String? icon, double total})>> incomeStatsAsync,
-    Color typeColor, {
-    required bool isCreditCard,
-  }) {
+    Color typeColor,
+  ) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 12.0.scaled(context, ref)),
       child: SectionCard(
@@ -828,25 +884,32 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
               Row(
                 children: [
                   _DetailChartTab(
-                    label: l10n.homeExpense,
-                    isSelected: isCreditCard || _detailChartTab == 0,
+                    label: l10n.accountDetailAll,
+                    isSelected: _detailChartTab == 0,
                     primaryColor: primaryColor,
                     onTap: () => setState(() => _detailChartTab = 0),
                   ),
-                  if (!isCreditCard) ...[
-                    SizedBox(width: 6.0.scaled(context, ref)),
-                    _DetailChartTab(
-                      label: l10n.homeIncome,
-                      isSelected: _detailChartTab == 1,
-                      primaryColor: primaryColor,
-                      onTap: () => setState(() => _detailChartTab = 1),
-                    ),
-                  ],
+                  SizedBox(width: 6.0.scaled(context, ref)),
+                  _DetailChartTab(
+                    label: l10n.homeExpense,
+                    isSelected: _detailChartTab == 1,
+                    primaryColor: primaryColor,
+                    onTap: () => setState(() => _detailChartTab = 1),
+                  ),
+                  SizedBox(width: 6.0.scaled(context, ref)),
+                  _DetailChartTab(
+                    label: l10n.homeIncome,
+                    isSelected: _detailChartTab == 2,
+                    primaryColor: primaryColor,
+                    onTap: () => setState(() => _detailChartTab = 2),
+                  ),
                 ],
               ),
               SizedBox(height: 12.0.scaled(context, ref)),
               // 图表内容
-              if (isCreditCard || _detailChartTab == 0)
+              if (_detailChartTab == 0)
+                const SizedBox.shrink()
+              else if (_detailChartTab == 1)
                 expenseStatsAsync.when(
                   data: (data) {
                     if (data.isEmpty) {
@@ -917,6 +980,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
     List<db.Category> categories,
     AppLocalizations l10n,
     Color typeColor,
+    Map<int, double>? runningBalances,
   ) {
     final transactions = state.transactions;
 
@@ -1002,6 +1066,7 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                       ref.watch(ledgersStreamProvider).asData?.value ?? [],
                   categories: categories,
                   currentAccountId: widget.account.id,
+                  runningBalance: runningBalances?[tx.id],
                   onTap: () => _editTransaction(context, ref, tx),
                 ),
               ],
@@ -1231,6 +1296,7 @@ class _TransactionTile extends ConsumerWidget {
   final List<db.Category> categories;
   final VoidCallback onTap;
   final int? currentAccountId;
+  final double? runningBalance;
 
   const _TransactionTile({
     required this.transaction,
@@ -1240,6 +1306,7 @@ class _TransactionTile extends ConsumerWidget {
     required this.categories,
     required this.onTap,
     this.currentAccountId,
+    this.runningBalance,
   });
 
   @override
@@ -1427,22 +1494,40 @@ class _TransactionTile extends ConsumerWidget {
                 ],
               ),
             ),
-            AmountText(
-              value: transaction.type == 'expense'
-                  ? -transaction.amount
-                  : transaction.type == 'transfer'
-                      ? (isTransferOut
-                          ? -transaction.amount
-                          : transaction.amount)
-                      : transaction.amount,
-              signed: true,
-              showCurrency: false,
-              currencyCode: currencyCode,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: amountColor,
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AmountText(
+                  value: transaction.type == 'expense'
+                      ? -transaction.amount
+                      : transaction.type == 'transfer'
+                          ? (isTransferOut
+                              ? -transaction.amount
+                              : transaction.amount)
+                          : transaction.amount,
+                  signed: true,
+                  showCurrency: false,
+                  currencyCode: currencyCode,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: amountColor,
+                  ),
+                ),
+                // 7.14.2: 「全部」模式逐笔余额。
+                if (runningBalance != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      '${l10n.accountRunningBalance} ${runningBalance!.toStringAsFixed(2)}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: BeeTokens.textTertiary(context),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ],
         ),

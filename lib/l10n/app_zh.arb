@@ -3442,6 +3442,8 @@
   "dataManagementGroupSpaceCleanup": "空间与清理",
   "searchTransferNoCategory": "转账无分类，直接按类型筛选",
   "searchSelectTypeHint": "请选择收入/支出/转账",
+  "accountDetailAll": "全部",
+  "accountRunningBalance": "余额",
   "exportCsvHeaderAccountType": "账户类型",
   "exportCsvHeaderFromAccountType": "转出账户类型",
   "exportCsvHeaderToAccountType": "转入账户类型",

@@ -7490,6 +7490,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get searchSelectTypeHint => '请选择收入/支出/转账';
 
   @override
+  String get accountDetailAll => '全部';
+
+  @override
+  String get accountRunningBalance => '余额';
+
+  @override
   String get exportCsvHeaderAccountType => '账户类型';
 
   @override

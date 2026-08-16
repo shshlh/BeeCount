@@ -7796,6 +7796,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get searchSelectTypeHint => 'Select income, expense, or transfer';
 
   @override
+  String get accountDetailAll => 'All';
+
+  @override
+  String get accountRunningBalance => 'Balance';
+
+  @override
   String get exportCsvHeaderAccountType => 'Account Type';
 
   @override
