@@ -32,6 +32,26 @@
 ## 2026-08-16
 
 **移交角色**：PM
+**接收角色**：architect + invest-logic + qa
+
+**任务**：7.15.1 账户段补全详细字段导出/导入
+
+**问题**：投资 CSV【账户】段目前只导出基础字段（type/币种/初始资金/排序/隐藏/不计资产/表外/图标），遗漏账户详细字段，导致导出导入后开户行、卡号后四位、信用额度、账单日、还款日、初始资金日期、备注丢失。
+
+**要求**：
+- `InvestmentCsvExportService`【账户】段 header 与每行补：`初始资金日期`、`备注`、`开户行`、`卡号后四位`、`信用额度`、`账单日`、`还款日`。
+- `InvestmentCsvImportService` 的 `_AccountSpec` 与 `ensureAccount` 补这些字段，`createAccount` 显式传入（`createAccount` 已支持 initialDate/bankName/cardLastFour/creditLimit/billingDay/paymentDueDay/note）。
+- 日期字段按现有 `_fmtDate` / `_date` 口径；空值保持 null 不写占位。
+- 补/更新 roundtrip 测试，逐字段断言这些详细字段恢复一致。
+- 全量 `flutter test` 0 failed；改动文件 analyze 无新增 error；HANDOFF/TEAM 只增不减。
+
+**git 状态**：当前分支 main，基线 `d882627`，待派工
+
+---
+
+## 2026-08-16
+
+**移交角色**：PM
 **接收角色**：归档 / 待实机验证
 
 **任务**：7.14 复审合入
