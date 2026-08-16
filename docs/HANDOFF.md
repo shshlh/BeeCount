@@ -32,6 +32,21 @@
 ## 2026-08-17
 
 **移交角色**：PM
+**接收角色**：归档
+
+**任务**：7.16 APK 构建修复（androidx.test 动态版本）
+
+**问题**：`integration_test` 声明 `androidx.test:runner:1.2+` 动态版本，Flutter 镜像 `download.flutter.io` 无动态版本 `maven-metadata.xml`，Gradle 缓存过期后构建失败。
+
+**修复**：`android/build.gradle` 增加阿里云镜像 + `resolutionStrategy` 固定 runner/rules/espresso-core 版本；`android/settings.gradle` 增加阿里云镜像。dev/prod 两版 APK 已重新构建成功。
+
+**git 状态**：当前分支 main，待提交
+
+---
+
+## 2026-08-17
+
+**移交角色**：PM
 **接收角色**：归档 / 待实机验证
 
 **任务**：7.16 复审合入

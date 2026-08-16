@@ -1,7 +1,27 @@
 allprojects {
     repositories {
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/central' }
         google()
         mavenCentral()
+    }
+    // 7.16 构建修复：integration_test 声明 androidx.test:runner:1.2+ 动态版本，
+    // Flutter 仓库会把它重定向到 download.flutter.io（动态版本元数据 404）。
+    // 这里固定版本，绕过动态版本 maven-metadata 解析。
+    configurations.all {
+        resolutionStrategy.eachDependency { details ->
+            if (details.requested.group == 'androidx.test') {
+                if (details.requested.name == 'runner') {
+                    details.useVersion '1.6.2'
+                } else if (details.requested.name == 'rules') {
+                    details.useVersion '1.6.1'
+                }
+            } else if (details.requested.group == 'androidx.test.espresso') {
+                if (details.requested.name == 'espresso-core') {
+                    details.useVersion '3.6.1'
+                }
+            }
+        }
     }
 }
 
