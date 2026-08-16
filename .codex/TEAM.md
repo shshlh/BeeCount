@@ -131,6 +131,7 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 7.15.1 账户段补全详细字段 | ✅ | architect + invest-logic + qa | 导出/导入 初始日期/备注/开户行/卡号后四位/额度/账单日/还款日 + roundtrip 测试 | 2026-08-16 |
 | 7.15.1 PM 复审合入 | ✅ | PM | 全量测试 814 passed + analyze 无 error + HANDOFF 记录 | 2026-08-16 |
 | 7.15.2 账户详情页去账本标签 + 补基金标识 | ✅ | invest-ui + invest-logic + qa | 移除账本 pill + 投资流水 fundLabel + 测试 | 2026-08-16 |
+| 7.15.2 PM 复审合入 | ✅ | PM | 全量测试 815 passed + analyze 无 error + HANDOFF 记录 | 2026-08-17 |
 
 ### 阶段 7.4：账户备注修复
 

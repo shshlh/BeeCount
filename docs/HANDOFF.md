@@ -29,6 +29,25 @@
 ---
 -->
 
+## 2026-08-17
+
+**移交角色**：PM
+**接收角色**：归档 / 待实机验证
+
+**任务**：7.15.2 复审合入
+
+**完成工作**：
+- 审查通过：账户详情页移除账本标签、补投资流水基金标识；`getAccountTransactions` 补全 investType/holdingId/多币种字段
+- 全量 `flutter test`：815 passed / 1 skipped / 0 failed；改动文件 analyze 无 error
+- 合入 main：`3a54936`
+
+**遗留（P3，非阻塞）**：
+- 账户详情页 `_loadFundMap` 用 `currentLedgerIdProvider` 取账本持仓，而非 `widget.account.ledgerId`；账户跟账本走时两者一致，跨账本查看历史账户才会不一致。
+
+**git 状态**：当前分支 main，已提交 `3a54936`
+
+---
+
 ## 2026-08-16
 
 **移交角色**：invest-ui + invest-logic + qa
