@@ -32,6 +32,25 @@
 ## 2026-08-17
 
 **移交角色**：PM
+**接收角色**：invest-logic + qa
+
+**任务**：7.15.3 返工：投资 CSV 导入账户已存在时补写详细字段
+
+**问题**：`ensureAccount` 发现 `(ledgerId, name)` 已存在时直接返回，不更新 `initialBalance` / `initialDate` / `note` / `bankName` / `cardLastFour` / `creditLimit` / `billingDay` / `paymentDueDay`。普通 CSV 先导入建的账户这些字段为空，导致投资 CSV 账户段完整信息没被写回。
+
+**要求**：
+- `InvestmentCsvImportService.ensureAccount` 改为 upsert 语义：账户已存在时，用【账户】段 `spec` 的字段更新已有账户（至少上述 8 个字段 + type/currency 可保持已有），不存在时照旧创建。
+- 复用现有 `updateAccount` 或等价 repository 方法，保持 sync change 追踪一致。
+- 补测试：先建同名账户（模拟普通 CSV），再导入投资 CSV 账户段，断言 initialBalance/initialDate/note/bankName/cardLastFour/creditLimit/billingDay/paymentDueDay 被更新。
+- 全量 `flutter test` 0 failed；改动文件 analyze 无新增 error；HANDOFF/TEAM 只增不减。
+
+**git 状态**：当前分支 main，基线 `2af912d`，待返工
+
+---
+
+## 2026-08-17
+
+**移交角色**：PM
 **接收角色**：归档 / 待实机验证
 
 **任务**：7.15.2 复审合入

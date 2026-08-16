@@ -132,6 +132,7 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 7.15.1 PM 复审合入 | ✅ | PM | 全量测试 814 passed + analyze 无 error + HANDOFF 记录 | 2026-08-16 |
 | 7.15.2 账户详情页去账本标签 + 补基金标识 | ✅ | invest-ui + invest-logic + qa | 移除账本 pill + 投资流水 fundLabel + 测试 | 2026-08-16 |
 | 7.15.2 PM 复审合入 | ✅ | PM | 全量测试 815 passed + analyze 无 error + HANDOFF 记录 | 2026-08-17 |
+| 7.15.3 返工：导入账户已存在时补写详细字段 | ⬜ 待执行 | invest-logic + qa | ensureAccount upsert + 补同名账户字段更新测试 | — |
 
 ### 阶段 7.4：账户备注修复
 
