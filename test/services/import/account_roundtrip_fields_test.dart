@@ -1,5 +1,6 @@
-// 7.13.6 诊断修复：普通 CSV 按 (ledgerId, name) 去重；投资 CSV 导入恢复
-// 全部【账户】段账户，逐字段断言 ledgerId/type/hidden/isOffBalance/currency。
+// 7.13.6/7.16：普通 CSV 按 (ledgerId, name) 去重；账户结构归配置 YAML，
+// 配置 roundtrip 逐字段断言 ledgerId/type/hidden/isOffBalance/currency 与
+// initialDate/sortOrder/iconType/customIconPath 等字段。
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -7,11 +8,9 @@ import 'package:drift/native.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:beecount/data/db.dart';
-import 'package:beecount/data/repositories/local/local_investment_repository.dart';
 import 'package:beecount/data/repositories/local/local_repository.dart';
 import 'package:beecount/services/data_import_service.dart';
-import 'package:beecount/services/export/investment_csv_export_service.dart';
-import 'package:beecount/services/import/investment_csv_import_service.dart';
+import 'package:beecount/services/export/config_export_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -19,12 +18,10 @@ void main() {
 
   late BeeDatabase db;
   late LocalRepository repo;
-  late LocalInvestmentRepository investmentRepo;
 
   setUp(() {
     db = BeeDatabase.forTesting(NativeDatabase.memory());
     repo = LocalRepository(db);
-    investmentRepo = LocalInvestmentRepository(db);
   });
 
   tearDown(() async => db.close());
@@ -67,7 +64,7 @@ void main() {
     expect(digital.ledgerId, ledger1);
   });
 
-  test('投资 CSV 导出→清空→导入后逐字段恢复全部账户', () async {
+  test('配置 YAML 导出→清空→导入后逐字段恢复账户结构并绑定账本', () async {
     final ledgerId = await repo.createLedger(name: 'L', currency: 'CNY');
     final hiddenId = await repo.createAccount(
         ledgerId: ledgerId, name: '隐藏账户', type: 'cash', currency: 'CNY');
@@ -99,35 +96,38 @@ void main() {
         name: '投资账户',
         type: 'investment',
         currency: 'CNY',
-        note: '基金账户');
-    await investmentRepo.buy(
-      ledgerId: ledgerId,
-      accountId: 5,
-      sourceAccountId: 4,
-      fundCode: '000001',
-      fundName: '基金A',
-      amount: 1000,
-      shares: 1000,
-      nav: 1.0,
-      happenedAt: DateTime(2026, 8, 1),
-    );
+        note: '基金账户',
+        iconType: 'custom',
+        customIconPath: '/tmp/icon.png');
 
     final before = {
       for (final a in await repo.getAllAccounts()) a.name: a,
     };
-    final csv = await InvestmentCsvExportService(
-      investmentRepo: investmentRepo,
-      repo: repo,
-    ).buildCsv(ledgerId: ledgerId);
+    const options = ExportOptions(
+      ledgers: false,
+      categories: false,
+      accounts: true,
+      tags: false,
+      recurringTransactions: false,
+      budgets: false,
+      appSettings: false,
+      ai: false,
+    );
+    final yaml = await ConfigExportService.exportToYaml(
+      repository: repo,
+      ledgerId: ledgerId,
+      options: options,
+    );
 
     await repo.resetLedger(ledgerId);
     expect(await repo.getAllAccounts(), isEmpty);
 
-    final result = await InvestmentCsvImportService(
-      repo: repo,
-      investmentRepo: investmentRepo,
-    ).importCsv(ledgerId: ledgerId, csvText: csv);
-    expect(result.holdingsImported, greaterThan(0));
+    await ConfigExportService.importFromYaml(
+      yaml,
+      repository: repo,
+      ledgerId: ledgerId,
+      options: options,
+    );
 
     final after = {
       for (final a in await repo.getAllAccounts()) a.name: a,
@@ -137,7 +137,9 @@ void main() {
       final dst = after[name];
       expect(dst, isNotNull, reason: '账户 $name 导入后应存在');
       expect(dst!.ledgerId, src.ledgerId, reason: '$name ledgerId');
+      expect(dst.ledgerId, ledgerId, reason: '$name 绑定目标账本');
       expect(dst.type, src.type, reason: '$name type');
+      expect(dst.initialBalance, src.initialBalance, reason: '$name initialBalance');
       expect(dst.hidden, src.hidden, reason: '$name hidden');
       expect(dst.isOffBalance, src.isOffBalance, reason: '$name isOffBalance');
       expect(dst.currency, src.currency, reason: '$name currency');
@@ -149,6 +151,12 @@ void main() {
       expect(dst.billingDay, src.billingDay, reason: '$name billingDay');
       expect(
           dst.paymentDueDay, src.paymentDueDay, reason: '$name paymentDueDay');
+      expect(dst.sortOrder, src.sortOrder, reason: '$name sortOrder');
+      expect(dst.excludeFromAssets, src.excludeFromAssets,
+          reason: '$name excludeFromAssets');
+      expect(dst.iconType, src.iconType, reason: '$name iconType');
+      expect(dst.customIconPath, src.customIconPath,
+          reason: '$name customIconPath');
     }
   });
 }

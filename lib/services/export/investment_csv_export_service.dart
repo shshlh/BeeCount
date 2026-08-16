@@ -30,8 +30,6 @@ class InvestmentCsvExportService {
     }
 
     final accounts = await repo.getAllAccounts();
-    final ledgerAccounts =
-        accounts.where((a) => a.ledgerId == ledgerId).toList();
     final accountName = {for (final a in accounts) a.id: a.name};
     final holdingById = {for (final h in holdings) h.id: h};
     final holdingGroup = <int, String>{};
@@ -40,50 +38,6 @@ class InvestmentCsvExportService {
         holdingGroup.putIfAbsent(hid, () => g.name);
       }
     }
-
-    // 账户（7.12.2）：账户 type / 初始资金 / 排序等结构的唯一权威来源。
-    rows.add(const ['【账户】']);
-    rows.add(const [
-      '账户名',
-      '类型',
-      '币种',
-      '初始资金',
-      '初始资金日期',
-      '备注',
-      '开户行',
-      '卡号后四位',
-      '信用额度',
-      '账单日',
-      '还款日',
-      '排序',
-      '隐藏',
-      '不计入资产',
-      '表外',
-      '图标类型',
-      '自定义图标路径',
-    ]);
-    for (final a in ledgerAccounts) {
-      rows.add([
-        a.name,
-        a.type,
-        a.currency,
-        a.initialBalance.toStringAsFixed(2),
-        a.initialDate != null ? _fmtDate(a.initialDate!) : '',
-        a.note ?? '',
-        a.bankName ?? '',
-        a.cardLastFour ?? '',
-        a.creditLimit?.toStringAsFixed(2) ?? '',
-        a.billingDay?.toString() ?? '',
-        a.paymentDueDay?.toString() ?? '',
-        a.sortOrder,
-        a.hidden ? '1' : '',
-        a.excludeFromAssets ? '1' : '',
-        a.isOffBalance ? '1' : '',
-        a.iconType ?? '',
-        a.customIconPath ?? '',
-      ]);
-    }
-    rows.add(const []);
 
     // 持仓
     rows.add(const ['【持仓】']);

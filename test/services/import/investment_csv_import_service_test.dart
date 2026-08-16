@@ -83,9 +83,8 @@ void main() {
       investmentRepo: investmentRepo,
       repo: repo,
     ).buildCsv(ledgerId: 1);
-    expect(csv, contains('【账户】'));
-    expect(csv, contains('账户名'));
-    expect(csv, contains('初始资金'));
+    // 7.16.3: 投资 CSV 不再含【账户】段，账户结构归配置 YAML。
+    expect(csv, isNot(contains('【账户】')));
     final expectedHoldings =
         (await investmentRepo.getHoldingsForLedger(1)).length;
     final expectedFlows =
@@ -94,6 +93,22 @@ void main() {
     await repo.resetLedger(1);
     expect(await (db.select(db.accounts)).get(), isEmpty);
     expect(await (db.select(db.investmentHoldings)).get(), isEmpty);
+
+    // 7.16.3: 账户由配置 YAML 先建好，CSV 按名称匹配复用。
+    final walletId = await repo.createAccount(
+      ledgerId: 1,
+      name: '钱包',
+      type: 'cash',
+      currency: 'CNY',
+      initialBalance: 5000,
+    );
+    final investId = await repo.createAccount(
+      ledgerId: 1,
+      name: '投资账户',
+      type: 'investment',
+      currency: 'CNY',
+      initialBalance: 1825,
+    );
 
     final service = InvestmentCsvImportService(
       repo: repo,
@@ -106,11 +121,13 @@ void main() {
     expect(result.flowsSkipped, 0);
     expect(result.groupsImported, 1);
 
-    // 7.12.2: 账户 type / 初始资金 / 排序 从【账户】段权威恢复。
+    // 7.16.3: 数据按名称匹配已有账户，不新建副本、不改配置字段。
     final accounts = await repo.getAllAccounts();
     final byName = {for (final a in accounts) a.name: a};
+    expect(accounts, hasLength(2));
+    expect(byName['钱包']!.id, walletId);
+    expect(byName['投资账户']!.id, investId);
     expect(byName['投资账户']!.type, 'investment');
-    // 投资账户 initialBalance 是市值缓存，导出/导入应原样恢复。
     expect(byName['投资账户']!.initialBalance, closeTo(1825, 0.01));
     expect(byName['钱包']!.type, 'cash');
     expect(byName['钱包']!.initialBalance, 5000);

@@ -31,6 +31,31 @@
 
 ## 2026-08-17
 
+**移交角色**：architect + invest-logic + qa
+**接收角色**：PM（审查合入）
+
+**任务**：7.16 账户结构归配置、投资 CSV 去账户段
+
+**完成工作**：
+- 7.16.1 配置导出：`AccountItem` 补 `initialDate / sortOrder / hidden / excludeFromAssets / isOffBalance / iconType / customIconPath`，`fromDb / toMap / fromMap` 同步；YAML 手写 buffer 也补写这 7 个字段（此前 toMap 有但 buffer 未输出导致丢失）
+- 7.16.2 配置导入：账户绑定目标账本 `ledgerId`（不再写 0）；`AccountsCompanion.insert` 补 7 字段；已有账户按 `(ledgerId, name)` 复用/更新详细字段（updateAccount + sortOrder 更新），不再按全局 name 简单跳过
+- 7.16.3 投资 CSV：导出移除【账户】段；导入移除账户段解析/预建，持仓/流水按名称匹配已有账户，匹配不到按 `(ledgerId, name)` 创建 cash 兜底
+- 7.16.4 测试：配置 YAML 导出→清空→导入逐字段断言 7 字段 + ledgerId 绑定；投资 CSV 断言不再含【账户】段、按名匹配不新建副本
+
+**验证**：
+- 全量 `flutter test`：815 passed / 1 skipped / 0 failed
+- 改动文件 `dart analyze` 无新增 issue；全仓 analyze 859 项既有 info/warning，无 error
+
+**下一个任务需要知道的**：
+- 账户结构/初始值由配置 YAML 负责；普通 CSV 与投资 CSV 只负责流水/投资数据
+- 投资 CSV 导入对未匹配账户仍会创建 cash 兜底，正式流程应先导入配置 YAML 建好账户
+
+**git 状态**：当前分支 main，改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-17
+
 **移交角色**：PM
 **接收角色**：architect + invest-logic + qa
 

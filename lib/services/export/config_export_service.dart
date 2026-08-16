@@ -893,7 +893,14 @@ class AccountItem {
   final String type;
   final String currency;
   final double initialBalance;
+  final String? initialDate; // ISO 8601
   final String? createdAt; // ISO 8601 format
+  final int? sortOrder;
+  final bool? hidden;
+  final bool? excludeFromAssets;
+  final bool? isOffBalance;
+  final String? iconType;
+  final String? customIconPath;
   final double? creditLimit; // 信用额度
   final int? billingDay; // 账单日 (1-28)
   final int? paymentDueDay; // 还款日 (1-28)
@@ -906,7 +913,14 @@ class AccountItem {
     required this.type,
     required this.currency,
     required this.initialBalance,
+    this.initialDate,
     this.createdAt,
+    this.sortOrder,
+    this.hidden,
+    this.excludeFromAssets,
+    this.isOffBalance,
+    this.iconType,
+    this.customIconPath,
     this.creditLimit,
     this.billingDay,
     this.paymentDueDay,
@@ -922,7 +936,14 @@ class AccountItem {
       'currency': currency,
       'initial_balance': initialBalance,
     };
+    if (initialDate != null) map['initial_date'] = initialDate;
     if (createdAt != null) map['created_at'] = createdAt;
+    if (sortOrder != null) map['sort_order'] = sortOrder;
+    if (hidden != null) map['hidden'] = hidden;
+    if (excludeFromAssets != null) map['exclude_from_assets'] = excludeFromAssets;
+    if (isOffBalance != null) map['is_off_balance'] = isOffBalance;
+    if (iconType != null) map['icon_type'] = iconType;
+    if (customIconPath != null) map['custom_icon_path'] = customIconPath;
     if (creditLimit != null) map['credit_limit'] = creditLimit;
     if (billingDay != null) map['billing_day'] = billingDay;
     if (paymentDueDay != null) map['payment_due_day'] = paymentDueDay;
@@ -938,7 +959,14 @@ class AccountItem {
       type: map['type'] as String,
       currency: map['currency'] as String? ?? 'CNY',
       initialBalance: (map['initial_balance'] as num?)?.toDouble() ?? 0.0,
+      initialDate: map['initial_date'] as String?,
       createdAt: map['created_at'] as String?,
+      sortOrder: map['sort_order'] as int?,
+      hidden: map['hidden'] as bool?,
+      excludeFromAssets: map['exclude_from_assets'] as bool?,
+      isOffBalance: map['is_off_balance'] as bool?,
+      iconType: map['icon_type'] as String?,
+      customIconPath: map['custom_icon_path'] as String?,
       creditLimit: (map['credit_limit'] as num?)?.toDouble(),
       billingDay: map['billing_day'] as int?,
       paymentDueDay: map['payment_due_day'] as int?,
@@ -954,7 +982,14 @@ class AccountItem {
       type: account.type,
       currency: account.currency,
       initialBalance: account.initialBalance,
+      initialDate: account.initialDate?.toIso8601String(),
       createdAt: account.createdAt?.toIso8601String(),
+      sortOrder: account.sortOrder,
+      hidden: account.hidden,
+      excludeFromAssets: account.excludeFromAssets,
+      isOffBalance: account.isOffBalance,
+      iconType: account.iconType,
+      customIconPath: account.customIconPath,
       creditLimit: account.creditLimit,
       billingDay: account.billingDay,
       paymentDueDay: account.paymentDueDay,
@@ -2089,8 +2124,29 @@ class ConfigExportService {
           buffer.writeln('      type: "${itemMap['type']}"');
           buffer.writeln('      currency: "${itemMap['currency']}"');
           buffer.writeln('      initial_balance: ${itemMap['initial_balance']}');
+          if (itemMap.containsKey('initial_date') && itemMap['initial_date'] != null) {
+            buffer.writeln('      initial_date: "${itemMap['initial_date']}"');
+          }
           if (itemMap.containsKey('created_at') && itemMap['created_at'] != null) {
             buffer.writeln('      created_at: "${itemMap['created_at']}"');
+          }
+          if (itemMap.containsKey('sort_order') && itemMap['sort_order'] != null) {
+            buffer.writeln('      sort_order: ${itemMap['sort_order']}');
+          }
+          if (itemMap.containsKey('hidden') && itemMap['hidden'] != null) {
+            buffer.writeln('      hidden: ${itemMap['hidden']}');
+          }
+          if (itemMap.containsKey('exclude_from_assets') && itemMap['exclude_from_assets'] != null) {
+            buffer.writeln('      exclude_from_assets: ${itemMap['exclude_from_assets']}');
+          }
+          if (itemMap.containsKey('is_off_balance') && itemMap['is_off_balance'] != null) {
+            buffer.writeln('      is_off_balance: ${itemMap['is_off_balance']}');
+          }
+          if (itemMap.containsKey('icon_type') && itemMap['icon_type'] != null) {
+            buffer.writeln('      icon_type: "${itemMap['icon_type']}"');
+          }
+          if (itemMap.containsKey('custom_icon_path') && itemMap['custom_icon_path'] != null) {
+            buffer.writeln('      custom_icon_path: "${itemMap['custom_icon_path']}"');
           }
           if (itemMap.containsKey('credit_limit') && itemMap['credit_limit'] != null) {
             buffer.writeln('      credit_limit: ${itemMap['credit_limit']}');
@@ -2600,42 +2656,84 @@ class ConfigExportService {
     if (options.accounts && config.accounts != null && repository != null) {
       try {
         final items = config.accounts!.items;
+        final targetLedgerId = ledgerId ?? 0;
 
-        // 获取现有账户名称集合
+        // 7.16.2: 按 (ledgerId, name) 匹配，不再按全局 name 简单跳过。
         final existingAccounts = await repository.getAllAccounts();
-        final existingNames = existingAccounts.map((a) => a.name.toLowerCase()).toSet();
+        final existingByKey = <String, Account>{
+          for (final a in existingAccounts)
+            '${a.ledgerId}|${a.name.toLowerCase()}': a,
+        };
 
-        // 过滤掉已存在的账户（按名称去重）
-        final newItems = items.where((item) =>
-          !existingNames.contains(item.name.toLowerCase())
-        ).toList();
+        int created = 0;
+        int updated = 0;
+        final accountsToInsert = <AccountsCompanion>[];
+        final sortOrderUpdates = <({int id, int sortOrder})>[];
 
-        if (newItems.isNotEmpty) {
-          // 准备批量插入的数据
-          final accountsToInsert = newItems.map((item) => AccountsCompanion.insert(
-            ledgerId: 0, // 保留字段，但不再使用（v2迁移后会移除）
-            name: item.name,
-            type: d.Value(item.type),
-            currency: d.Value(item.currency),
-            initialBalance: d.Value(item.initialBalance),
-            createdAt: d.Value(
-                item.createdAt != null ? DateTime.parse(item.createdAt!) : null),
-            updatedAt: d.Value(DateTime.now()),
-            creditLimit: d.Value(item.creditLimit),
-            billingDay: d.Value(item.billingDay),
-            paymentDueDay: d.Value(item.paymentDueDay),
-            bankName: d.Value(item.bankName),
-            cardLastFour: d.Value(item.cardLastFour),
-            note: d.Value(item.note),
-          )).toList();
+        for (final item in items) {
+          final key = '$targetLedgerId|${item.name.toLowerCase()}';
+          final existing = existingByKey[key];
+          final parsedInitialDate = item.initialDate != null
+              ? DateTime.tryParse(item.initialDate!)
+              : null;
 
-          // 使用 repository 方法进行批量插入
-          await repository.batchInsertAccounts(accountsToInsert);
-
-          logger.info('ConfigImport', '账户已导入: ${newItems.length}条 (跳过已存在: ${items.length - newItems.length}条)');
-        } else {
-          logger.info('ConfigImport', '账户全部已存在，跳过导入');
+          if (existing != null) {
+            // 同账本同名账户已存在 → 更新详细字段。
+            await repository.updateAccount(
+              existing.id,
+              initialBalance: item.initialBalance,
+              initialDate: parsedInitialDate,
+              note: item.note,
+              bankName: item.bankName,
+              cardLastFour: item.cardLastFour,
+              creditLimit: item.creditLimit,
+              billingDay: item.billingDay,
+              paymentDueDay: item.paymentDueDay,
+              hidden: item.hidden,
+              excludeFromAssets: item.excludeFromAssets,
+              isOffBalance: item.isOffBalance,
+              iconType: item.iconType,
+              customIconPath: item.customIconPath,
+            );
+            if (item.sortOrder != null && item.sortOrder != existing.sortOrder) {
+              sortOrderUpdates.add((id: existing.id, sortOrder: item.sortOrder!));
+            }
+            updated++;
+          } else {
+            accountsToInsert.add(AccountsCompanion.insert(
+              ledgerId: targetLedgerId, // 7.16.2: 绑定目标账本
+              name: item.name,
+              type: d.Value(item.type),
+              currency: d.Value(item.currency),
+              initialBalance: d.Value(item.initialBalance),
+              initialDate: d.Value(parsedInitialDate),
+              createdAt: d.Value(
+                  item.createdAt != null ? DateTime.parse(item.createdAt!) : null),
+              updatedAt: d.Value(DateTime.now()),
+              sortOrder: d.Value(item.sortOrder ?? 0),
+              creditLimit: d.Value(item.creditLimit),
+              billingDay: d.Value(item.billingDay),
+              paymentDueDay: d.Value(item.paymentDueDay),
+              bankName: d.Value(item.bankName),
+              cardLastFour: d.Value(item.cardLastFour),
+              note: d.Value(item.note),
+              hidden: d.Value(item.hidden ?? false),
+              excludeFromAssets: d.Value(item.excludeFromAssets ?? false),
+              isOffBalance: d.Value(item.isOffBalance ?? false),
+              iconType: d.Value(item.iconType),
+              customIconPath: d.Value(item.customIconPath),
+            ));
+            created++;
+          }
         }
+
+        if (accountsToInsert.isNotEmpty) {
+          await repository.batchInsertAccounts(accountsToInsert);
+        }
+        if (sortOrderUpdates.isNotEmpty) {
+          await repository.updateAccountSortOrders(sortOrderUpdates);
+        }
+        logger.info('ConfigImport', '账户已导入: 新增=$created 更新=$updated');
       } catch (e) {
         logger.error('ConfigImport', '导入账户失败: $e');
       }

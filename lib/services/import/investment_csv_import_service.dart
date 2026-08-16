@@ -20,45 +20,6 @@ class InvestmentImportResult {
   });
 }
 
-/// 【账户】段的账户规格（7.12.2：type / 初始资金 / 排序等恢复依据）。
-class _AccountSpec {
-  final String type;
-  final String currency;
-  final double initialBalance;
-  final DateTime? initialDate;
-  final String? note;
-  final String? bankName;
-  final String? cardLastFour;
-  final double? creditLimit;
-  final int? billingDay;
-  final int? paymentDueDay;
-  final int sortOrder;
-  final bool hidden;
-  final bool excludeFromAssets;
-  final bool isOffBalance;
-  final String? iconType;
-  final String? customIconPath;
-
-  const _AccountSpec({
-    required this.type,
-    required this.currency,
-    required this.initialBalance,
-    this.initialDate,
-    this.note,
-    this.bankName,
-    this.cardLastFour,
-    this.creditLimit,
-    this.billingDay,
-    this.paymentDueDay,
-    required this.sortOrder,
-    required this.hidden,
-    required this.excludeFromAssets,
-    required this.isOffBalance,
-    this.iconType,
-    this.customIconPath,
-  });
-}
-
 /// 投资 CSV 专用导入（7.10.3）。
 ///
 /// 解析 [InvestmentCsvExportService] 生成的多段归档格式：持仓、投资流水、
@@ -79,7 +40,6 @@ class InvestmentCsvImportService {
     required String csvText,
   }) async {
     final rows = CsvParser.parse(csvText);
-    final accountRows = _sectionRows(rows, '【账户】');
     final holdings = _sectionRows(rows, '【持仓】');
     final flows = _sectionRows(rows, '【投资流水】');
     final groups = _sectionRows(rows, '【分组】');
@@ -93,44 +53,6 @@ class InvestmentCsvImportService {
     final accountIdByKey = <String, int>{
       for (final a in await repo.getAllAccounts()) '${a.ledgerId}|${a.name}': a.id,
     };
-    final accountSpecs = <String, _AccountSpec>{
-      for (final r in accountRows)
-        if (_get(r, '账户名').trim().isNotEmpty)
-          _get(r, '账户名').trim(): _AccountSpec(
-            type: _get(r, '类型').trim(),
-            currency: _get(r, '币种').trim(),
-            initialBalance: _num(r, '初始资金'),
-            initialDate: _date(_get(r, '初始资金日期')),
-            note: _get(r, '备注').trim().isEmpty
-                ? null
-                : _get(r, '备注').trim(),
-            bankName: _get(r, '开户行').trim().isEmpty
-                ? null
-                : _get(r, '开户行').trim(),
-            cardLastFour: _get(r, '卡号后四位').trim().isEmpty
-                ? null
-                : _get(r, '卡号后四位').trim(),
-            creditLimit: _get(r, '信用额度').trim().isEmpty
-                ? null
-                : _num(r, '信用额度'),
-            billingDay: _get(r, '账单日').trim().isEmpty
-                ? null
-                : _int(r, '账单日'),
-            paymentDueDay: _get(r, '还款日').trim().isEmpty
-                ? null
-                : _int(r, '还款日'),
-            sortOrder: _int(r, '排序'),
-            hidden: _bool(r, '隐藏'),
-            excludeFromAssets: _bool(r, '不计入资产'),
-            isOffBalance: _bool(r, '表外'),
-            iconType: _get(r, '图标类型').trim().isEmpty
-                ? null
-                : _get(r, '图标类型').trim(),
-            customIconPath: _get(r, '自定义图标路径').trim().isEmpty
-                ? null
-                : _get(r, '自定义图标路径').trim(),
-          ),
-    };
     final investmentAccountNames = <String>{
       for (final r in holdings)
         if (_get(r, '所属账户').trim().isNotEmpty) _get(r, '所属账户').trim(),
@@ -142,41 +64,16 @@ class InvestmentCsvImportService {
       final key = '$ledgerId|$trimmed';
       final existing = accountIdByKey[key];
       if (existing != null) return existing;
-      final spec = accountSpecs[trimmed];
+      // 7.16.3: 账户结构由配置 YAML 负责；CSV 按名匹配已有账户，
+      // 匹配不到时按 (ledgerId, name) 创建 cash 兜底，保证流水可导入。
       final id = await repo.createAccount(
         ledgerId: ledgerId,
         name: trimmed,
-        type: (spec?.type.isNotEmpty ?? false) ? spec!.type : 'cash',
-        currency:
-            (spec?.currency.isNotEmpty ?? false) ? spec!.currency : currency,
-        initialBalance: spec?.initialBalance ?? 0,
-        initialDate: spec?.initialDate,
-        note: spec?.note,
-        bankName: spec?.bankName,
-        cardLastFour: spec?.cardLastFour,
-        creditLimit: spec?.creditLimit,
-        billingDay: spec?.billingDay,
-        paymentDueDay: spec?.paymentDueDay,
-        sortOrder: spec?.sortOrder,
-        excludeFromAssets: spec?.excludeFromAssets ?? false,
-        isOffBalance: spec?.isOffBalance ?? false,
-        iconType: spec?.iconType,
-        customIconPath: spec?.customIconPath,
+        type: 'cash',
+        currency: currency,
       );
-      if (spec?.hidden ?? false) {
-        await repo.setAccountHidden(id, true);
-      }
       accountIdByKey[key] = id;
       return id;
-    }
-
-    // 7.13.5/7.13.6: 先按【账户】段主动建全部账户，避免无持仓/无流水的
-    // 账户（银行卡/微信/数字人民币/应收款/信用卡/表外等）导入后丢失。
-    for (final r in accountRows) {
-      final name = _get(r, '账户名').trim();
-      if (name.isNotEmpty) {
-        await ensureAccount(name);
-      }
     }
 
     // 1. 持仓：按 (账本, 基金代码, 账户) 幂等恢复。
@@ -367,11 +264,6 @@ class InvestmentCsvImportService {
 
   static int _int(Map<String, String> row, String key) =>
       int.tryParse(_get(row, key)) ?? 0;
-
-  static bool _bool(Map<String, String> row, String key) {
-    final v = _get(row, key).trim().toLowerCase();
-    return v == '1' || v == 'true';
-  }
 
   static DateTime? _date(String raw) {
     final t = DateTime.tryParse(raw.trim());
