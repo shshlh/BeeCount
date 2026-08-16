@@ -130,6 +130,15 @@ class InvestmentCsvImportService {
       return id;
     }
 
+    // 7.13.5/7.13.6: 先按【账户】段主动建全部账户，避免无持仓/无流水的
+    // 账户（银行卡/微信/数字人民币/应收款/信用卡/表外等）导入后丢失。
+    for (final r in accountRows) {
+      final name = _get(r, '账户名').trim();
+      if (name.isNotEmpty) {
+        await ensureAccount(name);
+      }
+    }
+
     // 1. 持仓：按 (账本, 基金代码, 账户) 幂等恢复。
     final holdingIdByFundAccount = <String, int>{};
     final fundCodeToHoldingId = <String, int>{};

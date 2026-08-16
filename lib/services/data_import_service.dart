@@ -225,7 +225,8 @@ class DataImportService {
     return result;
   }
 
-  /// 导入账户(全局按名称去重)。public — sync_diff_service 也复用,避免维护两套。
+  /// 导入账户(7.13.6: 按 (ledgerId, name) 去重，账户强绑定账本)。
+  /// public — sync_diff_service 也复用,避免维护两套。
   Future<Map<String, int>> importAccounts(
     BaseRepository repo,
     List<ImportAccount> accounts,
@@ -240,19 +241,28 @@ class DataImportService {
 
     try {
       final existingAccounts = await repo.getAllAccounts();
+      final targetLedgerId = ledgerId ?? 0;
+      final existingNamesInLedger = <String>{};
       for (final acc in existingAccounts) {
-        accountNameToId[acc.name] = acc.id;
+        if (acc.ledgerId == targetLedgerId) {
+          existingNamesInLedger.add(acc.name);
+          accountNameToId[acc.name] = acc.id;
+        } else if (!accountNameToId.containsKey(acc.name)) {
+          // 旧数据兜底：目标账本无同名账户时，暂用全局同名账户映射。
+          accountNameToId[acc.name] = acc.id;
+        }
       }
 
       for (final acc in accounts) {
-        if (!accountNameToId.containsKey(acc.name)) {
+        if (!existingNamesInLedger.contains(acc.name)) {
           final id = await repo.createAccount(
-            ledgerId: ledgerId ?? 0, // 7.10.1: 账户绑定目标账本
+            ledgerId: targetLedgerId, // 7.10.1: 账户绑定目标账本
             name: acc.name,
             type: acc.type ?? 'cash',
             currency: acc.currency ?? defaultCurrency,
             initialBalance: acc.initialBalance ?? 0.0,
           );
+          existingNamesInLedger.add(acc.name);
           accountNameToId[acc.name] = id;
           created++;
         }

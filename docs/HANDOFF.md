@@ -31,6 +31,31 @@
 
 ## 2026-08-14
 
+**移交角色**：invest-logic + invest-ui + qa
+**接收角色**：PM（审查合入）
+
+**任务**：7.13.6 + 7.13.7 完成
+
+**完成工作**：
+- 7.13.6 诊断修复：根因是普通 CSV 导入 `DataImportService.importAccounts` 按全局 name 去重，同名账户会误用他账本/旧账本账户；改为按 `(ledgerId, name)` 去重，流水解析仍按 name 映射到目标账本账户。同时投资 CSV 导入先按【账户】段预建全部账户（含无持仓/无流水账户），避免银行卡/微信/数字人民币/应收款/信用卡/表外等导入后丢失
+- 新增诊断测试：普通 CSV 同名校验（L1 不误用 L2 同名账户）+ 投资 CSV 导出→清空→导入逐字段断言 ledgerId/type/hidden/isOffBalance/currency
+- 7.13.7 搜索页转账显示对齐流水页：搜索结果转账行传 `isTransfer: true`、`accountName: 转出 → 转入`、备注为空时标题显示「转账」，金额无正负号；非转账行保持原样
+- 新增 widget 测试：转账搜索结果展示「钱包 → 投资账户」且金额无正负号
+
+**验证**：
+- 全量 `flutter test`：810 passed / 1 skipped / 0 failed
+- 改动文件 `dart analyze` 无新增 issue；全仓 analyze 859 项既有 info/warning，无 error
+
+**下一个任务需要知道的**：
+- 7.13.6 的「按账户段预建全部账户」同时覆盖了 7.13.5 的要求（7.13.5 任务板状态请 PM 确认）
+- `DataImportService.importAccounts` 仍返回 name→id 映射供流水解析；同名他账本账户不会被误用
+
+**git 状态**：当前分支 main，改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-14
+
 **移交角色**：PM
 **接收角色**：invest-ui + qa
 

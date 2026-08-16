@@ -1157,12 +1157,21 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                               TransactionListItem(
                                 icon: iconData,
                                 category: item.category,
-                                title: subtitle,
+                                title: isTransfer
+                                    ? (subtitle.isNotEmpty
+                                        ? subtitle
+                                        : AppLocalizations.of(context).transferTitle)
+                                    : subtitle,
                                 categoryName: categoryName,
                                 amount: item.t.amount,
                                 currencyCode: item.t.currencyCode,
                                 nativeAmount: item.t.nativeAmount,
                                 isExpense: isExpense,
+                                // 7.13.7: 转账行与流水页一致，无正负号 + 中性色。
+                                isTransfer: isTransfer,
+                                accountName: isTransfer
+                                    ? '${item.account?.name ?? ''} → ${item.toAccount?.name ?? ''}'
+                                    : null,
                                 hide: hide,
                                 happenedAt: item.t.happenedAt,
                                 showFullDate: true,
