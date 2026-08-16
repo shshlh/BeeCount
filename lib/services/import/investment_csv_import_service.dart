@@ -25,6 +25,13 @@ class _AccountSpec {
   final String type;
   final String currency;
   final double initialBalance;
+  final DateTime? initialDate;
+  final String? note;
+  final String? bankName;
+  final String? cardLastFour;
+  final double? creditLimit;
+  final int? billingDay;
+  final int? paymentDueDay;
   final int sortOrder;
   final bool hidden;
   final bool excludeFromAssets;
@@ -36,6 +43,13 @@ class _AccountSpec {
     required this.type,
     required this.currency,
     required this.initialBalance,
+    this.initialDate,
+    this.note,
+    this.bankName,
+    this.cardLastFour,
+    this.creditLimit,
+    this.billingDay,
+    this.paymentDueDay,
     required this.sortOrder,
     required this.hidden,
     required this.excludeFromAssets,
@@ -86,6 +100,25 @@ class InvestmentCsvImportService {
             type: _get(r, '类型').trim(),
             currency: _get(r, '币种').trim(),
             initialBalance: _num(r, '初始资金'),
+            initialDate: _date(_get(r, '初始资金日期')),
+            note: _get(r, '备注').trim().isEmpty
+                ? null
+                : _get(r, '备注').trim(),
+            bankName: _get(r, '开户行').trim().isEmpty
+                ? null
+                : _get(r, '开户行').trim(),
+            cardLastFour: _get(r, '卡号后四位').trim().isEmpty
+                ? null
+                : _get(r, '卡号后四位').trim(),
+            creditLimit: _get(r, '信用额度').trim().isEmpty
+                ? null
+                : _num(r, '信用额度'),
+            billingDay: _get(r, '账单日').trim().isEmpty
+                ? null
+                : _int(r, '账单日'),
+            paymentDueDay: _get(r, '还款日').trim().isEmpty
+                ? null
+                : _int(r, '还款日'),
             sortOrder: _int(r, '排序'),
             hidden: _bool(r, '隐藏'),
             excludeFromAssets: _bool(r, '不计入资产'),
@@ -117,6 +150,13 @@ class InvestmentCsvImportService {
         currency:
             (spec?.currency.isNotEmpty ?? false) ? spec!.currency : currency,
         initialBalance: spec?.initialBalance ?? 0,
+        initialDate: spec?.initialDate,
+        note: spec?.note,
+        bankName: spec?.bankName,
+        cardLastFour: spec?.cardLastFour,
+        creditLimit: spec?.creditLimit,
+        billingDay: spec?.billingDay,
+        paymentDueDay: spec?.paymentDueDay,
         sortOrder: spec?.sortOrder,
         excludeFromAssets: spec?.excludeFromAssets ?? false,
         isOffBalance: spec?.isOffBalance ?? false,

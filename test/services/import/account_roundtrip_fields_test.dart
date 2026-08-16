@@ -77,19 +77,29 @@ void main() {
         name: '表外账户',
         type: 'cash',
         currency: 'CNY',
-        isOffBalance: true);
+        isOffBalance: true,
+        initialDate: DateTime(2026, 1, 1));
     await repo.createAccount(
-        ledgerId: ledgerId, name: '银行卡', type: 'bank_card', currency: 'CNY');
+        ledgerId: ledgerId,
+        name: '银行卡',
+        type: 'bank_card',
+        currency: 'CNY',
+        bankName: '招商银行',
+        cardLastFour: '1234');
     await repo.createAccount(
         ledgerId: ledgerId,
         name: '信用卡',
         type: 'credit_card',
-        currency: 'CNY');
+        currency: 'CNY',
+        creditLimit: 50000,
+        billingDay: 10,
+        paymentDueDay: 5);
     await repo.createAccount(
         ledgerId: ledgerId,
         name: '投资账户',
         type: 'investment',
-        currency: 'CNY');
+        currency: 'CNY',
+        note: '基金账户');
     await investmentRepo.buy(
       ledgerId: ledgerId,
       accountId: 5,
@@ -131,6 +141,14 @@ void main() {
       expect(dst.hidden, src.hidden, reason: '$name hidden');
       expect(dst.isOffBalance, src.isOffBalance, reason: '$name isOffBalance');
       expect(dst.currency, src.currency, reason: '$name currency');
+      expect(dst.initialDate, src.initialDate, reason: '$name initialDate');
+      expect(dst.note, src.note, reason: '$name note');
+      expect(dst.bankName, src.bankName, reason: '$name bankName');
+      expect(dst.cardLastFour, src.cardLastFour, reason: '$name cardLastFour');
+      expect(dst.creditLimit, src.creditLimit, reason: '$name creditLimit');
+      expect(dst.billingDay, src.billingDay, reason: '$name billingDay');
+      expect(
+          dst.paymentDueDay, src.paymentDueDay, reason: '$name paymentDueDay');
     }
   });
 }

@@ -31,6 +31,26 @@
 
 ## 2026-08-16
 
+**移交角色**：architect + invest-logic + qa
+**接收角色**：PM（审查合入）
+
+**任务**：7.15.1 账户段补全详细字段导出/导入
+
+**完成工作**：
+- 投资 CSV【账户】段 header 与每行补：`初始资金日期` / `备注` / `开户行` / `卡号后四位` / `信用额度` / `账单日` / `还款日`
+- `InvestmentCsvImportService._AccountSpec` 与 `ensureAccount` 补这些字段并显式传入 `createAccount`；空值保持 null，日期按 `yyyy-MM-dd` 口径
+- roundtrip 测试逐字段断言上述详细字段恢复一致（含 initialDate / note / bankName / cardLastFour / creditLimit / billingDay / paymentDueDay）
+
+**验证**：
+- 全量 `flutter test`：814 passed / 1 skipped / 0 failed
+- 改动文件 `dart analyze` 无新增 issue；全仓 analyze 859 项既有 info/warning，无 error
+
+**git 状态**：当前分支 main，改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-16
+
 **移交角色**：PM
 **接收角色**：architect + invest-logic + qa
 
