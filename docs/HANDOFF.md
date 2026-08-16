@@ -29,6 +29,34 @@
 ---
 -->
 
+## 2026-08-16
+
+**移交角色**：PM
+**接收角色**：invest-ui + invest-logic + qa
+
+**任务**：7.14 账户详情页流水「全部」视图 + 逐笔余额
+
+**要求**：
+
+7.14.1 流水 tab 增加「全部」（invest-ui）：
+- `lib/pages/account/account_detail_page.dart` 的详情 tab 由「支出/收入」改为「全部/支出/收入」，默认「全部」。
+- 「全部」对应 `flow = null`（底层 `getAccountTransactions` 已支持），按时间倒序展示所有收支/转账，不分收支。
+- 「支出/收入」保持原有分布图 + 过滤行为；「全部」模式下分类分布图可隐藏（无对应分布）。
+
+7.14.2 逐笔余额（invest-logic + invest-ui）：
+- 「全部」模式每笔流水金额下方用灰色小字显示「余额 xx.xx」。
+- 余额口径：账户 `initialBalance` + 按时间升序累计该账户相关流水（收入 +、支出 -、转出 -、转入 +），每笔交易后即为该笔下方展示的余额。
+- 转账/多币种按现有 `getAccountBalanceInLedger` 口径保持一致（估值/投资账户返回缓存市值）。
+
+7.14.3 测试（qa）：
+- 补 widget/逻辑测试：全部/支出/收入 tab 切换、逐笔余额累计正确（含转出/转入）。
+
+**约束**：全量 `flutter test` 0 failed；改动文件 analyze 无新增 error；HANDOFF/TEAM 只增不减。
+
+**git 状态**：当前分支 main，基线 `f2f2a59`，待派工
+
+---
+
 ## 2026-08-14
 
 **移交角色**：PM
