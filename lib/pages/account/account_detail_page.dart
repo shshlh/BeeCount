@@ -199,11 +199,27 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
   final ScrollController _scrollController = ScrollController();
   /// 详情页 tab: 0=全部, 1=支出, 2=收入（默认全部）
   int _detailChartTab = 0;
+  // 7.15.2: holdingId → 基金代码/名称（对齐明细页 fundLabel 口径）。
+  Map<int, ({String fundCode, String fundName})> _fundByHoldingId = {};
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    _loadFundMap();
+  }
+
+  Future<void> _loadFundMap() async {
+    final ledgerId = ref.read(currentLedgerIdProvider);
+    final investmentRepo = ref.read(investmentRepositoryProvider);
+    final holdings = await investmentRepo.getHoldingsForLedger(ledgerId);
+    if (!mounted) return;
+    setState(() {
+      _fundByHoldingId = {
+        for (final h in holdings)
+          h.id: (fundCode: h.fundCode, fundName: h.fundName),
+      };
+    });
   }
 
   @override
@@ -1054,6 +1070,12 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
           ...transactions.asMap().entries.map((entry) {
             final index = entry.key;
             final tx = entry.value;
+            final fundInfo = (tx.investType != null && tx.holdingId != null)
+                ? _fundByHoldingId[tx.holdingId!]
+                : null;
+            final fundLabel = fundInfo == null
+                ? null
+                : '${fundInfo.fundCode} ${fundInfo.fundName}'.trim();
 
             return Column(
               children: [
@@ -1062,11 +1084,10 @@ class _AccountDetailPageState extends ConsumerState<AccountDetailPage> {
                   transaction: tx,
                   currencyCode: currencyCode,
                   primaryColor: primaryColor,
-                  ledgers:
-                      ref.watch(ledgersStreamProvider).asData?.value ?? [],
                   categories: categories,
                   currentAccountId: widget.account.id,
                   runningBalance: runningBalances?[tx.id],
+                  fundLabel: fundLabel,
                   onTap: () => _editTransaction(context, ref, tx),
                 ),
               ],
@@ -1292,21 +1313,21 @@ class _TransactionTile extends ConsumerWidget {
   final db.Transaction transaction;
   final String currencyCode;
   final Color primaryColor;
-  final List<db.Ledger> ledgers;
   final List<db.Category> categories;
   final VoidCallback onTap;
   final int? currentAccountId;
   final double? runningBalance;
+  final String? fundLabel;
 
   const _TransactionTile({
     required this.transaction,
     required this.currencyCode,
     required this.primaryColor,
-    required this.ledgers,
     required this.categories,
     required this.onTap,
     this.currentAccountId,
     this.runningBalance,
+    this.fundLabel,
   });
 
   @override
@@ -1383,15 +1404,6 @@ class _TransactionTile extends ConsumerWidget {
       }
     }
 
-    final ledger = ledgers.cast<db.Ledger?>().firstWhere(
-          (l) => l?.id == transaction.ledgerId,
-          orElse: () => null,
-        );
-    String ledgerName = ledger?.name ?? '';
-    if (ledgerName == 'Default Ledger') {
-      ledgerName = l10n.ledgersDefaultLedgerName;
-    }
-
     return InkWell(
       onTap: onTap,
       child: Padding(
@@ -1444,28 +1456,6 @@ class _TransactionTile extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (ledgerName.isNotEmpty) ...[
-                        SizedBox(width: 6.0.scaled(context, ref)),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 6.0.scaled(context, ref),
-                            vertical: 2.0.scaled(context, ref),
-                          ),
-                          decoration: BoxDecoration(
-                            color: primaryColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(
-                                4.0.scaled(context, ref)),
-                          ),
-                          child: Text(
-                            ledgerName,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: primaryColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                   if (displaySubtitle != null)
@@ -1491,6 +1481,29 @@ class _TransactionTile extends ConsumerWidget {
                       ),
                     ),
                   ),
+                  // 7.15.2: 投资流水基金代码/名称标识。
+                  if (fundLabel != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: primaryColor.withValues(alpha: 0.35)),
+                        ),
+                        child: Text(
+                          fundLabel!,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: primaryColor,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

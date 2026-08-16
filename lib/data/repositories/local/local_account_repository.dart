@@ -749,6 +749,15 @@ class LocalAccountRepository implements AccountRepository {
         syncId: row.data['sync_id'] as String?,
         excludeFromStats: (row.data['exclude_from_stats'] as int? ?? 0) != 0,
         excludeFromBudget: (row.data['exclude_from_budget'] as int? ?? 0) != 0,
+        // 7.15.2: 投资字段/多币种字段补全，供详情页基金标识与余额展示。
+        investType: row.data['invest_type'] as String?,
+        investShares: (row.data['invest_shares'] as num?)?.toDouble(),
+        investNav: (row.data['invest_nav'] as num?)?.toDouble(),
+        investFee: (row.data['invest_fee'] as num?)?.toDouble(),
+        holdingId: row.data['holding_id'] as int?,
+        batchId: row.data['batch_id'] as String?,
+        currencyCode: row.data['currency_code'] as String?,
+        nativeAmount: (row.data['native_amount'] as num?)?.toDouble(),
       );
     }).toList();
   }

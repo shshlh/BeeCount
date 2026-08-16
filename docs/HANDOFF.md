@@ -31,6 +31,27 @@
 
 ## 2026-08-16
 
+**移交角色**：invest-ui + invest-logic + qa
+**接收角色**：PM（审查合入）
+
+**任务**：7.15.2 账户详情页流水去账本标签 + 补基金标识
+
+**完成工作**：
+- 移除 `_TransactionTile` 账本名称小标签及 `ledgersStreamProvider` 取数，当前账户随账本走，标签冗余
+- 投资流水（`investType != null && holdingId != null`）在详情页显示基金代码/名称小标签，口径与明细页 `fundLabel` 一致（页内预加载 holdingId → fundCode/fundName 映射）
+- 修复 `getAccountTransactions` 手工映射漏掉 investType/holdingId/多币种字段的问题，详情页投资流水因此能拿到 holdingId
+- 新增 widget 测试：投资流水显示基金标识、普通流水不显示、账本标签不再出现
+
+**验证**：
+- 全量 `flutter test`：815 passed / 1 skipped / 0 failed
+- 改动文件 `dart analyze` 无新增 issue；全仓 analyze 859 项既有 info/warning，无 error
+
+**git 状态**：当前分支 main，改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-16
+
 **移交角色**：PM
 **接收角色**：invest-ui + invest-logic + qa
 
