@@ -132,7 +132,16 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 7.15.1 PM 复审合入 | ✅ | PM | 全量测试 814 passed + analyze 无 error + HANDOFF 记录 | 2026-08-16 |
 | 7.15.2 账户详情页去账本标签 + 补基金标识 | ✅ | invest-ui + invest-logic + qa | 移除账本 pill + 投资流水 fundLabel + 测试 | 2026-08-16 |
 | 7.15.2 PM 复审合入 | ✅ | PM | 全量测试 815 passed + analyze 无 error + HANDOFF 记录 | 2026-08-17 |
-| 7.15.3 返工：导入账户已存在时补写详细字段 | ⬜ 待执行 | invest-logic + qa | ensureAccount upsert + 补同名账户字段更新测试 | — |
+| 7.15.3 返工：导入账户已存在时补写详细字段 | ❌ 作废（并入 7.16） | invest-logic + qa | ensureAccount upsert + 补同名账户字段更新测试 | 2026-08-17 |
+
+### 阶段 7.16：账户结构归配置、投资 CSV 去账户段
+
+| 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
+|---|---|---|---|---|
+| 7.16.1 配置导出账户字段补全 | ⬜ 待执行 | architect + invest-logic | AccountItem 补 7 字段 + fromDb/toMap/fromMap | — |
+| 7.16.2 配置导入账户补全 + 账本绑定 | ⬜ 待执行 | architect + invest-logic | ledgerId 绑定目标账本 + insert 补 7 字段 | — |
+| 7.16.3 投资 CSV 去账户段 + 数据按名匹配 | ⬜ 待执行 | invest-logic | 移除账户段 + 持仓/流水按名匹配 | — |
+| 7.16.4 测试 | ⬜ 待执行 | qa | 配置 roundtrip 7 字段 + 投资 CSV 无账户段 + 按名匹配 | — |
 
 ### 阶段 7.4：账户备注修复
 

@@ -32,6 +32,38 @@
 ## 2026-08-17
 
 **移交角色**：PM
+**接收角色**：architect + invest-logic + qa
+
+**任务**：7.16 账户结构归配置、投资 CSV 去账户段（替换 7.15.3）
+
+**背景**：账户是全局业务数据，不应挂在投资 CSV。分工改为：配置 YAML 管「账户结构/初始值」，CSV 管「流水/投资」。原 7.15.3（ensureAccount 已存在补写）作废。
+
+**要求**：
+
+7.16.1 配置导出账户字段补全（architect + invest-logic）：
+- `config_export_service.dart` 的 `AccountItem` 补 `initialDate` / `sortOrder` / `hidden` / `excludeFromAssets` / `isOffBalance` / `iconType` / `customIconPath`，`fromDb/toMap/fromMap` 同步。
+
+7.16.2 配置导入账户补全 + 账本绑定（architect + invest-logic）：
+- `importFromYaml` 账户导入：`ledgerId: 0` 改为绑定目标账本 `ledgerId`（跟随传入 `ledgerId` 或当前账本），`AccountsCompanion.insert` 补上述 7 字段。
+- 账户已存在时按 (ledgerId, name) 复用或更新，不再按全局 name 简单跳过。
+
+7.16.3 投资 CSV 去账户段 + 数据按名匹配（invest-logic）：
+- `InvestmentCsvExportService` 移除【账户】段；`InvestmentCsvImportService` 移除账户段解析与预建逻辑。
+- 投资 CSV 导入时持仓/流水的账户按名称匹配已有账户（配置已建），匹配不到时按 `(ledgerId, name)` 创建兜底，保持流水/持仓可导入。
+
+7.16.4 测试（qa）：
+- 配置导出→导入逐字段恢复 7 个新增字段 + ledgerId 绑定正确。
+- 投资 CSV 不再含【账户】段；数据导入按名匹配账户。
+
+**约束**：全量 `flutter test` 0 failed；改动文件 analyze 无新增 error；HANDOFF/TEAM 只增不减。
+
+**git 状态**：当前分支 main，基线 `b9ddadc`，待派工
+
+---
+
+## 2026-08-17
+
+**移交角色**：PM
 **接收角色**：invest-logic + qa
 
 **任务**：7.15.3 返工：投资 CSV 导入账户已存在时补写详细字段
