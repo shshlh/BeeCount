@@ -32,6 +32,25 @@
 ## 2026-08-17
 
 **移交角色**：PM
+**接收角色**：architect + invest-logic + qa
+
+**任务**：7.16.5 返工：配置导入账户绑定 YAML 账本
+
+**问题**：配置导入 UI 不传 `ledgerId`，账户导入 `targetLedgerId = ledgerId ?? 0` 落到 0，导致账户 `ledger_id=0`，账户管理页按账本过滤看不到。`AccountItem` 未带账本归属，导入无从绑定正确账本。
+
+**要求**：
+- `AccountItem` 增加账本归属字段（建议 `ledgerName`），`fromDb` 由导出的 `ledgerIdToName` 映射填充，`toMap/fromMap` 同步。
+- 账户导入：优先用显式 `ledgerId`；否则按 `ledgerName` 在已导入账本中查找 id 绑定；仍找不到则绑定唯一账本，无账本时降级 0 并告警。
+- 补测试：`importFromYaml` 不传 `ledgerId`（模拟真实 UI），断言账户绑定到 YAML 指定账本而非 0。
+- 全量 `flutter test` 0 failed；改动文件 analyze 无新增 error；HANDOFF/TEAM 只增不减。
+
+**git 状态**：当前分支 main，基线 `9c4ca37`，待返工
+
+---
+
+## 2026-08-17
+
+**移交角色**：PM
 **接收角色**：归档
 
 **任务**：7.16 APK 构建修复（androidx.test 动态版本）
