@@ -118,6 +118,7 @@ void main() {
       ledgerId: ledgerId,
       options: options,
     );
+    expect(yaml, contains('ledger_name: "L"'));
 
     await repo.resetLedger(ledgerId);
     expect(await repo.getAllAccounts(), isEmpty);
@@ -158,5 +159,38 @@ void main() {
       expect(dst.customIconPath, src.customIconPath,
           reason: '$name customIconPath');
     }
+  });
+
+  test('importFromYaml 不传 ledgerId 时账户按 YAML 账本名绑定而非 0', () async {
+    final ledgerId = await repo.createLedger(name: 'L', currency: 'CNY');
+    await repo.createAccount(
+        ledgerId: ledgerId, name: '现金', type: 'cash', currency: 'CNY');
+
+    const options = ExportOptions(
+      ledgers: false,
+      categories: false,
+      accounts: true,
+      tags: false,
+      recurringTransactions: false,
+      budgets: false,
+      appSettings: false,
+      ai: false,
+    );
+    final yaml = await ConfigExportService.exportToYaml(
+      repository: repo,
+      options: options,
+    );
+
+    await repo.resetLedger(ledgerId);
+    await ConfigExportService.importFromYaml(
+      yaml,
+      repository: repo,
+      options: options,
+    );
+
+    final accounts = await repo.getAllAccounts();
+    expect(accounts, hasLength(1));
+    expect(accounts.single.ledgerId, ledgerId);
+    expect(accounts.single.ledgerId, isNot(0));
   });
 }

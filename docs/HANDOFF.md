@@ -31,6 +31,26 @@
 
 ## 2026-08-17
 
+**移交角色**：architect + invest-logic + qa
+**接收角色**：PM（审查合入）
+
+**任务**：7.16.5 返工：配置导入账户绑定 YAML 账本
+
+**完成工作**：
+- `AccountItem` 增加 `ledgerName` 字段，`fromDb` 由导出的 `ledgerIdToName` 映射填充，`toMap / fromMap` 与 YAML buffer 同步输出
+- 配置导入账户按目标账本解析：优先显式 `ledgerId` → 按 YAML `ledgerName` 查找账本 → 唯一账本 → 无账本降级 0 并告警
+- 新增测试：`importFromYaml` 不传 `ledgerId`（模拟真实 UI）时账户绑定到 YAML 指定账本而非 0
+
+**验证**：
+- 全量 `flutter test`：816 passed / 1 skipped / 0 failed
+- 改动文件 `dart analyze` 无新增 issue；全仓 analyze 859 项既有 info/warning，无 error
+
+**git 状态**：当前分支 main，改动未提交，待 PM 审查合入
+
+---
+
+## 2026-08-17
+
 **移交角色**：PM
 **接收角色**：architect + invest-logic + qa
 

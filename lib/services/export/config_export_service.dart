@@ -889,6 +889,7 @@ class AccountsConfig {
 
 /// 账户项
 class AccountItem {
+  final String? ledgerName; // 7.16.5: 账本归属，导入时按名称绑定
   final String name;
   final String type;
   final String currency;
@@ -909,6 +910,7 @@ class AccountItem {
   final String? note; // 备注
 
   const AccountItem({
+    this.ledgerName,
     required this.name,
     required this.type,
     required this.currency,
@@ -936,6 +938,9 @@ class AccountItem {
       'currency': currency,
       'initial_balance': initialBalance,
     };
+    if (ledgerName != null && ledgerName!.isNotEmpty) {
+      map['ledger_name'] = ledgerName;
+    }
     if (initialDate != null) map['initial_date'] = initialDate;
     if (createdAt != null) map['created_at'] = createdAt;
     if (sortOrder != null) map['sort_order'] = sortOrder;
@@ -955,6 +960,7 @@ class AccountItem {
 
   static AccountItem fromMap(Map<String, dynamic> map) {
     return AccountItem(
+      ledgerName: map['ledger_name'] as String?,
       name: map['name'] as String,
       type: map['type'] as String,
       currency: map['currency'] as String? ?? 'CNY',
@@ -976,8 +982,9 @@ class AccountItem {
     );
   }
 
-  factory AccountItem.fromDb(Account account) {
+  factory AccountItem.fromDb(Account account, {String? ledgerName}) {
     return AccountItem(
+      ledgerName: ledgerName,
       name: account.name,
       type: account.type,
       currency: account.currency,
@@ -1601,6 +1608,10 @@ class ConfigExportService {
     if (repository != null && (options.accounts || requiredAccountIds.isNotEmpty)) {
       try {
         final accountsList = await repository.getAllAccounts();
+        final ledgersForAccounts = await repository.getAllLedgers();
+        final ledgerIdToName = {
+          for (final l in ledgersForAccounts) l.id: l.name,
+        };
 
         if (accountsList.isNotEmpty) {
           // 如果用户选择了导出账户，则导出全部
@@ -1612,7 +1623,10 @@ class ConfigExportService {
           if (itemsToExport.isNotEmpty) {
             accountsConfig = AccountsConfig(
               items: itemsToExport
-                  .map((account) => AccountItem.fromDb(account))
+                  .map((account) => AccountItem.fromDb(
+                        account,
+                        ledgerName: ledgerIdToName[account.ledgerId],
+                      ))
                   .toList(),
             );
           }
@@ -2121,6 +2135,9 @@ class ConfigExportService {
         for (final item in items) {
           final itemMap = item as Map<String, dynamic>;
           buffer.writeln('    - name: "${itemMap['name']}"');
+          if (itemMap.containsKey('ledger_name') && itemMap['ledger_name'] != null) {
+            buffer.writeln('      ledger_name: "${itemMap['ledger_name']}"');
+          }
           buffer.writeln('      type: "${itemMap['type']}"');
           buffer.writeln('      currency: "${itemMap['currency']}"');
           buffer.writeln('      initial_balance: ${itemMap['initial_balance']}');
@@ -2656,7 +2673,22 @@ class ConfigExportService {
     if (options.accounts && config.accounts != null && repository != null) {
       try {
         final items = config.accounts!.items;
-        final targetLedgerId = ledgerId ?? 0;
+
+        // 7.16.5: 优先显式 ledgerId，其次按 YAML 账本名绑定，
+        // 再退到唯一账本，最后降级 0 并告警。
+        Future<int> resolveLedgerId(AccountItem item) async {
+          if (ledgerId != null) return ledgerId;
+          final allLedgers = await repository.getAllLedgers();
+          if (item.ledgerName != null && item.ledgerName!.isNotEmpty) {
+            final hit =
+                allLedgers.where((l) => l.name == item.ledgerName).toList();
+            if (hit.isNotEmpty) return hit.first.id;
+          }
+          if (allLedgers.length == 1) return allLedgers.first.id;
+          logger.warning(
+              'ConfigImport', '账户 ${item.name} 找不到账本归属，降级 ledger_id=0');
+          return 0;
+        }
 
         // 7.16.2: 按 (ledgerId, name) 匹配，不再按全局 name 简单跳过。
         final existingAccounts = await repository.getAllAccounts();
@@ -2671,6 +2703,7 @@ class ConfigExportService {
         final sortOrderUpdates = <({int id, int sortOrder})>[];
 
         for (final item in items) {
+          final targetLedgerId = await resolveLedgerId(item);
           final key = '$targetLedgerId|${item.name.toLowerCase()}';
           final existing = existingByKey[key];
           final parsedInitialDate = item.initialDate != null
