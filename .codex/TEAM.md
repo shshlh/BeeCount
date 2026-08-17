@@ -144,6 +144,7 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 7.16.4 测试 | ✅ | qa | 配置 roundtrip 7 字段 + 投资 CSV 无账户段 + 按名匹配 | 2026-08-17 |
 | 7.16 PM 复审合入 | ✅ | PM | 全量测试 815 passed + analyze 无 error + HANDOFF 记录 | 2026-08-17 |
 | 7.16.5 返工：配置导入账户绑定 YAML 账本 | ✅ | architect + invest-logic + qa | AccountItem 带 ledgerName + 导入按账本绑定 + 测试 | 2026-08-17 |
+| 7.16.5 PM 复审合入 | ✅ | PM | 全量测试 816 passed + analyze 无 error + HANDOFF 记录 | 2026-08-17 |
 
 ### 阶段 7.4：账户备注修复
 

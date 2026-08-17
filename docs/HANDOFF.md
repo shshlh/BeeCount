@@ -31,6 +31,24 @@
 
 ## 2026-08-17
 
+**移交角色**：PM
+**接收角色**：归档 / 待实机验证
+
+**任务**：7.16.5 复审合入
+
+**完成工作**：
+- 审查通过：`AccountItem` 带 `ledgerName`，配置导入按显式 ledgerId → YAML 账本名 → 唯一账本 → 0 降级绑定账户
+- 全量 `flutter test`：816 passed / 1 skipped / 0 failed；改动文件 analyze 无 error
+- 合入 main：`b128ff2`
+
+**遗留（P3，非阻塞）**：`resolveLedgerId` 在账户循环内每次 `getAllLedgers()`，批量账户时 N 次查询，可后续提到循环外。
+
+**git 状态**：当前分支 main，已提交 `b128ff2`
+
+---
+
+## 2026-08-17
+
 **移交角色**：architect + invest-logic + qa
 **接收角色**：PM（审查合入）
 
