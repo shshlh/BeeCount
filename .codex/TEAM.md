@@ -169,6 +169,7 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 7.18.2 收益/涨跌 Decimal 化 | ✅ | invest-logic + invest-ui + qa | Snapshot/计算/摘要 Decimal + UI 兼容 | 2026-08-18 |
 | 7.18.3 money-only 刷新状态 | ✅ | invest-logic + qa | 节流标识 + empty eligible 状态 + 回归测试 | 2026-08-18 |
 | 7.18 PM 复审合入 | ✅ | PM | 全量测试 848 passed + analyze 无新增 + HANDOFF 记录 | 2026-08-18 |
+| 7.18 PM APK 编译 | ✅ | PM | dev-debug + prod-release APK | 2026-08-18 |
 
 ### 阶段 7.4：账户备注修复
 

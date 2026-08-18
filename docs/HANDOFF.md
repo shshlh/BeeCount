@@ -34,6 +34,22 @@
 **移交角色**：PM
 **接收角色**：归档 / 待实机验证
 
+**任务**：7.18 APK 编译
+
+**完成工作**：
+- `flutter build apk --debug --flavor dev`：`app-dev-debug.apk`
+- `flutter build apk --release --flavor prod`：`app-prod-release.apk`
+- 源码工作树干净，构建产物未纳入 Git
+
+**git 状态**：当前分支 main，基线 `8d59a41`，待提交构建记录
+
+---
+
+## 2026-08-18
+
+**移交角色**：PM
+**接收角色**：归档 / 待实机验证
+
 **任务**：7.18 P3 收口复审合入
 
 **完成工作**：
