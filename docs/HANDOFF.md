@@ -31,6 +31,23 @@
 
 ## 2026-08-18
 
+**移交角色**：PM
+**接收角色**：归档 / 待实机验证
+
+**任务**：7.19 复审合入
+
+**完成工作**：
+- 审查通过：再记一笔 originalEditId、QDII 买入回填、投资 CSV roundtrip 均修复
+- 全量 `flutter test`：866 passed / 1 skipped / 0 failed
+- 改动文件 analyze 无新增 error
+- 合入 main：`2e4ba03`
+
+**git 状态**：当前分支 main，已提交 `2e4ba03`
+
+---
+
+## 2026-08-18
+
 **移交角色**：invest-ui + invest-logic + qa
 **接收角色**：PM（复审）
 

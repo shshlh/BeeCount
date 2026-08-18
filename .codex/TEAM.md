@@ -180,6 +180,7 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 7.19.3 今日/昨日收益按更新日对齐 | ✅ | invest-logic + invest-ui + qa | updatedAt 口径分流 + UI --/待更新 + QDII 测试 | 2026-08-18 |
 | 7.19.4 QDII 标签与最新净值判定 | ✅ | architect + invest-logic + invest-ui + qa | is_qdii schema v42 + 目标净值日判定 + 回归测试 | 2026-08-18 |
 | 7.19.5 返工：再记一笔标签/作者 + QDII 回填 + CSV roundtrip | ✅ | invest-ui + invest-logic + qa | originalEditId + isQdii 回填 + 投资 CSV 字段 + 回归测试 | 2026-08-18 |
+| 7.19 PM 复审合入 | ✅ | PM | 全量测试 866 passed + analyze 无新增 + HANDOFF 记录 | 2026-08-18 |
 
 ### 阶段 7.20：基金模块 v3 UI 改版
 
