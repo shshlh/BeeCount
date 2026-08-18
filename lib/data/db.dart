@@ -232,6 +232,22 @@ class InvestmentHoldings extends Table {
   DateTimeColumn get updatedAt => dateTime().nullable()();
 }
 
+// --- v41: 基金净值历史表 ---
+/// 每基金按净值日保存一档单位净值，供今日/昨日收益与涨跌幅计算。
+/// 主键 (fund_code, nav_date)，重复抓取按日期 upsert。
+class FundNavHistories extends Table {
+  @override
+  String get tableName => 'fund_nav_history';
+
+  TextColumn get fundCode => text()();
+  DateTimeColumn get navDate => dateTime()();
+  RealColumn get unitNav => real()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {fundCode, navDate};
+}
+
 // --- v36: 基金分组表 ---
 /// 用户自定义基金分组（本地数据，不同步）。
 class InvestmentGroups extends Table {
@@ -539,6 +555,7 @@ class SharedLedgerTags extends Table {
   ExchangeRates,
   ExchangeRateOverrides,
   InvestmentHoldings,
+  FundNavHistories,
   InvestmentGroups,
   InvestmentGroupHoldings,
 ])
@@ -552,7 +569,7 @@ class BeeDatabase extends _$BeeDatabase {
 
   @override
   int get schemaVersion =>
-      40; // v31: 账户隐藏 / v32: 投资数据层 / v33: 账户体系改造 / v34: 账户初始资金日期 / v35: 账户不计入资产 / v36: 基金分组 / v37: 投资净值日期 / v38: 表外账户 / v39: 转换内部流水不进明细 / v40: 账户 ledger_id 回填/孤儿清理
+      41; // v31: 账户隐藏 / v32: 投资数据层 / v33: 账户体系改造 / v34: 账户初始资金日期 / v35: 账户不计入资产 / v36: 基金分组 / v37: 投资净值日期 / v38: 表外账户 / v39: 转换内部流水不进明细 / v40: 账户 ledger_id 回填/孤儿清理 / v41: 基金净值历史
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1418,6 +1435,18 @@ class BeeDatabase extends _$BeeDatabase {
             await migrateAccountLedgerIds();
             logger.info('DBMigration', 'v40 迁移完成');
           }
+          if (from < 41) {
+            logger.info('DBMigration', '开始迁移到 v41: 基金净值历史(fund_nav_history)');
+            await _createTableIfMissing(
+                migrator, 'fund_nav_history', fundNavHistories);
+            await customStatement(
+                'CREATE INDEX IF NOT EXISTS idx_fund_nav_history_code '
+                'ON fund_nav_history (fund_code);');
+            await customStatement(
+                'CREATE INDEX IF NOT EXISTS idx_fund_nav_history_date '
+                'ON fund_nav_history (nav_date);');
+            logger.info('DBMigration', 'v41 迁移完成');
+          }
         },
         onCreate: (m) async {
           await m.createAll();
@@ -1442,6 +1471,12 @@ class BeeDatabase extends _$BeeDatabase {
           await customStatement(
               'CREATE INDEX IF NOT EXISTS idx_investment_group_holdings_holding '
               'ON investment_group_holdings (holding_id);');
+          await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_fund_nav_history_code '
+              'ON fund_nav_history (fund_code);');
+          await customStatement(
+              'CREATE INDEX IF NOT EXISTS idx_fund_nav_history_date '
+              'ON fund_nav_history (nav_date);');
         },
       );
 

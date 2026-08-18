@@ -4,6 +4,7 @@ import 'package:decimal/decimal.dart';
 import '../data/db.dart';
 import '../data/repositories/investment_repository.dart';
 import '../data/repositories/local/local_investment_repository.dart';
+import '../services/data/daily_return_calculator.dart';
 import '../services/data/investment_service.dart';
 import 'database_providers.dart';
 
@@ -127,6 +128,19 @@ final holdingReturnProvider = FutureProvider.family
   ref.watch(currentHoldingsProvider);
   final service = ref.watch(investmentServiceProvider);
   return service.getHoldingReturn(holdingId);
+});
+
+/// 当前账本每只持仓的今日/昨日收益与涨跌幅（7.17.6）。
+final holdingDailyReturnsProvider =
+    FutureProvider.autoDispose<Map<int, DailyReturnSnapshot>>((ref) async {
+  final holdings = await ref.watch(currentHoldingsProvider.future);
+  final service = ref.watch(investmentServiceProvider);
+  final result = <int, DailyReturnSnapshot>{};
+  for (final holding in holdings) {
+    final daily = await service.getHoldingDailyReturn(holding.id);
+    if (daily != null) result[holding.id] = daily;
+  }
+  return result;
 });
 
 // ---- 基金分组与排序（v6.2）----

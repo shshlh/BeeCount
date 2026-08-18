@@ -9,6 +9,8 @@ import '../../data/repositories/investment_repository.dart';
 import 'package:decimal/decimal.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'daily_return_calculator.dart';
+import 'holiday_calendar.dart';
 import 'nav_fetch_service.dart';
 
 Decimal _toDecimal(double value) => Decimal.parse(value.toString());
@@ -23,6 +25,11 @@ class PortfolioSummary {
   final double unrealizedPnL;
   final double returnRate;
   final int holdingCount;
+  final double? todayProfit;
+  final double? yesterdayProfit;
+  final double? todayChangePct;
+  final double? yesterdayChangePct;
+  final DailyNavStatus dailyStatus;
 
   const PortfolioSummary({
     required this.totalMarketValue,
@@ -30,12 +37,20 @@ class PortfolioSummary {
     required this.unrealizedPnL,
     required this.returnRate,
     required this.holdingCount,
+    this.todayProfit,
+    this.yesterdayProfit,
+    this.todayChangePct,
+    this.yesterdayChangePct,
+    this.dailyStatus = DailyNavStatus.pending,
   });
 
   @override
   String toString() =>
       'PortfolioSummary(mv=$totalMarketValue, cost=$totalCost, pnl=$unrealizedPnL, rate=$returnRate, count=$holdingCount)';
 }
+
+/// 今日/昨日净值更新状态（7.17.5）。
+enum DailyNavStatus { pending, partialUpdated, allUpdated, nonTradingDay }
 
 /// 单持仓未实现收益。
 class HoldingReturn {
@@ -48,10 +63,14 @@ class HoldingReturn {
 /// 一次净值刷新结果（6.13.3）。
 class NavRefreshResult {
   final int updatedCount;
+  final int advancedCount;
+  final int totalAdvancedCount;
   final List<String> skippedCodes;
 
   const NavRefreshResult({
     required this.updatedCount,
+    this.advancedCount = 0,
+    this.totalAdvancedCount = 0,
     required this.skippedCodes,
   });
 }
@@ -59,9 +78,14 @@ class NavRefreshResult {
 class InvestmentService {
   final InvestmentRepository _repo;
   NavFetchService? _navFetch;
+  final DateTime Function() _clock;
 
-  InvestmentService(this._repo, {NavFetchService? navFetch})
-      : _navFetch = navFetch;
+  InvestmentService(
+    this._repo, {
+    NavFetchService? navFetch,
+    DateTime Function()? clock,
+  })  : _navFetch = navFetch,
+        _clock = clock ?? DateTime.now;
 
   NavFetchService get _navFetchService => _navFetch ??= NavFetchService();
 
@@ -91,7 +115,7 @@ class InvestmentService {
       final prefs = await SharedPreferences.getInstance();
       final last = prefs.getInt('investment_nav_refresh_at_$ledgerId');
       if (last != null) {
-        final elapsed = DateTime.now()
+        final elapsed = _clock()
             .difference(DateTime.fromMillisecondsSinceEpoch(last));
         if (elapsed < _navRefreshThrottle) {
           return const NavRefreshResult(updatedCount: 0, skippedCodes: []);
@@ -105,18 +129,49 @@ class InvestmentService {
     }
 
     final codes = holdings.map((h) => h.fundCode).toSet().toList();
-    final navs = await _navFetchService.fetchLatestNavs(codes);
-    final successCodes = navs.keys.toSet();
-    final skippedCodes = codes.toSet().difference(successCodes).toList()
+    final histories = await _navFetchService.fetchNavHistories(codes);
+    final successCodes = histories.keys.toSet();
+    final moneyFundCodes = holdings
+        .where((h) =>
+            isMoneyFund(fundName: h.fundName, holdingType: h.holdingType))
+        .map((h) => h.fundCode)
+        .toSet();
+    final skippedCodes = codes
+        .toSet()
+        .difference(successCodes)
+        .difference(moneyFundCodes)
+        .toList()
       ..sort();
 
     final navMap = <int, FundNavQuote>{};
+    final advancedIds = <int>{};
+    final allAdvancedIds = <int>{};
     for (final h in holdings) {
-      final quote = navs[h.fundCode];
-      if (quote != null) navMap[h.id] = quote;
+      final quotes = histories[h.fundCode];
+      if (quotes == null || quotes.isEmpty) continue;
+      final quote = quotes.last;
+      navMap[h.id] = quote;
+      final previous = h.navDate;
+      final isMoney =
+          isMoneyFund(fundName: h.fundName, holdingType: h.holdingType);
+      if (previous == null || quote.navDate.isAfter(previous)) {
+        allAdvancedIds.add(h.id);
+        if (!isMoney) advancedIds.add(h.id);
+      }
     }
     if (navMap.isEmpty) {
-      return NavRefreshResult(updatedCount: 0, skippedCodes: skippedCodes);
+      return NavRefreshResult(
+        updatedCount: 0,
+        advancedCount: 0,
+        totalAdvancedCount: 0,
+        skippedCodes: skippedCodes,
+      );
+    }
+
+    for (final entry in histories.entries) {
+      for (final quote in entry.value) {
+        await _repo.upsertNavHistory(entry.key, quote.navDate, quote.nav);
+      }
     }
 
     await batchUpdateNav(navMap);
@@ -124,12 +179,84 @@ class InvestmentService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(
       'investment_nav_refresh_at_$ledgerId',
-      DateTime.now().millisecondsSinceEpoch,
+      _clock().millisecondsSinceEpoch,
     );
     return NavRefreshResult(
       updatedCount: navMap.length,
+      advancedCount: advancedIds.length,
+      totalAdvancedCount: allAdvancedIds.length,
       skippedCodes: skippedCodes,
     );
+  }
+
+  /// 7.17.5 每日净值刷新：0:01~20:00 不拉取（待更新），20:00 后进入页面
+  /// 即拉取，部分/全部更新状态按 [NavRefreshResult.advancedCount] 汇总。
+  Future<NavRefreshResult> refreshDailyNavsForLedger(
+    int ledgerId, {
+    bool force = false,
+  }) async {
+    final now = _clock();
+    if (!HolidayCalendar.isTradingDay(now)) {
+      await _saveDailyStatus(ledgerId, DailyNavStatus.nonTradingDay);
+      return const NavRefreshResult(updatedCount: 0, skippedCodes: []);
+    }
+    if (now.hour < 20) {
+      await _saveDailyStatus(ledgerId, DailyNavStatus.pending);
+      return const NavRefreshResult(updatedCount: 0, skippedCodes: []);
+    }
+
+    final result = await refreshNavsForLedgerDetailed(ledgerId, force: force);
+    if (result.updatedCount == 0 && result.skippedCodes.isEmpty) {
+      // 15 分钟节流命中，保留上次状态。
+      return result;
+    }
+
+    final holdings = await _repo.watchHoldings(ledgerId: ledgerId).first;
+    final eligibleHoldings = holdings
+        .where((h) =>
+            !isMoneyFund(fundName: h.fundName, holdingType: h.holdingType))
+        .toList();
+    final status = eligibleHoldings.isEmpty ||
+            result.advancedCount >= eligibleHoldings.length
+        ? DailyNavStatus.allUpdated
+        : (result.totalAdvancedCount > 0
+            ? DailyNavStatus.partialUpdated
+            : DailyNavStatus.pending);
+    await _saveDailyStatus(ledgerId, status);
+    return result;
+  }
+
+  /// 当前账本今日净值状态（读取上次刷新结果，未刷新时按时间兜底）。
+  Future<DailyNavStatus> getDailyNavStatus(int ledgerId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final stored = prefs.getString(_dailyStatusKey(ledgerId));
+    if (stored != null) {
+      return DailyNavStatus.values.firstWhere(
+        (s) => s.name == stored,
+        orElse: () => DailyNavStatus.pending,
+      );
+    }
+    final now = _clock();
+    if (!HolidayCalendar.isTradingDay(now)) {
+      return DailyNavStatus.nonTradingDay;
+    }
+    return DailyNavStatus.pending;
+  }
+
+  Future<void> _saveDailyStatus(int ledgerId, DailyNavStatus status) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _dailyStatusKey(ledgerId),
+      status.name,
+    );
+  }
+
+  /// 状态按自然日隔离，跨日自动回退 pending/非交易日，避免残留昨日状态。
+  String _dailyStatusKey(int ledgerId) {
+    final now = _clock();
+    final month = now.month.toString().padLeft(2, '0');
+    final day = now.day.toString().padLeft(2, '0');
+    return 'investment_nav_daily_status_${ledgerId}_${now.year}$month$day';
   }
 
   // ---- 组合摘要 ----
@@ -148,14 +275,45 @@ class InvestmentService {
 
     Decimal totalMv = Decimal.zero;
     Decimal totalCost = Decimal.zero;
+    double? todayProfit;
+    double? yesterdayProfit;
+    Decimal todayBase = Decimal.zero;
+    Decimal yesterdayBase = Decimal.zero;
     for (final h in holdings) {
       totalMv += _toDecimal(h.marketValue);
       totalCost += _toDecimal(h.totalCost);
+      if (isMoneyFund(fundName: h.fundName, holdingType: h.holdingType)) {
+        continue;
+      }
+      final history = await _repo.getNavHistory(h.fundCode, limit: 3);
+      if (history.length < 3) continue;
+      final quotes = [
+        for (final row in history)
+          FundNavQuote(nav: row.unitNav, navDate: row.navDate),
+      ];
+      final snapshot =
+          calculateDailyReturn(history: quotes, shares: h.totalShares);
+      if (snapshot == null) continue;
+      todayProfit = (todayProfit ?? 0) + snapshot.todayProfit;
+      yesterdayProfit = (yesterdayProfit ?? 0) + snapshot.yesterdayProfit;
+      final navsByDate = [...quotes]
+        ..sort((a, b) => a.navDate.compareTo(b.navDate));
+      final navs = navsByDate
+          .map((q) => q.nav)
+          .where((nav) => nav > 0)
+          .toList();
+      if (navs.length >= 3) {
+        todayBase +=
+            _toDecimal(navs[navs.length - 2]) * _toDecimal(h.totalShares);
+        yesterdayBase +=
+            _toDecimal(navs[navs.length - 3]) * _toDecimal(h.totalShares);
+      }
     }
 
     final pnl = totalMv - totalCost;
     final rate =
         totalCost > Decimal.zero ? _divide(pnl, totalCost) : Decimal.zero;
+    final dailyStatus = await getDailyNavStatus(ledgerId);
 
     return PortfolioSummary(
       totalMarketValue: totalMv.toDouble(),
@@ -163,6 +321,15 @@ class InvestmentService {
       unrealizedPnL: pnl.toDouble(),
       returnRate: rate.toDouble(),
       holdingCount: holdings.length,
+      todayProfit: todayProfit,
+      yesterdayProfit: yesterdayProfit,
+      todayChangePct: todayBase > Decimal.zero
+          ? _divide(_toDecimal(todayProfit ?? 0), todayBase).toDouble()
+          : null,
+      yesterdayChangePct: yesterdayBase > Decimal.zero
+          ? _divide(_toDecimal(yesterdayProfit ?? 0), yesterdayBase).toDouble()
+          : null,
+      dailyStatus: dailyStatus,
     );
   }
 
@@ -192,6 +359,30 @@ class InvestmentService {
     return HoldingReturn(
       unrealizedPnL: pnl.toDouble(),
       returnRate: rate.toDouble(),
+    );
+  }
+
+  /// 单持仓今日/昨日收益与涨跌幅（7.17.3）。
+  ///
+  /// 历史不足 3 档返回 null；货币基金返回
+  /// [DailyReturnSnapshot.notApplicable]（UI 显示「--」）。
+  Future<DailyReturnSnapshot?> getHoldingDailyReturn(int holdingId) async {
+    final holding = await _repo.getHolding(holdingId);
+    if (holding == null) return null;
+    if (isMoneyFund(
+      fundName: holding.fundName,
+      holdingType: holding.holdingType,
+    )) {
+      return DailyReturnSnapshot.notApplicable;
+    }
+    final history = await _repo.getNavHistory(holding.fundCode, limit: 3);
+    if (history.isEmpty) return null;
+    return calculateDailyReturn(
+      history: [
+        for (final row in history)
+          FundNavQuote(nav: row.unitNav, navDate: row.navDate),
+      ],
+      shares: holding.totalShares,
     );
   }
 

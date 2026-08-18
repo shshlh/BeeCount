@@ -11978,6 +11978,279 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
   }
 }
 
+class $FundNavHistoriesTable extends FundNavHistories
+    with TableInfo<$FundNavHistoriesTable, FundNavHistory> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $FundNavHistoriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _fundCodeMeta =
+      const VerificationMeta('fundCode');
+  @override
+  late final GeneratedColumn<String> fundCode = GeneratedColumn<String>(
+      'fund_code', aliasedName, false,
+      type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _navDateMeta =
+      const VerificationMeta('navDate');
+  @override
+  late final GeneratedColumn<DateTime> navDate = GeneratedColumn<DateTime>(
+      'nav_date', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  static const VerificationMeta _unitNavMeta =
+      const VerificationMeta('unitNav');
+  @override
+  late final GeneratedColumn<double> unitNav = GeneratedColumn<double>(
+      'unit_nav', aliasedName, false,
+      type: DriftSqlType.double, requiredDuringInsert: true);
+  static const VerificationMeta _updatedAtMeta =
+      const VerificationMeta('updatedAt');
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+      'updated_at', aliasedName, false,
+      type: DriftSqlType.dateTime, requiredDuringInsert: true);
+  @override
+  List<GeneratedColumn> get $columns => [fundCode, navDate, unitNav, updatedAt];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'fund_nav_history';
+  @override
+  VerificationContext validateIntegrity(Insertable<FundNavHistory> instance,
+      {bool isInserting = false}) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('fund_code')) {
+      context.handle(_fundCodeMeta,
+          fundCode.isAcceptableOrUnknown(data['fund_code']!, _fundCodeMeta));
+    } else if (isInserting) {
+      context.missing(_fundCodeMeta);
+    }
+    if (data.containsKey('nav_date')) {
+      context.handle(_navDateMeta,
+          navDate.isAcceptableOrUnknown(data['nav_date']!, _navDateMeta));
+    } else if (isInserting) {
+      context.missing(_navDateMeta);
+    }
+    if (data.containsKey('unit_nav')) {
+      context.handle(_unitNavMeta,
+          unitNav.isAcceptableOrUnknown(data['unit_nav']!, _unitNavMeta));
+    } else if (isInserting) {
+      context.missing(_unitNavMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(_updatedAtMeta,
+          updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta));
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {fundCode, navDate};
+  @override
+  FundNavHistory map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return FundNavHistory(
+      fundCode: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}fund_code'])!,
+      navDate: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}nav_date'])!,
+      unitNav: attachedDatabase.typeMapping
+          .read(DriftSqlType.double, data['${effectivePrefix}unit_nav'])!,
+      updatedAt: attachedDatabase.typeMapping
+          .read(DriftSqlType.dateTime, data['${effectivePrefix}updated_at'])!,
+    );
+  }
+
+  @override
+  $FundNavHistoriesTable createAlias(String alias) {
+    return $FundNavHistoriesTable(attachedDatabase, alias);
+  }
+}
+
+class FundNavHistory extends DataClass implements Insertable<FundNavHistory> {
+  final String fundCode;
+  final DateTime navDate;
+  final double unitNav;
+  final DateTime updatedAt;
+  const FundNavHistory(
+      {required this.fundCode,
+      required this.navDate,
+      required this.unitNav,
+      required this.updatedAt});
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['fund_code'] = Variable<String>(fundCode);
+    map['nav_date'] = Variable<DateTime>(navDate);
+    map['unit_nav'] = Variable<double>(unitNav);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  FundNavHistoriesCompanion toCompanion(bool nullToAbsent) {
+    return FundNavHistoriesCompanion(
+      fundCode: Value(fundCode),
+      navDate: Value(navDate),
+      unitNav: Value(unitNav),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory FundNavHistory.fromJson(Map<String, dynamic> json,
+      {ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return FundNavHistory(
+      fundCode: serializer.fromJson<String>(json['fundCode']),
+      navDate: serializer.fromJson<DateTime>(json['navDate']),
+      unitNav: serializer.fromJson<double>(json['unitNav']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'fundCode': serializer.toJson<String>(fundCode),
+      'navDate': serializer.toJson<DateTime>(navDate),
+      'unitNav': serializer.toJson<double>(unitNav),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  FundNavHistory copyWith(
+          {String? fundCode,
+          DateTime? navDate,
+          double? unitNav,
+          DateTime? updatedAt}) =>
+      FundNavHistory(
+        fundCode: fundCode ?? this.fundCode,
+        navDate: navDate ?? this.navDate,
+        unitNav: unitNav ?? this.unitNav,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
+  FundNavHistory copyWithCompanion(FundNavHistoriesCompanion data) {
+    return FundNavHistory(
+      fundCode: data.fundCode.present ? data.fundCode.value : this.fundCode,
+      navDate: data.navDate.present ? data.navDate.value : this.navDate,
+      unitNav: data.unitNav.present ? data.unitNav.value : this.unitNav,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FundNavHistory(')
+          ..write('fundCode: $fundCode, ')
+          ..write('navDate: $navDate, ')
+          ..write('unitNav: $unitNav, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(fundCode, navDate, unitNav, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FundNavHistory &&
+          other.fundCode == this.fundCode &&
+          other.navDate == this.navDate &&
+          other.unitNav == this.unitNav &&
+          other.updatedAt == this.updatedAt);
+}
+
+class FundNavHistoriesCompanion extends UpdateCompanion<FundNavHistory> {
+  final Value<String> fundCode;
+  final Value<DateTime> navDate;
+  final Value<double> unitNav;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const FundNavHistoriesCompanion({
+    this.fundCode = const Value.absent(),
+    this.navDate = const Value.absent(),
+    this.unitNav = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  FundNavHistoriesCompanion.insert({
+    required String fundCode,
+    required DateTime navDate,
+    required double unitNav,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  })  : fundCode = Value(fundCode),
+        navDate = Value(navDate),
+        unitNav = Value(unitNav),
+        updatedAt = Value(updatedAt);
+  static Insertable<FundNavHistory> custom({
+    Expression<String>? fundCode,
+    Expression<DateTime>? navDate,
+    Expression<double>? unitNav,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (fundCode != null) 'fund_code': fundCode,
+      if (navDate != null) 'nav_date': navDate,
+      if (unitNav != null) 'unit_nav': unitNav,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  FundNavHistoriesCompanion copyWith(
+      {Value<String>? fundCode,
+      Value<DateTime>? navDate,
+      Value<double>? unitNav,
+      Value<DateTime>? updatedAt,
+      Value<int>? rowid}) {
+    return FundNavHistoriesCompanion(
+      fundCode: fundCode ?? this.fundCode,
+      navDate: navDate ?? this.navDate,
+      unitNav: unitNav ?? this.unitNav,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (fundCode.present) {
+      map['fund_code'] = Variable<String>(fundCode.value);
+    }
+    if (navDate.present) {
+      map['nav_date'] = Variable<DateTime>(navDate.value);
+    }
+    if (unitNav.present) {
+      map['unit_nav'] = Variable<double>(unitNav.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('FundNavHistoriesCompanion(')
+          ..write('fundCode: $fundCode, ')
+          ..write('navDate: $navDate, ')
+          ..write('unitNav: $unitNav, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $InvestmentGroupsTable extends InvestmentGroups
     with TableInfo<$InvestmentGroupsTable, InvestmentGroup> {
   @override
@@ -12512,6 +12785,8 @@ abstract class _$BeeDatabase extends GeneratedDatabase {
       $ExchangeRateOverridesTable(this);
   late final $InvestmentHoldingsTable investmentHoldings =
       $InvestmentHoldingsTable(this);
+  late final $FundNavHistoriesTable fundNavHistories =
+      $FundNavHistoriesTable(this);
   late final $InvestmentGroupsTable investmentGroups =
       $InvestmentGroupsTable(this);
   late final $InvestmentGroupHoldingsTable investmentGroupHoldings =
@@ -12543,6 +12818,7 @@ abstract class _$BeeDatabase extends GeneratedDatabase {
         exchangeRates,
         exchangeRateOverrides,
         investmentHoldings,
+        fundNavHistories,
         investmentGroups,
         investmentGroupHoldings
       ];
@@ -18279,6 +18555,165 @@ typedef $$InvestmentHoldingsTableProcessedTableManager = ProcessedTableManager<
     (InvestmentHolding, $$InvestmentHoldingsTableReferences),
     InvestmentHolding,
     PrefetchHooks Function({bool investmentGroupHoldingsRefs})>;
+typedef $$FundNavHistoriesTableCreateCompanionBuilder
+    = FundNavHistoriesCompanion Function({
+  required String fundCode,
+  required DateTime navDate,
+  required double unitNav,
+  required DateTime updatedAt,
+  Value<int> rowid,
+});
+typedef $$FundNavHistoriesTableUpdateCompanionBuilder
+    = FundNavHistoriesCompanion Function({
+  Value<String> fundCode,
+  Value<DateTime> navDate,
+  Value<double> unitNav,
+  Value<DateTime> updatedAt,
+  Value<int> rowid,
+});
+
+class $$FundNavHistoriesTableFilterComposer
+    extends Composer<_$BeeDatabase, $FundNavHistoriesTable> {
+  $$FundNavHistoriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get fundCode => $composableBuilder(
+      column: $table.fundCode, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get navDate => $composableBuilder(
+      column: $table.navDate, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<double> get unitNav => $composableBuilder(
+      column: $table.unitNav, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnFilters(column));
+}
+
+class $$FundNavHistoriesTableOrderingComposer
+    extends Composer<_$BeeDatabase, $FundNavHistoriesTable> {
+  $$FundNavHistoriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get fundCode => $composableBuilder(
+      column: $table.fundCode, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get navDate => $composableBuilder(
+      column: $table.navDate, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<double> get unitNav => $composableBuilder(
+      column: $table.unitNav, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+      column: $table.updatedAt, builder: (column) => ColumnOrderings(column));
+}
+
+class $$FundNavHistoriesTableAnnotationComposer
+    extends Composer<_$BeeDatabase, $FundNavHistoriesTable> {
+  $$FundNavHistoriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get fundCode =>
+      $composableBuilder(column: $table.fundCode, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get navDate =>
+      $composableBuilder(column: $table.navDate, builder: (column) => column);
+
+  GeneratedColumn<double> get unitNav =>
+      $composableBuilder(column: $table.unitNav, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$FundNavHistoriesTableTableManager extends RootTableManager<
+    _$BeeDatabase,
+    $FundNavHistoriesTable,
+    FundNavHistory,
+    $$FundNavHistoriesTableFilterComposer,
+    $$FundNavHistoriesTableOrderingComposer,
+    $$FundNavHistoriesTableAnnotationComposer,
+    $$FundNavHistoriesTableCreateCompanionBuilder,
+    $$FundNavHistoriesTableUpdateCompanionBuilder,
+    (
+      FundNavHistory,
+      BaseReferences<_$BeeDatabase, $FundNavHistoriesTable, FundNavHistory>
+    ),
+    FundNavHistory,
+    PrefetchHooks Function()> {
+  $$FundNavHistoriesTableTableManager(
+      _$BeeDatabase db, $FundNavHistoriesTable table)
+      : super(TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$FundNavHistoriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$FundNavHistoriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$FundNavHistoriesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback: ({
+            Value<String> fundCode = const Value.absent(),
+            Value<DateTime> navDate = const Value.absent(),
+            Value<double> unitNav = const Value.absent(),
+            Value<DateTime> updatedAt = const Value.absent(),
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              FundNavHistoriesCompanion(
+            fundCode: fundCode,
+            navDate: navDate,
+            unitNav: unitNav,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          createCompanionCallback: ({
+            required String fundCode,
+            required DateTime navDate,
+            required double unitNav,
+            required DateTime updatedAt,
+            Value<int> rowid = const Value.absent(),
+          }) =>
+              FundNavHistoriesCompanion.insert(
+            fundCode: fundCode,
+            navDate: navDate,
+            unitNav: unitNav,
+            updatedAt: updatedAt,
+            rowid: rowid,
+          ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ));
+}
+
+typedef $$FundNavHistoriesTableProcessedTableManager = ProcessedTableManager<
+    _$BeeDatabase,
+    $FundNavHistoriesTable,
+    FundNavHistory,
+    $$FundNavHistoriesTableFilterComposer,
+    $$FundNavHistoriesTableOrderingComposer,
+    $$FundNavHistoriesTableAnnotationComposer,
+    $$FundNavHistoriesTableCreateCompanionBuilder,
+    $$FundNavHistoriesTableUpdateCompanionBuilder,
+    (
+      FundNavHistory,
+      BaseReferences<_$BeeDatabase, $FundNavHistoriesTable, FundNavHistory>
+    ),
+    FundNavHistory,
+    PrefetchHooks Function()>;
 typedef $$InvestmentGroupsTableCreateCompanionBuilder
     = InvestmentGroupsCompanion Function({
   Value<int> id,
@@ -18907,6 +19342,8 @@ class $BeeDatabaseManager {
       $$ExchangeRateOverridesTableTableManager(_db, _db.exchangeRateOverrides);
   $$InvestmentHoldingsTableTableManager get investmentHoldings =>
       $$InvestmentHoldingsTableTableManager(_db, _db.investmentHoldings);
+  $$FundNavHistoriesTableTableManager get fundNavHistories =>
+      $$FundNavHistoriesTableTableManager(_db, _db.fundNavHistories);
   $$InvestmentGroupsTableTableManager get investmentGroups =>
       $$InvestmentGroupsTableTableManager(_db, _db.investmentGroups);
   $$InvestmentGroupHoldingsTableTableManager get investmentGroupHoldings =>

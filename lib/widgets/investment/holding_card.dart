@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/db.dart';
+import '../../services/data/daily_return_calculator.dart';
 import '../../styles/tokens.dart';
 import '../biz/section_card.dart';
 import '../biz/amount_text.dart';
@@ -16,11 +17,13 @@ import '../biz/amount_text.dart';
 class HoldingCard extends ConsumerWidget {
   final InvestmentHolding holding;
   final VoidCallback? onTap;
+  final DailyReturnSnapshot? dailyReturn;
 
   const HoldingCard({
     super.key,
     required this.holding,
     this.onTap,
+    this.dailyReturn,
   });
 
   double get _pnl => holding.marketValue - holding.totalCost;
@@ -146,9 +149,108 @@ class HoldingCard extends ConsumerWidget {
                 ),
               ],
             ),
+            const SizedBox(height: BeeDimens.p8),
+            _buildDailyRow(context, ref),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDailyRow(BuildContext context, WidgetRef ref) {
+    final now = DateTime.now();
+    final yesterday = now.subtract(const Duration(days: 1));
+    final daily = dailyReturn;
+    final hasData = daily != null && !daily.isNotApplicable;
+    final dailyData = hasData ? daily : null;
+
+    return Wrap(
+      spacing: BeeDimens.p8,
+      runSpacing: 4,
+      children: [
+        _dailyChip(
+          context,
+          ref,
+          label: '今日收益（${now.year}.${now.month}.${now.day}）',
+          profit: dailyData?.todayProfit,
+          pct: null,
+        ),
+        _dailyChip(
+          context,
+          ref,
+          label: '昨日收益（${yesterday.year}.${yesterday.month}.${yesterday.day}）',
+          profit: dailyData?.yesterdayProfit,
+          pct: null,
+        ),
+        _dailyChip(
+          context,
+          ref,
+          label: '今日涨跌',
+          profit: null,
+          pct: dailyData?.todayChangePct,
+        ),
+        _dailyChip(
+          context,
+          ref,
+          label: '昨日涨跌',
+          profit: null,
+          pct: dailyData?.yesterdayChangePct,
+        ),
+      ],
+    );
+  }
+
+  Widget _dailyChip(
+    BuildContext context,
+    WidgetRef ref, {
+    required String label,
+    required double? profit,
+    required double? pct,
+  }) {
+    if (profit == null && pct == null) {
+      return _dailyText(context, ref, label, '--', neutral: true);
+    }
+    final positive = (profit ?? pct ?? 0) >= 0;
+    final color = positive
+        ? BeeTokens.incomeColor(context, ref)
+        : BeeTokens.expenseColor(context, ref);
+    final sign = positive ? '+' : '';
+    final value = profit != null
+        ? '$sign${profit.toStringAsFixed(2)}'
+        : '$sign${(pct! * 100).toStringAsFixed(2)}%';
+    return _dailyText(context, ref, label, value, color: color);
+  }
+
+  Widget _dailyText(
+    BuildContext context,
+    WidgetRef ref,
+    String label,
+    String value, {
+    Color? color,
+    bool neutral = false,
+  }) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: BeeTokens.textTertiary(context),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 12,
+            color: neutral
+                ? BeeTokens.textTertiary(context)
+                : (color ?? BeeTokens.textSecondary(context)),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 

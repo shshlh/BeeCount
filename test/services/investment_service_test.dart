@@ -1,11 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:beecount/data/db.dart';
 import 'package:beecount/data/repositories/local/local_investment_repository.dart';
 import 'package:beecount/services/data/investment_service.dart';
 import 'package:beecount/services/data/nav_fetch_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  SharedPreferences.setMockInitialValues({});
+
   late BeeDatabase db;
   late LocalInvestmentRepository repo;
   late InvestmentService service;

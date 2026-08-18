@@ -95,7 +95,7 @@ void main() {
     expect(rows, isEmpty);
   });
 
-  test('schemaVersion = 40（当前最新版本）', () {
-    expect(db.schemaVersion, 40);
+  test('schemaVersion = 41（当前最新版本）', () {
+    expect(db.schemaVersion, 41);
   });
 }

@@ -42,6 +42,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('净值'), findsOneWidget);
-    expect(find.textContaining('（'), findsNothing);
+    expect(find.textContaining('净值（'), findsNothing);
   });
 }

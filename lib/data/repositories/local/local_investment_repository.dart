@@ -1190,4 +1190,35 @@ class LocalInvestmentRepository implements InvestmentRepository {
   @override
   Future<void> syncInvestmentAccountValue(int accountId) =>
       _syncInvestmentAccountValue(accountId);
+
+  @override
+  Future<void> upsertNavHistory(
+    String fundCode,
+    DateTime navDate,
+    double nav,
+  ) async {
+    await db.into(db.fundNavHistories).insertOnConflictUpdate(
+          FundNavHistoriesCompanion.insert(
+            fundCode: fundCode,
+            navDate: navDate,
+            unitNav: nav,
+            updatedAt: DateTime.now(),
+          ),
+        );
+  }
+
+  @override
+  Future<List<FundNavHistory>> getNavHistory(
+    String fundCode, {
+    int limit = 3,
+  }) {
+    return (db.select(db.fundNavHistories)
+          ..where((h) => h.fundCode.equals(fundCode))
+          ..orderBy([
+            (h) => d.OrderingTerm(
+                expression: h.navDate, mode: d.OrderingMode.desc)
+          ])
+          ..limit(limit))
+        .get();
+  }
 }

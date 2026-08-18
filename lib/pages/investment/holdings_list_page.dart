@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/db.dart';
 import '../../providers.dart';
+import '../../services/data/holiday_calendar.dart';
 import '../../styles/tokens.dart';
 import '../../widgets/ui/ui.dart';
 import '../../widgets/biz/amount_text.dart';
@@ -35,6 +36,9 @@ class HoldingsListPage extends ConsumerStatefulWidget {
 }
 
 class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
+  Timer? _dailyPollTimer;
+  DailyNavStatus _dailyStatus = DailyNavStatus.pending;
+
   @override
   void initState() {
     super.initState();
@@ -44,14 +48,27 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
     });
   }
 
+  @override
+  void dispose() {
+    _dailyPollTimer?.cancel();
+    super.dispose();
+  }
+
   Future<void> _refreshOnEnter() async {
     final ledgerId = ref.read(currentLedgerIdProvider);
     try {
       final result = await ref
           .read(investmentServiceProvider)
-          .refreshNavsForLedgerDetailed(ledgerId);
+          .refreshDailyNavsForLedger(ledgerId);
+      _dailyStatus =
+          await ref.read(investmentServiceProvider).getDailyNavStatus(ledgerId);
+      _scheduleDailyPoll();
       _showSkippedCodes(result.skippedCodes);
-      if (result.updatedCount > 0 && mounted) _invalidateHoldings();
+      if (mounted) {
+        // 状态写入 prefs 后无条件刷新摘要，避免残留昨日状态。
+        ref.invalidate(portfolioSummaryProvider);
+        if (result.updatedCount > 0) _invalidateHoldings();
+      }
     } catch (_) {
       // 进入页面自动刷新失败静默，不打断列表
     }
@@ -62,7 +79,10 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
     try {
       final result = await ref
           .read(investmentServiceProvider)
-          .refreshNavsForLedgerDetailed(ledgerId, force: true);
+          .refreshDailyNavsForLedger(ledgerId, force: true);
+      _dailyStatus =
+          await ref.read(investmentServiceProvider).getDailyNavStatus(ledgerId);
+      _scheduleDailyPoll();
       _invalidateHoldings();
       _showSkippedCodes(result.skippedCodes);
     } catch (_) {
@@ -85,6 +105,32 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
     ref.invalidate(currentHoldingsProvider);
     ref.invalidate(portfolioSummaryProvider);
     ref.invalidate(filteredHoldingsProvider);
+    ref.invalidate(holdingDailyReturnsProvider);
+  }
+
+  /// 7.17.5 轮询：20:00 前挂一个到 20:00 的定时器；20:00 后若部分更新，
+  /// 每 15 分钟再拉一次，直到全部更新/非交易日/离开页面。
+  void _scheduleDailyPoll() {
+    _dailyPollTimer?.cancel();
+    _dailyPollTimer = null;
+    final now = DateTime.now();
+    if (!HolidayCalendar.isTradingDay(now)) return;
+    if (now.hour == 23 && now.minute >= 59) return;
+
+    if (now.hour >= 20) {
+      if (_dailyStatus != DailyNavStatus.allUpdated &&
+          _dailyStatus != DailyNavStatus.nonTradingDay) {
+        _dailyPollTimer = Timer(const Duration(minutes: 15), () {
+          if (mounted) _refreshOnEnter();
+        });
+      }
+      return;
+    }
+
+    final target = DateTime(now.year, now.month, now.day, 20);
+    _dailyPollTimer = Timer(target.difference(now), () {
+      if (mounted) _refreshOnEnter();
+    });
   }
 
   @override
@@ -100,6 +146,7 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
     final selectedGroupId = ref.watch(selectedGroupProvider);
     final sort = ref.watch(holdingsSortProvider);
     final summaryAsync = ref.watch(portfolioSummaryProvider);
+    final dailyReturnsAsync = ref.watch(holdingDailyReturnsProvider);
     final hasHoldings = holdingsAsync.asData?.value.isNotEmpty ?? false;
 
     return Scaffold(
@@ -163,6 +210,8 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {
                           final holding = filtered[index];
+                          final dailyReturn =
+                              dailyReturnsAsync.valueOrNull?[holding.id];
                           return Padding(
                             padding:
                                 const EdgeInsets.only(bottom: BeeDimens.p8),
@@ -171,6 +220,7 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
                                   _confirmDeleteHolding(context, holding),
                               child: HoldingCard(
                                 holding: holding,
+                                dailyReturn: dailyReturn,
                                 onTap: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
@@ -370,6 +420,26 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
             ),
             const SizedBox(height: BeeDimens.p8),
             _summaryPnlRow(context, ref, summary),
+            const SizedBox(height: BeeDimens.p8),
+            _summaryStatusRow(context, summary.dailyStatus),
+            const SizedBox(height: BeeDimens.p8),
+            _summaryDailyRow(
+              context,
+              ref,
+              label: '今日收益',
+              date: DateTime.now(),
+              profit: summary.todayProfit,
+              pct: summary.todayChangePct,
+            ),
+            const SizedBox(height: BeeDimens.p8),
+            _summaryDailyRow(
+              context,
+              ref,
+              label: '昨日收益',
+              date: DateTime.now().subtract(const Duration(days: 1)),
+              profit: summary.yesterdayProfit,
+              pct: summary.yesterdayChangePct,
+            ),
           ],
         ),
       ),
@@ -453,6 +523,99 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
               style: TextStyle(
                 fontSize: 12,
                 color: pnlColor,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _summaryStatusRow(BuildContext context, DailyNavStatus status) {
+    final label = switch (status) {
+      DailyNavStatus.pending => '待更新',
+      DailyNavStatus.partialUpdated => '部分更新',
+      DailyNavStatus.allUpdated => '全部更新',
+      DailyNavStatus.nonTradingDay => '非交易日',
+    };
+    final color = switch (status) {
+      DailyNavStatus.allUpdated => BeeTokens.success(context),
+      DailyNavStatus.partialUpdated => BeeTokens.warning(context),
+      DailyNavStatus.nonTradingDay => BeeTokens.info(context),
+      DailyNavStatus.pending => BeeTokens.textSecondary(context),
+    };
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          '今日净值状态',
+          style: TextStyle(
+            fontSize: 13,
+            color: BeeTokens.textSecondary(context),
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: color,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _summaryDailyRow(
+    BuildContext context,
+    WidgetRef ref, {
+    required String label,
+    required DateTime date,
+    required double? profit,
+    required double? pct,
+  }) {
+    final dateStr = '${date.year}.${date.month}.${date.day}';
+    final valueStr = profit == null
+        ? '--'
+        : '${profit >= 0 ? '+' : ''}${profit.toStringAsFixed(2)}';
+    final pctStr = pct == null
+        ? '--'
+        : '${pct >= 0 ? '+' : ''}${(pct * 100).toStringAsFixed(2)}%';
+    final profitValue = profit;
+    final color = profitValue != null
+        ? (profitValue >= 0
+            ? BeeTokens.incomeColor(context, ref)
+            : BeeTokens.expenseColor(context, ref))
+        : BeeTokens.textTertiary(context);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          '$label（$dateStr）',
+          style: TextStyle(
+            fontSize: 13,
+            color: BeeTokens.textSecondary(context),
+          ),
+        ),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              valueStr,
+              style: TextStyle(
+                fontSize: 13,
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(width: BeeDimens.p8),
+            Text(
+              pctStr,
+              style: TextStyle(
+                fontSize: 12,
+                color: color,
               ),
             ),
           ],

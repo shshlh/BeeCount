@@ -223,4 +223,13 @@ abstract class InvestmentRepository {
 
   /// 7.10.3 投资 CSV 导入后刷新投资账户市值缓存。
   Future<void> syncInvestmentAccountValue(int accountId);
+
+  /// 按净值日 upsert 一档基金净值历史（7.17.1）。
+  Future<void> upsertNavHistory(String fundCode, DateTime navDate, double nav);
+
+  /// 取某基金最近 [limit] 档净值历史，按净值日降序（7.17.1）。
+  Future<List<FundNavHistory>> getNavHistory(
+    String fundCode, {
+    int limit = 3,
+  });
 }

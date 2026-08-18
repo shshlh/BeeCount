@@ -30,8 +30,8 @@ void main() {
     };
   }
 
-  test('schemaVersion = 40', () {
-    expect(db.schemaVersion, 40);
+  test('schemaVersion = 41', () {
+    expect(db.schemaVersion, 41);
   });
 
   test('ledger_id=0 账户按流水反推回填到正确账本', () async {

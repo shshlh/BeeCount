@@ -8,20 +8,27 @@ import 'package:beecount/services/data/investment_service.dart';
 import 'package:beecount/services/data/nav_fetch_service.dart';
 
 class _FakeNavFetchService extends NavFetchService {
-  _FakeNavFetchService(this.navs, {this.failAll = false});
+  _FakeNavFetchService(this.navs, {this.failAll = false, this.histories});
 
   final Map<String, FundNavQuote> navs;
+  final Map<String, List<FundNavQuote>>? histories;
   final bool failAll;
   int calls = 0;
 
   @override
-  Future<Map<String, FundNavQuote>> fetchLatestNavs(
+  Future<Map<String, List<FundNavQuote>>> fetchNavHistories(
       List<String> fundCodes) async {
     calls++;
     if (failAll) return const {};
+    if (histories != null) {
+      return {
+        for (final code in fundCodes)
+          if (histories!.containsKey(code)) code: histories![code]!,
+      };
+    }
     return {
       for (final code in fundCodes)
-        if (navs.containsKey(code)) code: navs[code]!,
+        if (navs.containsKey(code)) code: [navs[code]!],
     };
   }
 }
@@ -341,5 +348,257 @@ void main() {
     expect(result.skippedCodes.toSet(), {'000001', '000002'});
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getInt('investment_nav_refresh_at_1'), isNull);
+  });
+
+  test('刷新写入净值历史并统计 advancedCount', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0,
+        navDate: DateTime(2026, 8, 18));
+
+    final fake = _FakeNavFetchService(
+      {'000001': FundNavQuote(nav: 1.2, navDate: DateTime(2026, 8, 19))},
+      histories: {
+        '000001': [
+          FundNavQuote(nav: 1.0, navDate: DateTime(2026, 8, 17)),
+          FundNavQuote(nav: 1.1, navDate: DateTime(2026, 8, 18)),
+          FundNavQuote(nav: 1.2, navDate: DateTime(2026, 8, 19)),
+        ],
+      },
+    );
+    final service = InvestmentService(repo, navFetch: fake);
+
+    final result = await service.refreshNavsForLedgerDetailed(1);
+
+    expect(result.updatedCount, 1);
+    expect(result.advancedCount, 1);
+    final history = await repo.getNavHistory('000001', limit: 3);
+    expect(history.map((h) => h.navDate.day).toList(), [19, 18, 17]);
+  });
+
+  test('refreshDailyNavsForLedger：20:00 前待更新不拉取，20:00 后拉取', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0,
+        navDate: DateTime(2026, 8, 17));
+
+    final fake = _FakeNavFetchService({
+      '000001': FundNavQuote(nav: 1.2, navDate: DateTime(2026, 8, 18)),
+    });
+    var now = DateTime(2026, 8, 18, 15);
+    final service = InvestmentService(repo, navFetch: fake, clock: () => now);
+
+    final pending = await service.refreshDailyNavsForLedger(1);
+    expect(pending.updatedCount, 0);
+    expect(fake.calls, 0);
+    expect(await service.getDailyNavStatus(1), DailyNavStatus.pending);
+
+    now = DateTime(2026, 8, 18, 20, 30);
+    final result = await service.refreshDailyNavsForLedger(1);
+    expect(result.updatedCount, 1);
+    expect(fake.calls, 1);
+    expect(await service.getDailyNavStatus(1), DailyNavStatus.allUpdated);
+  });
+
+  test('非交易日不拉取并标记非交易日', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0);
+
+    final fake = _FakeNavFetchService({
+      '000001': FundNavQuote(nav: 1.2, navDate: DateTime(2026, 8, 15)),
+    });
+    final service = InvestmentService(
+      repo,
+      navFetch: fake,
+      clock: () => DateTime(2026, 8, 15, 20, 30),
+    );
+
+    final result = await service.refreshDailyNavsForLedger(1);
+    expect(result.updatedCount, 0);
+    expect(fake.calls, 0);
+    expect(await service.getDailyNavStatus(1), DailyNavStatus.nonTradingDay);
+  });
+
+  test('部分更新：只有净值日期前进的持仓算已更新', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0,
+        navDate: DateTime(2026, 8, 18));
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '基金B',
+        amount: 500,
+        shares: 500,
+        nav: 1.0,
+        navDate: DateTime(2026, 8, 18));
+
+    final fake = _FakeNavFetchService(
+      const {},
+      histories: {
+        '000001': [
+          FundNavQuote(nav: 1.0, navDate: DateTime(2026, 8, 18)),
+          FundNavQuote(nav: 1.2, navDate: DateTime(2026, 8, 19)),
+        ],
+        '000002': [
+          FundNavQuote(nav: 1.0, navDate: DateTime(2026, 8, 18)),
+        ],
+      },
+    );
+    final service = InvestmentService(
+      repo,
+      navFetch: fake,
+      clock: () => DateTime(2026, 8, 18, 20, 30),
+    );
+
+    final result = await service.refreshDailyNavsForLedger(1);
+
+    expect(result.updatedCount, 2);
+    expect(result.advancedCount, 1);
+    expect(await service.getDailyNavStatus(1), DailyNavStatus.partialUpdated);
+  });
+
+  test('全部更新分母排除货币基金', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0,
+        navDate: DateTime(2026, 8, 18));
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '货币基金A',
+        amount: 500,
+        shares: 500,
+        nav: 1.0,
+        navDate: DateTime(2026, 8, 18));
+
+    final fake = _FakeNavFetchService(
+      const {},
+      histories: {
+        '000001': [
+          FundNavQuote(nav: 1.0, navDate: DateTime(2026, 8, 18)),
+          FundNavQuote(nav: 1.2, navDate: DateTime(2026, 8, 19)),
+        ],
+      },
+    );
+    final service = InvestmentService(
+      repo,
+      navFetch: fake,
+      clock: () => DateTime(2026, 8, 18, 20, 30),
+    );
+
+    final result = await service.refreshDailyNavsForLedger(1);
+
+    expect(result.updatedCount, 1);
+    expect(result.advancedCount, 1);
+    expect(result.skippedCodes, isEmpty,
+        reason: '货币基金不进入 skippedCodes');
+    expect(await service.getDailyNavStatus(1), DailyNavStatus.allUpdated);
+  });
+
+  test('普通基金未更新 + 货币基金已更新 → partialUpdated', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0,
+        navDate: DateTime(2026, 8, 18));
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '货币基金A',
+        amount: 500,
+        shares: 500,
+        nav: 1.0,
+        navDate: DateTime(2026, 8, 17));
+
+    final fake = _FakeNavFetchService(
+      const {},
+      histories: {
+        '000001': [
+          FundNavQuote(nav: 1.0, navDate: DateTime(2026, 8, 18)),
+        ],
+        '000002': [
+          FundNavQuote(nav: 1.0, navDate: DateTime(2026, 8, 18)),
+        ],
+      },
+    );
+    final service = InvestmentService(
+      repo,
+      navFetch: fake,
+      clock: () => DateTime(2026, 8, 18, 20, 30),
+    );
+
+    final result = await service.refreshDailyNavsForLedger(1);
+
+    expect(result.updatedCount, 2);
+    expect(result.advancedCount, 0,
+        reason: 'advancedCount 只统计非货币基金');
+    expect(result.totalAdvancedCount, 1,
+        reason: '货币基金仍计入 totalAdvancedCount 用于部分更新判断');
+    expect(await service.getDailyNavStatus(1), DailyNavStatus.partialUpdated);
+  });
+
+  test('状态 key 带日期，跨日不残留昨日状态', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0,
+        navDate: DateTime(2026, 8, 18));
+
+    final fake = _FakeNavFetchService({
+      '000001': FundNavQuote(nav: 1.2, navDate: DateTime(2026, 8, 19)),
+    });
+    final service = InvestmentService(
+      repo,
+      navFetch: fake,
+      clock: () => DateTime(2026, 8, 18, 20, 30),
+    );
+
+    await service.refreshDailyNavsForLedger(1);
+    expect(await service.getDailyNavStatus(1), DailyNavStatus.allUpdated);
+
+    final nextDay = InvestmentService(
+      repo,
+      navFetch: fake,
+      clock: () => DateTime(2026, 8, 19, 10),
+    );
+    expect(await nextDay.getDailyNavStatus(1), DailyNavStatus.pending);
   });
 }

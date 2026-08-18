@@ -348,24 +348,172 @@ void main() {
 
     expect(find.text('以下基金未更新：11017'), findsOneWidget);
   });
+
+  testWidgets('摘要卡片显示更新状态与今日收益', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          investmentRepositoryProvider.overrideWithValue(investmentRepo),
+          repositoryProvider.overrideWithValue(repo),
+          currentHoldingsProvider.overrideWith(
+            (ref) => Stream<List<InvestmentHolding>>.value(const []),
+          ),
+          groupsProvider.overrideWith(
+            (ref) => Stream<List<InvestmentGroup>>.value(const []),
+          ),
+          portfolioSummaryProvider.overrideWith(
+            (ref) async => const PortfolioSummary(
+              totalMarketValue: 0,
+              totalCost: 0,
+              unrealizedPnL: 0,
+              returnRate: 0,
+              holdingCount: 0,
+              todayProfit: 10,
+              todayChangePct: 0.1,
+              dailyStatus: DailyNavStatus.allUpdated,
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: const HoldingsListPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('全部更新'), findsOneWidget);
+    expect(find.text('+10.00'), findsOneWidget);
+    expect(find.text('+10.00%'), findsOneWidget);
+  });
+
+  testWidgets('20:00 前状态变化后无条件刷新摘要', (tester) async {
+    final spy = _SpyInvestmentService(investmentRepo)
+      ..dailyStatus = DailyNavStatus.pending;
+    var summaryBuilds = 0;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          investmentRepositoryProvider.overrideWithValue(investmentRepo),
+          repositoryProvider.overrideWithValue(repo),
+          investmentServiceProvider.overrideWithValue(spy),
+          currentHoldingsProvider.overrideWith(
+            (ref) => Stream<List<InvestmentHolding>>.value(const []),
+          ),
+          groupsProvider.overrideWith(
+            (ref) => Stream<List<InvestmentGroup>>.value(const []),
+          ),
+          portfolioSummaryProvider.overrideWith((ref) async {
+            summaryBuilds++;
+            return const PortfolioSummary(
+              totalMarketValue: 0,
+              totalCost: 0,
+              unrealizedPnL: 0,
+              returnRate: 0,
+              holdingCount: 0,
+              dailyStatus: DailyNavStatus.pending,
+            );
+          }),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: const HoldingsListPage(asTab: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final initialBuilds = summaryBuilds;
+    expect(find.text('待更新'), findsOneWidget);
+
+    final ctx = tester.element(find.byType(HoldingsListPage));
+    final container = ProviderScope.containerOf(ctx, listen: false);
+    container.read(bottomTabIndexProvider.notifier).state = 0;
+    await tester.pumpAndSettle();
+    container.read(bottomTabIndexProvider.notifier).state = 2;
+    await tester.pumpAndSettle();
+
+    expect(summaryBuilds, greaterThan(initialBuilds));
+  });
+
+  testWidgets('非交易日状态变化后无条件刷新摘要', (tester) async {
+    final spy = _SpyInvestmentService(investmentRepo)
+      ..dailyStatus = DailyNavStatus.nonTradingDay;
+    var summaryBuilds = 0;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          investmentRepositoryProvider.overrideWithValue(investmentRepo),
+          repositoryProvider.overrideWithValue(repo),
+          investmentServiceProvider.overrideWithValue(spy),
+          currentHoldingsProvider.overrideWith(
+            (ref) => Stream<List<InvestmentHolding>>.value(const []),
+          ),
+          groupsProvider.overrideWith(
+            (ref) => Stream<List<InvestmentGroup>>.value(const []),
+          ),
+          portfolioSummaryProvider.overrideWith((ref) async {
+            summaryBuilds++;
+            return const PortfolioSummary(
+              totalMarketValue: 0,
+              totalCost: 0,
+              unrealizedPnL: 0,
+              returnRate: 0,
+              holdingCount: 0,
+              dailyStatus: DailyNavStatus.nonTradingDay,
+            );
+          }),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: const HoldingsListPage(asTab: true),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final initialBuilds = summaryBuilds;
+    expect(find.text('非交易日'), findsOneWidget);
+
+    final ctx = tester.element(find.byType(HoldingsListPage));
+    final container = ProviderScope.containerOf(ctx, listen: false);
+    container.read(bottomTabIndexProvider.notifier).state = 0;
+    await tester.pumpAndSettle();
+    container.read(bottomTabIndexProvider.notifier).state = 2;
+    await tester.pumpAndSettle();
+
+    expect(summaryBuilds, greaterThan(initialBuilds));
+  });
 }
 
 class _SpyInvestmentService extends InvestmentService {
   int refreshCalls = 0;
   int deleteHoldingCalls = 0;
+  DailyNavStatus dailyStatus = DailyNavStatus.pending;
   NavRefreshResult detailedResult =
       const NavRefreshResult(updatedCount: 0, skippedCodes: []);
 
   _SpyInvestmentService(super.repo);
 
   @override
-  Future<NavRefreshResult> refreshNavsForLedgerDetailed(
+  Future<NavRefreshResult> refreshDailyNavsForLedger(
     int ledgerId, {
     bool force = false,
   }) async {
     refreshCalls++;
     return detailedResult;
   }
+
+  @override
+  Future<DailyNavStatus> getDailyNavStatus(int ledgerId) async => dailyStatus;
 
   @override
   Future<void> deleteHolding(int holdingId) async {

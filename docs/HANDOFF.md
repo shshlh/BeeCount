@@ -31,6 +31,123 @@
 
 ## 2026-08-18
 
+**移交角色**：invest-logic + qa
+**接收角色**：PM（复审）
+
+**任务**：7.17.9 返工完成
+
+**完成工作**：
+- `refreshNavsForLedgerDetailed` 的 `advancedIds` 只统计非货币基金；新增 `totalAdvancedCount` 保留全部前进数供状态判断
+- `skippedCodes` 排除货币基金，货币基金抓取失败不再刷出无关提示
+- 状态口径修正：eligible 未全部前进时，只要 `totalAdvancedCount > 0` 即判「部分更新」；普通基金未更新 + 货币基金已更新 → `partialUpdated`
+- 新增混合持仓回归测试，覆盖上述场景
+- 全量 `flutter test` 842 passed / 1 skipped / 0 failed；改动文件 analyze 无 error
+
+**git 状态**：当前分支 main，7.17 + 7.17.8 + 7.17.9 改动未提交，待 PM 复审
+
+---
+
+## 2026-08-18
+
+**移交角色**：PM
+**接收角色**：invest-logic + qa
+
+**任务**：7.17.9 返工：货币基金 advancedCount 口径
+
+**审查结论**：7.17.8 仍未合入，剩余 1 个必修问题。
+
+**必修问题**：
+- `refreshNavsForLedgerDetailed` 统计 `advancedIds` 时未排除货币基金，而 `refreshDailyNavsForLedger` 只排除了分母。混合持仓时，例如普通基金 A 未更新、货币基金 B 已更新，`advancedCount=1`、`eligibleHoldings.length=1`，会被误判为「全部更新」。刷新目标、`advancedIds`、`skippedCodes` 应统一排除货币基金，或至少让 advanced 统计只针对 eligible 持仓。
+
+**已确认通过**：
+- 净值历史已改天天基金主源、腾讯行情兜底，主源正常可拿到 3 档
+- 持仓页状态变化后无条件刷新 `portfolioSummaryProvider`
+- 状态 key 已带 `yyyyMMdd`，跨日不再残留
+- `FundNavQuote.dailyChangePct` 已移除
+
+**要求**：补「普通基金未更新 + 货币基金已更新 → partialUpdated」的回归测试；修复后全量 `flutter test` 0 failed，改动文件 analyze 无新增 error，HANDOFF/TEAM 只增不减。
+
+**git 状态**：当前分支 main，7.17 + 7.17.8 改动未提交，待返工
+
+---
+
+## 2026-08-18
+
+**移交角色**：invest-logic + invest-ui + qa
+**接收角色**：PM（复审）
+
+**任务**：7.17.8 返工完成
+
+**完成工作**：
+- 净值历史改为天天基金主源、腾讯行情兜底，腾讯正常返回时也能拿到 3 档
+- 持仓页刷新后无条件重建 `portfolioSummaryProvider`，20:00 前/非交易日不再残留昨日状态
+- 「全部更新」分母排除货币基金，货币基金不参与收益计算时不再长期显示部分更新
+- 状态 key 带 `yyyyMMdd`，跨日自动回退 pending/非交易日
+- 移除未使用的 `FundNavQuote.dailyChangePct`
+- 回归测试：数据源主次、摘要无条件刷新、货币基金分母、跨日状态均新增覆盖
+- 全量 `flutter test` 841 passed / 1 skipped / 0 failed；改动文件 analyze 无 error
+
+**遗留（P3，非阻塞）**：
+- `fund_nav_history` 无物理清理，查询仅靠 `limit: 3`，历史表会持续增长
+- 收益/涨跌计算仍为 `double`，与组合摘要 Decimal 口径不一致，后续可统一
+
+**git 状态**：当前分支 main，7.17 + 7.17.8 改动未提交，待 PM 复审
+
+---
+
+## 2026-08-18
+
+**移交角色**：PM
+**接收角色**：invest-logic + invest-ui + qa
+
+**任务**：7.17.8 返工：净值历史数据源、日收益状态刷新与货币基金口径
+
+**审查结论**：7.17 暂不合入。
+
+**必修问题**：
+- P1 `NavFetchService._fetchOne` 仍以腾讯行情为主源，腾讯成功时只返回 1 档，天天基金 3 档永不触发；新用户净值历史不足 3 档，今日/昨日收益与涨跌幅会一直显示 `--`。改为 history 场景以天天基金为主源、腾讯行情兜底，或合并两源后补足 3 档，并补“腾讯正常返回时也能拿到 3 档”的测试。
+- P1 `HoldingsListPage._refreshOnEnter` 仅在 `updatedCount > 0` 时 invalidate 摘要；20:00 前、非交易日、节流命中时状态已写 prefs 但 UI 不会刷新，会残留昨天的「全部更新/部分更新」。状态变化后应无条件刷新 `portfolioSummaryProvider`，补 20:00 前与非交易日 widget 测试。
+
+**建议修复**：
+- P2 刷新状态的 `advancedCount >= holdings.length` 分母包含货币基金；货币基金不参与收益计算，应从「全部更新」分母中排除，否则货币基金不前进会长期显示「部分更新」。
+- P2 `getDailyNavStatus` 只存状态枚举，不区分日期；跨日首次进入摘要可能读到前一日状态。建议状态 key 带 `yyyyMMdd`，跨日自动回退 `pending/nonTradingDay`。
+- P3 `FundNavQuote.dailyChangePct` 已解析但未用于任何校验，按口径要么落成校验逻辑，要么移除。
+- P3 `fund_nav_history` 无物理清理，`limit: 3` 只限制查询，历史表会持续增长。
+- P3 收益/涨跌计算使用 `double`，组合摘要其余金额用 `Decimal`；若要求口径一致，建议后续统一为 `Decimal`。
+
+**约束**：修复后全量 `flutter test` 0 failed；改动文件 analyze 无新增 error；HANDOFF/TEAM 只增不减。
+
+**git 状态**：当前分支 main，7.17 改动未提交，待返工
+
+---
+
+## 2026-08-18
+
+**移交角色**：architect + invest-logic + invest-ui + qa
+**接收角色**：PM（审查合入）
+
+**任务**：7.17 基金今日/昨日收益 + 涨跌幅
+
+**完成工作**：
+- 7.17.1：新增 `fund_nav_history(fund_code, nav_date, unit_nav, updated_at)` 表，schema v40 → v41，Repository 提供按日期 upsert 与最近 3 档查询
+- 7.17.2：`NavFetchService.fetchNavHistories` 天天基金取末尾 3 档、腾讯行情返回最新一档 + 日增长率（仅校验）；刷新时写历史表
+- 7.17.3：新增 `daily_return_calculator.dart` 纯函数（今日/昨日收益 + 涨跌幅），货币基金排除
+- 7.17.4：新增 `holiday_calendar.dart`，内置 2026 官方节假日与 2027 推算节假日
+- 7.17.5：`refreshDailyNavsForLedger` 20:00 时间窗/交易日判断，`advancedCount` 汇总部分/全部更新，持仓页 15 分钟轮询
+- 7.17.6：汇总卡片与单基金卡片展示今日/昨日收益、涨跌幅、更新状态与日期
+- 7.17.7：新增迁移/计算/节假日/刷新状态/UI 测试；全量 `flutter test` 838 passed / 1 skipped / 0 failed；改动文件 analyze 无 error
+
+**下一个任务需要知道的**：
+- 2027 节假日为按现行 13 天规则推算，官方通知发布后更新 `HolidayCalendar`
+- 货币基金按名称含「货币」或 holdingType=money 识别
+- 收益/涨跌幅取历史表最近 3 档，不依赖净值日期连续（QDII 滞后兼容）
+
+**git 状态**：当前分支 main，待提交
+
+---
+
+## 2026-08-18
+
 **移交角色**：PM
 **接收角色**：归档
 
