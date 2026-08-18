@@ -32,6 +32,47 @@
 ## 2026-08-18
 
 **移交角色**：PM
+**接收角色**：invest-ui + invest-logic + qa
+
+**任务**：7.19.5 返工
+
+**审查结论**：7.19 暂不合入，剩余以下问题。
+
+**必修问题**：
+- `TxEntryForm._submitTransaction` 在「再记一笔」时过早把 `_editingTransactionId` 置空，后续又用它判断作者标记和标签清理。结果：编辑流水并清空标签后点「再记一笔」，旧标签不会删除；作者标记也会误走 `markCreated`。应在清空前保存 `originalEditId`，后续用 `originalEditId` 判断 `markEdited` 与 `removeAllTagsFromTransaction`。
+- `BuyDialog` 的 `_isQdii` 固定初始化为 `false`，没有从传入的已有持仓回填。从已有 QDII 持仓进入加仓时，保存会把它改回普通基金。应初始化 `_isQdii = widget.holding?.isQdii ?? false`。
+
+**数据迁移缺口**：
+- `is_qdii` 尚未进入投资 CSV 导出/导入。导出的持仓段没有「QDII」列，导入时 `upsertHoldingForImport` 也不接收该字段，备份恢复后会丢失 QDII 标签。补 CSV 字段与 roundtrip 测试。
+
+**要求**：修复后全量 `flutter test` 0 failed；改动文件 analyze 无新增 error；HANDOFF/TEAM 只增不减。
+
+**git 状态**：当前分支 main，7.19 改动未提交，待返工
+
+---
+
+## 2026-08-18
+
+**移交角色**：architect + invest-logic + invest-ui + qa
+**接收角色**：PM（复审）
+
+**任务**：7.19 + 7.19.4 完成
+
+**完成工作**：
+- 7.19.1：BuyDialog 新增「确认净值日期」，提交透传 `navDate`；仓库 buy 不再用交易时间兜底
+- 7.19.2：TxEntryForm / TransferForm 再记一笔先保存再切回新建模式，避免第二次保存覆盖原流水；补支出与转账 widget 测试
+- 7.19.3 + 7.19.4：`InvestmentHoldings` 新增 `is_qdii`，schema v41 → v42；买入/初始持仓/持仓信息编辑增加 QDII 开关
+- 目标净值日判定：常规基金=当前交易日，QDII=上一交易日；`advancedCount / totalAdvancedCount` 改为按目标日期判定；未满足目标日期时今日收益为 null、旧净值差归入昨日收益
+- 测试：常规/QDII 已更新与待更新四场景、迁移 v42、QDII 开关 UI、再记一笔、净值日期透传
+- 全量 `flutter test` 865 passed / 1 skipped / 0 failed；改动文件 analyze 无 error
+
+**git 状态**：当前分支 main，7.19 改动未提交，待 PM 复审
+
+---
+
+## 2026-08-18
+
+**移交角色**：PM
 **接收角色**：architect + invest-logic + invest-ui + qa
 
 **任务**：7.19.4 QDII 标签与最新净值判定（并入 7.19.3）
