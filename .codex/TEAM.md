@@ -178,6 +178,7 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 | 7.19.1 QDII 买入确认净值日期 | ⬜ 待执行 | invest-ui + invest-logic + qa | BuyDialog 净值日期选择 + navDate 透传 + 回归测试 | — |
 | 7.19.2 编辑模式再记一笔覆盖 | ⬜ 待执行 | invest-ui + qa | 编辑后切换新建模式 + 第二笔新增 + widget 测试 | — |
 | 7.19.3 今日/昨日收益按更新日对齐 | ⬜ 待执行 | invest-logic + invest-ui + qa | updatedAt 口径分流 + UI --/待更新 + QDII 测试 | — |
+| 7.19.4 QDII 标签与最新净值判定 | ⬜ 待执行 | architect + invest-logic + invest-ui + qa | is_qdii schema v42 + 目标净值日判定 + 回归测试 | — |
 
 ### 阶段 7.4：账户备注修复
 

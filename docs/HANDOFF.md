@@ -32,6 +32,46 @@
 ## 2026-08-18
 
 **移交角色**：PM
+**接收角色**：architect + invest-logic + invest-ui + qa
+
+**任务**：7.19.4 QDII 标签与最新净值判定（并入 7.19.3）
+
+**背景**：仅用 `navDate 前进了` 判断是否更新，QDII 滞后净值会产生歧义。改为显式 QDII 标签 + 基金类型规则。
+
+**要求**：
+
+7.19.4.1 数据层（architect + qa）：
+- `InvestmentHoldings` 增加 `is_qdii` 布尔字段，默认 `false`。
+- schema v41 → v42，迁移存量持仓为 `false`。
+
+7.19.4.2 UI（invest-ui）：
+- 买入弹窗、初始持仓导入、持仓信息编辑增加「QDII基金」开关，用于手动标记该基金。
+
+7.19.4.3 判定逻辑（invest-logic + qa）：
+- 常规基金：当天盘后已更新 = 抓取到的最新 `nav_date == 当前交易日`。
+- QDII 基金：当天盘后已更新 = 抓取到的最新 `nav_date == 上一交易日`。
+- 周末/节假日不刷新，继续按 `HolidayCalendar` 计算交易日。
+- 刷新时的 `advancedCount / totalAdvancedCount` 改为按上述目标日期判定，不再只比较 `quote.navDate.isAfter(previous)`。
+
+7.19.4.4 收益展示（invest-logic + invest-ui + qa）：
+- 满足目标日期时，今日收益 = 最新净值差；昨日收益 = 前一次净值差。
+- 不满足目标日期时，今日收益/今日涨跌显示 `--` 或「待更新」，最近一次旧净值差归入昨日收益。
+
+**测试**：
+- 常规基金 18 日拉到 18 日净值 -> 已更新。
+- 常规基金 18 日仍为 17 日净值 -> 待更新，今日收益为空。
+- QDII 18 日拉到 17 日净值 -> 已更新，今日收益按 17 日净值差计算。
+- QDII 18 日仍为 16 日净值 -> 待更新。
+
+**约束**：全量 `flutter test` 0 failed；改动文件 analyze 无新增 error；HANDOFF/TEAM 只增不减。
+
+**git 状态**：当前分支 main，基线 `649c5cf`，待派工
+
+---
+
+## 2026-08-18
+
+**移交角色**：PM
 **接收角色**：invest-logic + invest-ui + qa
 
 **任务**：7.19 实机测试问题修复
