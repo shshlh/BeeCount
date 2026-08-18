@@ -1197,14 +1197,17 @@ class LocalInvestmentRepository implements InvestmentRepository {
     DateTime navDate,
     double nav,
   ) async {
-    await db.into(db.fundNavHistories).insertOnConflictUpdate(
-          FundNavHistoriesCompanion.insert(
-            fundCode: fundCode,
-            navDate: navDate,
-            unitNav: nav,
-            updatedAt: DateTime.now(),
-          ),
-        );
+    await db.transaction(() async {
+      await db.into(db.fundNavHistories).insertOnConflictUpdate(
+            FundNavHistoriesCompanion.insert(
+              fundCode: fundCode,
+              navDate: navDate,
+              unitNav: nav,
+              updatedAt: DateTime.now(),
+            ),
+          );
+      await pruneNavHistory(fundCode);
+    });
   }
 
   @override
@@ -1220,5 +1223,29 @@ class LocalInvestmentRepository implements InvestmentRepository {
           ])
           ..limit(limit))
         .get();
+  }
+
+  @override
+  Future<void> pruneNavHistory(String fundCode, {int keep = 3}) async {
+    await db.customUpdate(
+      'DELETE FROM fund_nav_history WHERE ('
+      'SELECT COUNT(*) FROM fund_nav_history AS h2 '
+      'WHERE h2.fund_code = fund_nav_history.fund_code '
+      'AND h2.nav_date > fund_nav_history.nav_date) >= ?1',
+      variables: [d.Variable<int>(keep)],
+      updates: {db.fundNavHistories},
+    );
+  }
+
+  @override
+  Future<void> pruneAllNavHistories({int keep = 3}) async {
+    await db.customUpdate(
+      'DELETE FROM fund_nav_history WHERE ('
+      'SELECT COUNT(*) FROM fund_nav_history AS h2 '
+      'WHERE h2.fund_code = fund_nav_history.fund_code '
+      'AND h2.nav_date > fund_nav_history.nav_date) >= ?1',
+      variables: [d.Variable<int>(keep)],
+      updates: {db.fundNavHistories},
+    );
   }
 }

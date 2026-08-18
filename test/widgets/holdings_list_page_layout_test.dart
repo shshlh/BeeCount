@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:decimal/decimal.dart';
 
 import 'package:beecount/data/db.dart';
 import 'package:beecount/data/repositories/local/local_investment_repository.dart';
@@ -44,7 +45,7 @@ void main() {
             (ref) => Stream<List<InvestmentGroup>>.value(const []),
           ),
           portfolioSummaryProvider.overrideWith(
-            (ref) async => const PortfolioSummary(
+            (ref) async => PortfolioSummary(
               totalMarketValue: 0,
               totalCost: 0,
               unrealizedPnL: 0,
@@ -208,7 +209,7 @@ void main() {
             (ref) => Stream<List<InvestmentGroup>>.value(const []),
           ),
           portfolioSummaryProvider.overrideWith(
-            (ref) async => const PortfolioSummary(
+            (ref) async => PortfolioSummary(
               totalMarketValue: 0,
               totalCost: 0,
               unrealizedPnL: 0,
@@ -362,14 +363,14 @@ void main() {
             (ref) => Stream<List<InvestmentGroup>>.value(const []),
           ),
           portfolioSummaryProvider.overrideWith(
-            (ref) async => const PortfolioSummary(
+            (ref) async => PortfolioSummary(
               totalMarketValue: 0,
               totalCost: 0,
               unrealizedPnL: 0,
               returnRate: 0,
               holdingCount: 0,
-              todayProfit: 10,
-              todayChangePct: 0.1,
+              todayProfit: Decimal.fromInt(10),
+              todayChangePct: Decimal.parse('0.1'),
               dailyStatus: DailyNavStatus.allUpdated,
             ),
           ),

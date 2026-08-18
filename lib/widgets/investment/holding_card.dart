@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:decimal/decimal.dart';
 import '../../data/db.dart';
 import '../../services/data/daily_return_calculator.dart';
 import '../../styles/tokens.dart';
@@ -204,20 +205,20 @@ class HoldingCard extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref, {
     required String label,
-    required double? profit,
-    required double? pct,
+    required Decimal? profit,
+    required Decimal? pct,
   }) {
     if (profit == null && pct == null) {
       return _dailyText(context, ref, label, '--', neutral: true);
     }
-    final positive = (profit ?? pct ?? 0) >= 0;
+    final positive = (profit ?? pct ?? Decimal.zero) >= Decimal.zero;
     final color = positive
         ? BeeTokens.incomeColor(context, ref)
         : BeeTokens.expenseColor(context, ref);
     final sign = positive ? '+' : '';
     final value = profit != null
         ? '$sign${profit.toStringAsFixed(2)}'
-        : '$sign${(pct! * 100).toStringAsFixed(2)}%';
+        : '$sign${(pct! * Decimal.fromInt(100)).toStringAsFixed(2)}%';
     return _dailyText(context, ref, label, value, color: color);
   }
 

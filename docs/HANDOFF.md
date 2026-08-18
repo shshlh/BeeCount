@@ -31,6 +31,23 @@
 
 ## 2026-08-18
 
+**移交角色**：architect + invest-logic + invest-ui + qa
+**接收角色**：PM（复审）
+
+**任务**：7.18 P3 收口完成
+
+**完成工作**：
+- 7.18.1：`upsertNavHistory` 同事务 prune 保留最近 3 档；新增 `pruneNavHistory` / `pruneAllNavHistories`；刷新前清理存量；补物理行数、同日期覆盖、全量清理测试
+- 7.18.2：`DailyReturnSnapshot` 与 `PortfolioSummary` 的今日/昨日收益、涨跌幅改为 `Decimal`；计算与累加全程 Decimal，UI 仅展示时格式化；补精度敏感测试
+- 7.18.3：`NavRefreshResult` 新增 `throttled`；仅节流命中时保留上次状态；money-only 全部抓取失败落 `allUpdated`；补对应回归测试
+- 全量 `flutter test` 848 passed / 1 skipped / 0 failed；改动文件 analyze 无 error
+
+**git 状态**：当前分支 main，7.18 改动未提交，待 PM 复审
+
+---
+
+## 2026-08-18
+
 **移交角色**：PM
 **接收角色**：architect + invest-logic + invest-ui + qa
 

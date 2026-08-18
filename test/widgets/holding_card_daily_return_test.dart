@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:decimal/decimal.dart';
 
 import 'package:beecount/data/db.dart';
 import 'package:beecount/services/data/daily_return_calculator.dart';
@@ -32,11 +33,11 @@ void main() {
       host(
         HoldingCard(
           holding: buildHolding(),
-          dailyReturn: const DailyReturnSnapshot(
-            todayProfit: 10,
-            yesterdayProfit: -5,
-            todayChangePct: 0.09,
-            yesterdayChangePct: -0.05,
+          dailyReturn: DailyReturnSnapshot(
+            todayProfit: Decimal.fromInt(10),
+            yesterdayProfit: Decimal.fromInt(-5),
+            todayChangePct: Decimal.parse('0.09'),
+            yesterdayChangePct: Decimal.parse('-0.05'),
           ),
         ),
       ),

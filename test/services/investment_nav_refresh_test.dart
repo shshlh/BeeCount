@@ -601,4 +601,74 @@ void main() {
     );
     expect(await nextDay.getDailyNavStatus(1), DailyNavStatus.pending);
   });
+
+  test('仅货币基金全部抓取失败：allUpdated 且不残留上次状态', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000002',
+        fundName: '货币基金A',
+        amount: 500,
+        shares: 500,
+        nav: 1.0,
+        navDate: DateTime(2026, 8, 17));
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      'investment_nav_daily_status_1_20260818',
+      DailyNavStatus.partialUpdated.name,
+    );
+
+    final fake = _FakeNavFetchService({}, failAll: true);
+    final service = InvestmentService(
+      repo,
+      navFetch: fake,
+      clock: () => DateTime(2026, 8, 18, 20, 30),
+    );
+
+    final result = await service.refreshDailyNavsForLedger(1);
+
+    expect(result.throttled, isFalse);
+    expect(result.updatedCount, 0);
+    expect(result.skippedCodes, isEmpty);
+    expect(await service.getDailyNavStatus(1), DailyNavStatus.allUpdated);
+  });
+
+  test('节流命中时保留上次状态', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0,
+        navDate: DateTime(2026, 8, 17));
+
+    final now = DateTime(2026, 8, 18, 20, 30);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(
+      'investment_nav_refresh_at_1',
+      now.millisecondsSinceEpoch,
+    );
+    await prefs.setString(
+      'investment_nav_daily_status_1_20260818',
+      DailyNavStatus.partialUpdated.name,
+    );
+
+    final fake = _FakeNavFetchService({
+      '000001': FundNavQuote(nav: 1.2, navDate: DateTime(2026, 8, 18)),
+    });
+    final service = InvestmentService(
+      repo,
+      navFetch: fake,
+      clock: () => now,
+    );
+
+    final result = await service.refreshDailyNavsForLedger(1);
+
+    expect(result.throttled, isTrue);
+    expect(result.updatedCount, 0);
+    expect(await service.getDailyNavStatus(1), DailyNavStatus.partialUpdated);
+  });
 }

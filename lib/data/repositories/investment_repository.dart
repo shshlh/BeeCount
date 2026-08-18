@@ -232,4 +232,10 @@ abstract class InvestmentRepository {
     String fundCode, {
     int limit = 3,
   });
+
+  /// 清理某基金净值历史，按净值日降序保留最近 [keep] 档（7.18.1）。
+  Future<void> pruneNavHistory(String fundCode, {int keep = 3});
+
+  /// 一次性清理全部基金的净值历史，每只保留最近 [keep] 档（7.18.1）。
+  Future<void> pruneAllNavHistories({int keep = 3});
 }

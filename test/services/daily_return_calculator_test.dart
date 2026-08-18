@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:decimal/decimal.dart';
 
 import 'package:beecount/services/data/daily_return_calculator.dart';
 import 'package:beecount/services/data/nav_fetch_service.dart';
@@ -19,10 +20,10 @@ void main() {
     );
 
     expect(result, isNotNull);
-    expect(result!.todayProfit, closeTo(10, 0.001)); // (1.2-1.1)*100
-    expect(result.yesterdayProfit, closeTo(10, 0.001)); // (1.1-1.0)*100
-    expect(result.todayChangePct, closeTo(0.1 / 1.1, 0.0001));
-    expect(result.yesterdayChangePct, closeTo(0.1, 0.0001));
+    expect(result!.todayProfit, Decimal.parse('10')); // (1.2-1.1)*100
+    expect(result.yesterdayProfit, Decimal.parse('10')); // (1.1-1.0)*100
+    expect(result.todayChangePct.toStringAsFixed(10), '0.0909090909');
+    expect(result.yesterdayChangePct, Decimal.parse('0.1'));
   });
 
   test('下跌时收益与涨跌幅为负', () {
@@ -31,10 +32,10 @@ void main() {
       shares: 50,
     );
 
-    expect(result!.todayProfit, closeTo(-5, 0.001));
-    expect(result.yesterdayProfit, closeTo(-5, 0.001));
-    expect(result.todayChangePct, closeTo(-0.1 / 1.1, 0.0001));
-    expect(result.yesterdayChangePct, closeTo(-0.1 / 1.2, 0.0001));
+    expect(result!.todayProfit, Decimal.parse('-5'));
+    expect(result.yesterdayProfit, Decimal.parse('-5'));
+    expect(result.todayChangePct.toStringAsFixed(10), '-0.0909090909');
+    expect(result.yesterdayChangePct.toStringAsFixed(10), '-0.0833333333');
   });
 
   test('QDII 滞后场景：净值日期不连续仍按最新三档计算', () {
@@ -47,9 +48,19 @@ void main() {
       shares: 200,
     );
 
-    expect(result!.todayProfit, closeTo(6, 0.001));
-    expect(result.yesterdayProfit, closeTo(10, 0.001));
-    expect(result.todayChangePct, closeTo(0.03 / 1.05, 0.0001));
+    expect(result!.todayProfit, Decimal.parse('6'));
+    expect(result.yesterdayProfit, Decimal.parse('10'));
+    expect(result.todayChangePct.toStringAsFixed(10), '0.0285714286');
+  });
+
+  test('精度敏感：小数份额不引入浮点误差', () {
+    final result = calculateDailyReturn(
+      history: history([1.0, 1.1, 1.2]),
+      shares: 0.1,
+    );
+
+    expect(result!.todayProfit, Decimal.parse('0.01'));
+    expect(result.yesterdayProfit, Decimal.parse('0.01'));
   });
 
   test('历史不足三档或份额非法返回 null', () {

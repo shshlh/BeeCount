@@ -25,10 +25,10 @@ class PortfolioSummary {
   final double unrealizedPnL;
   final double returnRate;
   final int holdingCount;
-  final double? todayProfit;
-  final double? yesterdayProfit;
-  final double? todayChangePct;
-  final double? yesterdayChangePct;
+  final Decimal? todayProfit;
+  final Decimal? yesterdayProfit;
+  final Decimal? todayChangePct;
+  final Decimal? yesterdayChangePct;
   final DailyNavStatus dailyStatus;
 
   const PortfolioSummary({
@@ -66,12 +66,14 @@ class NavRefreshResult {
   final int advancedCount;
   final int totalAdvancedCount;
   final List<String> skippedCodes;
+  final bool throttled;
 
   const NavRefreshResult({
     required this.updatedCount,
     this.advancedCount = 0,
     this.totalAdvancedCount = 0,
     required this.skippedCodes,
+    this.throttled = false,
   });
 }
 
@@ -118,7 +120,11 @@ class InvestmentService {
         final elapsed = _clock()
             .difference(DateTime.fromMillisecondsSinceEpoch(last));
         if (elapsed < _navRefreshThrottle) {
-          return const NavRefreshResult(updatedCount: 0, skippedCodes: []);
+          return const NavRefreshResult(
+            updatedCount: 0,
+            skippedCodes: [],
+            throttled: true,
+          );
         }
       }
     }
@@ -127,6 +133,9 @@ class InvestmentService {
     if (holdings.isEmpty) {
       return const NavRefreshResult(updatedCount: 0, skippedCodes: []);
     }
+
+    // 一次性清理所有基金的旧历史，避免 7.18.1 前积压超过 3 档的数据长期残留。
+    await _repo.pruneAllNavHistories();
 
     final codes = holdings.map((h) => h.fundCode).toSet().toList();
     final histories = await _navFetchService.fetchNavHistories(codes);
@@ -206,10 +215,7 @@ class InvestmentService {
     }
 
     final result = await refreshNavsForLedgerDetailed(ledgerId, force: force);
-    if (result.updatedCount == 0 && result.skippedCodes.isEmpty) {
-      // 15 分钟节流命中，保留上次状态。
-      return result;
-    }
+    if (result.throttled) return result;
 
     final holdings = await _repo.watchHoldings(ledgerId: ledgerId).first;
     final eligibleHoldings = holdings
@@ -275,8 +281,8 @@ class InvestmentService {
 
     Decimal totalMv = Decimal.zero;
     Decimal totalCost = Decimal.zero;
-    double? todayProfit;
-    double? yesterdayProfit;
+    Decimal? todayProfit;
+    Decimal? yesterdayProfit;
     Decimal todayBase = Decimal.zero;
     Decimal yesterdayBase = Decimal.zero;
     for (final h in holdings) {
@@ -294,8 +300,9 @@ class InvestmentService {
       final snapshot =
           calculateDailyReturn(history: quotes, shares: h.totalShares);
       if (snapshot == null) continue;
-      todayProfit = (todayProfit ?? 0) + snapshot.todayProfit;
-      yesterdayProfit = (yesterdayProfit ?? 0) + snapshot.yesterdayProfit;
+      todayProfit = (todayProfit ?? Decimal.zero) + snapshot.todayProfit;
+      yesterdayProfit =
+          (yesterdayProfit ?? Decimal.zero) + snapshot.yesterdayProfit;
       final navsByDate = [...quotes]
         ..sort((a, b) => a.navDate.compareTo(b.navDate));
       final navs = navsByDate
@@ -324,10 +331,10 @@ class InvestmentService {
       todayProfit: todayProfit,
       yesterdayProfit: yesterdayProfit,
       todayChangePct: todayBase > Decimal.zero
-          ? _divide(_toDecimal(todayProfit ?? 0), todayBase).toDouble()
+          ? _divide(todayProfit ?? Decimal.zero, todayBase)
           : null,
       yesterdayChangePct: yesterdayBase > Decimal.zero
-          ? _divide(_toDecimal(yesterdayProfit ?? 0), yesterdayBase).toDouble()
+          ? _divide(yesterdayProfit ?? Decimal.zero, yesterdayBase)
           : null,
       dailyStatus: dailyStatus,
     );

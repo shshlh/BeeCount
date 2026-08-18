@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:decimal/decimal.dart';
 import '../../data/db.dart';
 import '../../providers.dart';
 import '../../services/data/holiday_calendar.dart';
@@ -572,19 +573,20 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
     WidgetRef ref, {
     required String label,
     required DateTime date,
-    required double? profit,
-    required double? pct,
+    required Decimal? profit,
+    required Decimal? pct,
   }) {
     final dateStr = '${date.year}.${date.month}.${date.day}';
     final valueStr = profit == null
         ? '--'
-        : '${profit >= 0 ? '+' : ''}${profit.toStringAsFixed(2)}';
+        : '${profit >= Decimal.zero ? '+' : ''}${profit.toStringAsFixed(2)}';
     final pctStr = pct == null
         ? '--'
-        : '${pct >= 0 ? '+' : ''}${(pct * 100).toStringAsFixed(2)}%';
+        : '${pct >= Decimal.zero ? '+' : ''}'
+            '${(pct * Decimal.fromInt(100)).toStringAsFixed(2)}%';
     final profitValue = profit;
     final color = profitValue != null
-        ? (profitValue >= 0
+        ? (profitValue >= Decimal.zero
             ? BeeTokens.incomeColor(context, ref)
             : BeeTokens.expenseColor(context, ref))
         : BeeTokens.textTertiary(context);

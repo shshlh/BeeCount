@@ -1,11 +1,16 @@
+import 'package:decimal/decimal.dart';
+
 import 'nav_fetch_service.dart';
+
+Decimal _divide(Decimal a, Decimal b) =>
+    (a / b).toDecimal(scaleOnInfinitePrecision: 18);
 
 /// 今日/昨日收益与涨跌幅快照（7.17.3）。
 class DailyReturnSnapshot {
-  final double todayProfit;
-  final double yesterdayProfit;
-  final double todayChangePct;
-  final double yesterdayChangePct;
+  final Decimal todayProfit;
+  final Decimal yesterdayProfit;
+  final Decimal todayChangePct;
+  final Decimal yesterdayChangePct;
   final bool isNotApplicable;
 
   const DailyReturnSnapshot({
@@ -17,11 +22,11 @@ class DailyReturnSnapshot {
   });
 
   /// 货币基金等不适用场景。
-  static const notApplicable = DailyReturnSnapshot(
-    todayProfit: 0,
-    yesterdayProfit: 0,
-    todayChangePct: 0,
-    yesterdayChangePct: 0,
+  static final notApplicable = DailyReturnSnapshot(
+    todayProfit: Decimal.zero,
+    yesterdayProfit: Decimal.zero,
+    todayChangePct: Decimal.zero,
+    yesterdayChangePct: Decimal.zero,
     isNotApplicable: true,
   );
 }
@@ -42,14 +47,19 @@ DailyReturnSnapshot? calculateDailyReturn({
       .toList();
   if (navs.length < 3 || shares <= 0) return null;
 
-  final third = navs[navs.length - 3];
-  final second = navs[navs.length - 2];
-  final latest = navs[navs.length - 1];
+  final sharesDecimal = Decimal.parse(shares.toString());
+  final third = Decimal.parse(navs[navs.length - 3].toString());
+  final second = Decimal.parse(navs[navs.length - 2].toString());
+  final latest = Decimal.parse(navs[navs.length - 1].toString());
   return DailyReturnSnapshot(
-    todayProfit: (latest - second) * shares,
-    yesterdayProfit: (second - third) * shares,
-    todayChangePct: second > 0 ? (latest - second) / second : 0,
-    yesterdayChangePct: third > 0 ? (second - third) / third : 0,
+    todayProfit: (latest - second) * sharesDecimal,
+    yesterdayProfit: (second - third) * sharesDecimal,
+    todayChangePct: second > Decimal.zero
+        ? _divide(latest - second, second)
+        : Decimal.zero,
+    yesterdayChangePct: third > Decimal.zero
+        ? _divide(second - third, third)
+        : Decimal.zero,
   );
 }
 

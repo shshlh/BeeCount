@@ -165,9 +165,9 @@ PM 创建/指派任务 → 角色线程独立工作 → 任务完成更新本文
 
 | 任务 | 状态 | 负责人 | 产出物 | 完成日期 |
 |---|---|---|---|---|
-| 7.18.1 净值历史物理清理 | ⬜ 待执行 | architect + qa | prune keep 3 + 物理行数回归测试 | — |
-| 7.18.2 收益/涨跌 Decimal 化 | ⬜ 待执行 | invest-logic + invest-ui + qa | Snapshot/计算/摘要 Decimal + UI 兼容 | — |
-| 7.18.3 money-only 刷新状态 | ⬜ 待执行 | invest-logic + qa | 节流标识 + empty eligible 状态 + 回归测试 | — |
+| 7.18.1 净值历史物理清理 | ✅ | architect + qa | prune keep 3 + 物理行数回归测试 | 2026-08-18 |
+| 7.18.2 收益/涨跌 Decimal 化 | ✅ | invest-logic + invest-ui + qa | Snapshot/计算/摘要 Decimal + UI 兼容 | 2026-08-18 |
+| 7.18.3 money-only 刷新状态 | ✅ | invest-logic + qa | 节流标识 + empty eligible 状态 + 回归测试 | 2026-08-18 |
 
 ### 阶段 7.4：账户备注修复
 

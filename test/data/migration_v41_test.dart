@@ -4,6 +4,7 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
+import 'package:drift/drift.dart' show Variable;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:beecount/data/db.dart';
@@ -22,6 +23,16 @@ void main() {
   });
 
   tearDown(() async => db.close());
+
+  Future<int> rowCount(String fundCode) async {
+    final row = await db
+        .customSelect(
+          'SELECT COUNT(*) AS c FROM fund_nav_history WHERE fund_code = ?',
+          variables: [Variable<String>(fundCode)],
+        )
+        .getSingle();
+    return row.read<int>('c');
+  }
 
   test('schemaVersion = 41', () {
     expect(db.schemaVersion, 41);
@@ -59,5 +70,56 @@ void main() {
     final b = await repo.getNavHistory('000002', limit: 3);
     expect(a.single.unitNav, 1.1);
     expect(b.single.unitNav, 2.2);
+  });
+
+  test('连续 upsert 超过 3 档后物理行数不超过 3', () async {
+    for (var day = 10; day <= 15; day++) {
+      await repo.upsertNavHistory(
+        '000001',
+        DateTime(2026, 8, day),
+        day.toDouble(),
+      );
+    }
+
+    expect(await rowCount('000001'), 3);
+    final history = await repo.getNavHistory('000001', limit: 3);
+    expect(history.map((h) => h.navDate.day).toList(), [15, 14, 13]);
+  });
+
+  test('同日期再次 upsert 只覆盖、不新增物理行', () async {
+    await repo.upsertNavHistory('000001', DateTime(2026, 8, 15), 1.0);
+    await repo.upsertNavHistory('000001', DateTime(2026, 8, 16), 1.1);
+    await repo.upsertNavHistory('000001', DateTime(2026, 8, 16), 1.2);
+    await repo.upsertNavHistory('000001', DateTime(2026, 8, 17), 1.3);
+
+    expect(await rowCount('000001'), 3);
+  });
+
+  test('pruneAllNavHistories 清理存量超过 3 档的旧数据', () async {
+    for (var day = 10; day <= 15; day++) {
+      await db.into(db.fundNavHistories).insert(
+            FundNavHistoriesCompanion.insert(
+              fundCode: '000001',
+              navDate: DateTime(2026, 8, day),
+              unitNav: day.toDouble(),
+              updatedAt: DateTime(2026, 8, day),
+            ),
+          );
+    }
+    for (var day = 10; day <= 12; day++) {
+      await db.into(db.fundNavHistories).insert(
+            FundNavHistoriesCompanion.insert(
+              fundCode: '000002',
+              navDate: DateTime(2026, 8, day),
+              unitNav: day.toDouble(),
+              updatedAt: DateTime(2026, 8, day),
+            ),
+          );
+    }
+
+    await repo.pruneAllNavHistories();
+
+    expect(await rowCount('000001'), 3);
+    expect(await rowCount('000002'), 3);
   });
 }
