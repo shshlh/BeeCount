@@ -7,14 +7,12 @@ import '../../styles/tokens.dart';
 import '../biz/section_card.dart';
 import '../biz/amount_text.dart';
 
-/// 持仓卡片，展示单只基金/股票的持仓摘要。
+/// 持仓卡片，展示单只基金/股票的持仓摘要（v3 基金模块 UI）。
 ///
 /// 布局：
-///   第一行 — 基金名称（左）| 市值（右）
-///   第二行 — 代码 + 份额 (左) | 盈亏 + 收益率（右，按收入/支出配色）
-///
-/// 遵循 BeeCount UI 风格：用 [SectionCard] 做容器、[AmountText] 格式化金额、
-/// [BeeTokens] 驱动主题色。
+///   区域 1 — 基金名称/代码 | 市值
+///   区域 2 — 持有收益 + 收益率
+///   区域 3 — 今日/昨日收益（两列，含涨跌幅）
 class HoldingCard extends ConsumerWidget {
   final InvestmentHolding holding;
   final VoidCallback? onTap;
@@ -35,12 +33,7 @@ class HoldingCard extends ConsumerWidget {
     return '${_isProfit ? '+' : ''}${rate.toStringAsFixed(2)}%';
   }
 
-  String get _navLabel {
-    final date = holding.navDate;
-    return date == null
-        ? '净值'
-        : '净值（${date.year}.${date.month}.${date.day}）';
-  }
+  String _dateStr(DateTime date) => '${date.month}.${date.day}';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -55,106 +48,113 @@ class HoldingCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 第一行：名称 | 市值
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 左侧：基金名称 + 代码
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        holding.fundName,
-                        style: BeeTextTokens.title(context),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        holding.fundCode,
-                        style: BeeTextTokens.label(context),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: BeeDimens.p8),
-                // 右侧：市值
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '市值',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: BeeTokens.textTertiary(context),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    AmountText(
-                      value: holding.marketValue,
-                      signed: false,
-                      useCompactFormat: false,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: BeeTokens.textPrimary(context),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+            _buildHeader(context),
             const SizedBox(height: BeeDimens.p8),
-            // 第二行：份额/净值 | 盈亏/收益率
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // 左侧：份额 | 成本 | 净值（日期）
-                Expanded(
-                  child: Wrap(
-                    spacing: BeeDimens.p8,
-                    runSpacing: 4,
-                    children: [
-                      _infoChip(
-                          '份额', holding.totalShares.toStringAsFixed(2)),
-                      _infoChip('成本', holding.totalCost.toStringAsFixed(2)),
-                      _infoChip(
-                          _navLabel, holding.currentNav.toStringAsFixed(4)),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: BeeDimens.p8),
-                // 右侧：盈亏 + 收益率
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    AmountText(
-                      value: _pnl,
-                      signed: true,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: pnlColor,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _pnlRateStr,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: pnlColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+            const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
+            const SizedBox(height: BeeDimens.p8),
+            _buildHoldingReturn(context, ref, pnlColor),
+            const SizedBox(height: BeeDimens.p8),
+            const Divider(height: 1, thickness: 1, color: Color(0xFFF0F0F0)),
             const SizedBox(height: BeeDimens.p8),
             _buildDailyRow(context, ref),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                holding.fundName,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: BeeTokens.textPrimary(context),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                holding.fundCode,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: BeeTokens.textTertiary(context),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: BeeDimens.p8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            AmountText(
+              value: holding.marketValue,
+              signed: false,
+              showCurrency: true,
+              useCompactFormat: false,
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: BeeTokens.textPrimary(context),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '市值',
+              style: TextStyle(
+                fontSize: 10,
+                color: BeeTokens.textTertiary(context),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHoldingReturn(
+    BuildContext context,
+    WidgetRef ref,
+    Color pnlColor,
+  ) {
+    return Row(
+      children: [
+        Text(
+          '持有收益',
+          style: TextStyle(
+            fontSize: 12,
+            color: BeeTokens.textSecondary(context),
+          ),
+        ),
+        const Spacer(),
+        AmountText(
+          value: _pnl,
+          signed: true,
+          showCurrency: true,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: pnlColor,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          _pnlRateStr,
+          style: TextStyle(
+            fontSize: 12,
+            color: pnlColor,
+          ),
+        ),
+      ],
     );
   }
 
@@ -165,119 +165,122 @@ class HoldingCard extends ConsumerWidget {
     final hasData = daily != null && !daily.isNotApplicable;
     final dailyData = hasData ? daily : null;
 
-    return Wrap(
-      spacing: BeeDimens.p8,
-      runSpacing: 4,
+    return Row(
       children: [
-        _dailyChip(
-          context,
-          ref,
-          label: '今日收益（${now.year}.${now.month}.${now.day}）',
-          profit: dailyData?.todayProfit,
-          pct: null,
+        Expanded(
+          child: _dailyColumn(
+            context,
+            ref,
+            label: '今日收益',
+            date: now,
+            profit: dailyData?.todayProfit,
+            pct: dailyData?.todayChangePct,
+          ),
         ),
-        _dailyChip(
-          context,
-          ref,
-          label: '昨日收益（${yesterday.year}.${yesterday.month}.${yesterday.day}）',
-          profit: dailyData?.yesterdayProfit,
-          pct: null,
+        const SizedBox(width: BeeDimens.p8),
+        Container(
+          width: 1,
+          height: 52,
+          color: const Color(0xFFF0F0F0),
         ),
-        _dailyChip(
-          context,
-          ref,
-          label: '今日涨跌',
-          profit: null,
-          pct: dailyData?.todayChangePct,
-        ),
-        _dailyChip(
-          context,
-          ref,
-          label: '昨日涨跌',
-          profit: null,
-          pct: dailyData?.yesterdayChangePct,
+        const SizedBox(width: BeeDimens.p8),
+        Expanded(
+          child: _dailyColumn(
+            context,
+            ref,
+            label: '昨日收益',
+            date: yesterday,
+            profit: dailyData?.yesterdayProfit,
+            pct: dailyData?.yesterdayChangePct,
+          ),
         ),
       ],
     );
   }
 
-  Widget _dailyChip(
+  Widget _dailyColumn(
     BuildContext context,
     WidgetRef ref, {
     required String label,
+    required DateTime date,
     required Decimal? profit,
     required Decimal? pct,
   }) {
-    if (profit == null && pct == null) {
-      return _dailyText(context, ref, label, '--', neutral: true);
-    }
+    final hasValue = profit != null || pct != null;
     final positive = (profit ?? pct ?? Decimal.zero) >= Decimal.zero;
-    final color = positive
-        ? BeeTokens.incomeColor(context, ref)
-        : BeeTokens.expenseColor(context, ref);
-    final sign = positive ? '+' : '';
-    final value = profit != null
-        ? '$sign${profit.toStringAsFixed(2)}'
-        : '$sign${(pct! * Decimal.fromInt(100)).toStringAsFixed(2)}%';
-    return _dailyText(context, ref, label, value, color: color);
-  }
+    final valueColor = hasValue
+        ? (positive
+            ? BeeTokens.incomeColor(context, ref)
+            : BeeTokens.expenseColor(context, ref))
+        : const Color(0xFFCCCCCC);
+    final pctColor = hasValue
+        ? (positive
+            ? BeeTokens.incomeColor(context, ref)
+            : BeeTokens.expenseColor(context, ref))
+        : const Color(0xFFBBBBBB);
 
-  Widget _dailyText(
-    BuildContext context,
-    WidgetRef ref,
-    String label,
-    String value, {
-    Color? color,
-    bool neutral = false,
-  }) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    return Column(
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            color: BeeTokens.textTertiary(context),
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: BeeTokens.textTertiary(context),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              _dateStr(date),
+              style: const TextStyle(
+                fontSize: 10,
+                color: Color(0xFFBBBBBB),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(width: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 12,
-            color: neutral
-                ? BeeTokens.textTertiary(context)
-                : (color ?? BeeTokens.textSecondary(context)),
-            fontWeight: FontWeight.w600,
-          ),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (profit != null)
+              AmountText(
+                value: profit.toDouble(),
+                signed: true,
+                showCurrency: true,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: valueColor,
+                ),
+              )
+            else
+              Text(
+                '--',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: valueColor,
+                ),
+              ),
+            const SizedBox(width: 4),
+            Text(
+              pct == null ? '(--%)' : '(${_pctStr(pct)})',
+              style: TextStyle(
+                fontSize: 11,
+                color: pctColor,
+              ),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  Widget _infoChip(String label, String value) {
-    return Builder(builder: (context) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              color: BeeTokens.textTertiary(context),
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 12,
-              color: BeeTokens.textSecondary(context),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      );
-    });
+  String _pctStr(Decimal pct) {
+    final value = (pct * Decimal.fromInt(100)).toStringAsFixed(2);
+    return '${pct >= Decimal.zero ? '+' : ''}$value%';
   }
 }

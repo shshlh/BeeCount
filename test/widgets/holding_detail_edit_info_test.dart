@@ -41,6 +41,7 @@ void main() {
             (ref) async =>
                 const HoldingReturn(unrealizedPnL: 100, returnRate: 0.2),
           ),
+          holdingDailyReturnProvider(1).overrideWith((ref) async => null),
           investmentServiceProvider.overrideWithValue(spy),
         ],
         child: MaterialApp(
@@ -69,6 +70,8 @@ void main() {
 
     expect(spy.updateCalls, 1);
     expect(find.text('编辑基金信息'), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 2));
   });
 }
 

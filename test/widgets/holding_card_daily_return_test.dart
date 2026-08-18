@@ -19,7 +19,7 @@ void main() {
         currentNav: 1.1,
         marketValue: 110,
         holdingType: 'fund',
-      isQdii: false,
+        isQdii: false,
         createdAt: DateTime(2026),
       );
 
@@ -29,7 +29,7 @@ void main() {
         ),
       );
 
-  testWidgets('有日收益数据时展示今日/昨日收益与涨跌幅', (tester) async {
+  testWidgets('v3 卡片展示市值/持有收益/今日昨日收益', (tester) async {
     await tester.pumpWidget(
       host(
         HoldingCard(
@@ -45,12 +45,15 @@ void main() {
     );
     await tester.pump();
 
+    expect(find.text('市值'), findsOneWidget);
+    expect(find.text('持有收益'), findsOneWidget);
     expect(find.textContaining('今日收益'), findsOneWidget);
     expect(find.textContaining('昨日收益'), findsOneWidget);
-    expect(find.text('+10.00'), findsOneWidget);
-    expect(find.text('-5.00'), findsOneWidget);
-    expect(find.text('+9.00%'), findsOneWidget);
-    expect(find.text('-5.00%'), findsOneWidget);
+    expect(find.textContaining('+10.00'), findsOneWidget);
+    expect(find.textContaining('-5.00'), findsOneWidget);
+    expect(find.textContaining('+9.00%'), findsOneWidget);
+    expect(find.textContaining('-5.00%'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 2));
   });
 
   testWidgets('货币基金收益/涨跌幅显示 --', (tester) async {
@@ -65,8 +68,10 @@ void main() {
     await tester.pump();
 
     expect(find.textContaining('今日收益'), findsOneWidget);
-    expect(find.textContaining('今日涨跌'), findsOneWidget);
-    expect(find.text('--'), findsNWidgets(4));
+    expect(find.textContaining('昨日收益'), findsOneWidget);
+    expect(find.text('--'), findsNWidgets(2));
+    expect(find.text('(--%)'), findsNWidgets(2));
+    await tester.pump(const Duration(seconds: 2));
   });
 
   testWidgets('今日未更新时今日/昨日收益显示 --（7.19.3）', (tester) async {
@@ -87,6 +92,8 @@ void main() {
     await tester.pump();
 
     expect(find.textContaining('今日收益'), findsOneWidget);
-    expect(find.text('--'), findsNWidgets(4));
+    expect(find.text('--'), findsNWidgets(2));
+    expect(find.text('(--%)'), findsNWidgets(2));
+    await tester.pump(const Duration(seconds: 2));
   });
 }

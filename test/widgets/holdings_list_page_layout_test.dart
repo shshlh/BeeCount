@@ -140,9 +140,17 @@ void main() {
 
     await tester.tap(find.text('持有金额'));
     await tester.pumpAndSettle();
-    expect(find.text('持有收益'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byWidgetPredicate((widget) => widget is PopupMenuItem),
+        matching: find.text('持有收益'),
+      ),
+      findsOneWidget,
+    );
     expect(find.text('持有收益率'), findsOneWidget);
     expect(find.byType(PopupMenuDivider), findsNWidgets(2));
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 10));
   });
 
   testWidgets('选中分组无基金时显示分组空态', (tester) async {
@@ -315,6 +323,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(spy.deleteHoldingCalls, 1);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 10));
   });
 
   testWidgets('刷新跳过基金时提示具体代码', (tester) async {
@@ -396,9 +406,47 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('全部更新'), findsOneWidget);
+    expect(find.text('更新完成'), findsOneWidget);
     expect(find.text('+10.00'), findsOneWidget);
     expect(find.text('+10.00%'), findsOneWidget);
+  });
+
+  testWidgets('部分更新状态显示在今日收益行', (tester) async {
+    final spy = _SpyInvestmentService(investmentRepo);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          investmentRepositoryProvider.overrideWithValue(investmentRepo),
+          repositoryProvider.overrideWithValue(repo),
+          investmentServiceProvider.overrideWithValue(spy),
+          currentHoldingsProvider.overrideWith(
+            (ref) => Stream<List<InvestmentHolding>>.value(const []),
+          ),
+          groupsProvider.overrideWith(
+            (ref) => Stream<List<InvestmentGroup>>.value(const []),
+          ),
+          portfolioSummaryProvider.overrideWith(
+            (ref) async => const PortfolioSummary(
+              totalMarketValue: 0,
+              totalCost: 0,
+              unrealizedPnL: 0,
+              returnRate: 0,
+              holdingCount: 0,
+              dailyStatus: DailyNavStatus.partialUpdated,
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: const HoldingsListPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('部分更新'), findsOneWidget);
   });
 
   testWidgets('20:00 前状态变化后无条件刷新摘要', (tester) async {

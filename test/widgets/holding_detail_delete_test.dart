@@ -63,6 +63,7 @@ void main() {
         holdingReturnProvider(1).overrideWith(
           (ref) async => const HoldingReturn(unrealizedPnL: 0, returnRate: 0),
         ),
+        holdingDailyReturnProvider(1).overrideWith((ref) async => null),
         repositoryProvider.overrideWithValue(repo),
         investmentServiceProvider.overrideWithValue(service),
       ],
@@ -87,6 +88,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repo.deleteTransactionCalls, 1);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 2));
   });
 
   testWidgets('删除整个持仓需确认并调用服务', (tester) async {
@@ -101,6 +104,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(service.deleteHoldingCalls, 1);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 2));
   });
 
   testWidgets('转换批次流水删除整批并调用服务', (tester) async {
@@ -129,6 +134,7 @@ void main() {
           holdingReturnProvider(1).overrideWith(
             (ref) async => const HoldingReturn(unrealizedPnL: 0, returnRate: 0),
           ),
+          holdingDailyReturnProvider(1).overrideWith((ref) async => null),
           repositoryProvider.overrideWithValue(repo),
           investmentServiceProvider.overrideWithValue(service),
         ],
@@ -153,6 +159,8 @@ void main() {
 
     expect(service.deleteConversionCalls, 1);
     expect(repo.deleteTransactionCalls, 0);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 2));
   });
 }
 

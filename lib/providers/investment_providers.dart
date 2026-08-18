@@ -143,6 +143,13 @@ final holdingDailyReturnsProvider =
   return result;
 });
 
+/// 单只持仓的今日/昨日收益与涨跌幅（7.20.2 详情页使用）。
+final holdingDailyReturnProvider = FutureProvider.family
+    .autoDispose<DailyReturnSnapshot?, int>((ref, holdingId) {
+  final service = ref.watch(investmentServiceProvider);
+  return service.getHoldingDailyReturn(holdingId);
+});
+
 // ---- 基金分组与排序（v6.2）----
 
 /// 当前账本的分组列表（按 sortOrder 升序）。

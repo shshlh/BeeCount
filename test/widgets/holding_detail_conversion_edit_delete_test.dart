@@ -159,6 +159,7 @@ void main() {
       // 卸载 ProviderScope 并冲刷 Drift stream 取消产生的零时长 timer
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(milliseconds: 10));
+      await tester.pump(const Duration(seconds: 2));
     });
   });
 
@@ -182,7 +183,7 @@ void main() {
       final convertRow = find.ancestor(
         of: find.descendant(
             of: find.byType(SectionCard), matching: find.text('转换')),
-        matching: find.byType(SectionCard),
+        matching: find.byType(InkWell),
       );
       await tester.tap(
         find.descendant(of: convertRow, matching: find.byTooltip('删除流水')),
@@ -206,6 +207,7 @@ void main() {
       // 卸载 ProviderScope 并冲刷 Drift stream 取消产生的零时长 timer
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(milliseconds: 10));
+      await tester.pump(const Duration(seconds: 2));
     });
   });
 }

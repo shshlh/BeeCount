@@ -53,6 +53,7 @@ void main() {
           overrides: [
             investmentRepositoryProvider.overrideWithValue(investmentRepo),
             repositoryProvider.overrideWithValue(LocalRepository(db)),
+            holdingDailyReturnProvider(1).overrideWith((ref) async => null),
           ],
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -98,6 +99,7 @@ void main() {
       // 卸载 ProviderScope 并冲刷 Drift stream 取消产生的零时长 timer
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(milliseconds: 10));
+      await tester.pump(const Duration(seconds: 2));
     });
   });
 }

@@ -17,7 +17,7 @@ void main() {
         currentNav: 1.2345,
         marketValue: 123.45,
         holdingType: 'fund',
-      isQdii: false,
+        isQdii: false,
         createdAt: DateTime(2026),
         navDate: navDate,
       );
@@ -28,21 +28,25 @@ void main() {
         ),
       );
 
-  testWidgets('净值标签带日期、数值独立展示', (tester) async {
+  testWidgets('v3 卡片头部展示代码/市值，不再展示净值', (tester) async {
     await tester.pumpWidget(
       host(buildHolding(navDate: DateTime(2026, 8, 7))),
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('净值（2026.8.7）'), findsOneWidget);
-    expect(find.text('1.2345'), findsOneWidget);
+    expect(find.text('000001'), findsOneWidget);
+    expect(find.text('市值'), findsOneWidget);
+    expect(find.text('净值'), findsNothing);
+    expect(find.textContaining('净值（'), findsNothing);
+    await tester.pump(const Duration(seconds: 2));
   });
 
-  testWidgets('无净值日期时不显示括号', (tester) async {
+  testWidgets('无净值日期时列表卡片同样不显示净值', (tester) async {
     await tester.pumpWidget(host(buildHolding()));
     await tester.pumpAndSettle();
 
-    expect(find.text('净值'), findsOneWidget);
-    expect(find.textContaining('净值（'), findsNothing);
+    expect(find.text('市值'), findsOneWidget);
+    expect(find.text('净值'), findsNothing);
+    await tester.pump(const Duration(seconds: 2));
   });
 }

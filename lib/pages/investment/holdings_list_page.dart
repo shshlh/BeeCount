@@ -285,8 +285,7 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('删除持仓'),
-        content: Text(
-            '删除持仓「${holding.fundName}」？将同时删除该持仓的全部交易记录，此操作不可恢复。'),
+        content: Text('删除持仓「${holding.fundName}」？将同时删除该持仓的全部交易记录，此操作不可恢复。'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -306,9 +305,7 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
     if (confirmed != true) return;
 
     try {
-      await ref
-          .read(investmentServiceProvider)
-          .deleteHolding(holding.id);
+      await ref.read(investmentServiceProvider).deleteHolding(holding.id);
       _invalidateHoldings();
     } catch (e) {
       if (context.mounted) {
@@ -394,13 +391,17 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
               children: [
                 Text(
                   '投资组合',
-                  style: BeeTextTokens.strongTitle(context),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: BeeTokens.textPrimary(context),
+                  ),
                 ),
                 const SizedBox(width: BeeDimens.p8),
                 Text(
                   '共 ${summary.holdingCount} 只',
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 14,
                     color: BeeTokens.textTertiary(context),
                   ),
                 ),
@@ -411,7 +412,6 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
               context,
               label: '总市值',
               value: summary.totalMarketValue,
-              isMain: true,
             ),
             const SizedBox(height: BeeDimens.p8),
             _summaryRow(
@@ -422,8 +422,6 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
             const SizedBox(height: BeeDimens.p8),
             _summaryPnlRow(context, ref, summary),
             const SizedBox(height: BeeDimens.p8),
-            _summaryStatusRow(context, summary.dailyStatus),
-            const SizedBox(height: BeeDimens.p8),
             _summaryDailyRow(
               context,
               ref,
@@ -431,6 +429,7 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
               date: DateTime.now(),
               profit: summary.todayProfit,
               pct: summary.todayChangePct,
+              status: summary.dailyStatus,
             ),
             const SizedBox(height: BeeDimens.p8),
             _summaryDailyRow(
@@ -455,7 +454,6 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
     BuildContext context, {
     required String label,
     required double value,
-    bool isMain = false,
   }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -463,11 +461,8 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
         Text(
           label,
           style: TextStyle(
-            fontSize: isMain ? 15 : 13,
-            color: isMain
-                ? BeeTokens.textPrimary(context)
-                : BeeTokens.textSecondary(context),
-            fontWeight: isMain ? FontWeight.w600 : FontWeight.normal,
+            fontSize: 14,
+            color: BeeTokens.textSecondary(context),
           ),
         ),
         AmountText(
@@ -475,8 +470,8 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
           signed: false,
           useCompactFormat: false,
           style: TextStyle(
-            fontSize: isMain ? 20 : 14,
-            fontWeight: isMain ? FontWeight.bold : FontWeight.w500,
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
             color: BeeTokens.textPrimary(context),
           ),
         ),
@@ -503,7 +498,7 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
         Text(
           '持仓盈亏',
           style: TextStyle(
-            fontSize: 13,
+            fontSize: 14,
             color: BeeTokens.textSecondary(context),
           ),
         ),
@@ -513,7 +508,7 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
               value: summary.unrealizedPnL,
               signed: true,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: pnlColor,
               ),
@@ -522,7 +517,7 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
             Text(
               '$sign$rateStr%',
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 14,
                 color: pnlColor,
               ),
             ),
@@ -532,39 +527,44 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
     );
   }
 
-  Widget _summaryStatusRow(BuildContext context, DailyNavStatus status) {
-    final label = switch (status) {
-      DailyNavStatus.pending => '待更新',
-      DailyNavStatus.partialUpdated => '部分更新',
-      DailyNavStatus.allUpdated => '全部更新',
-      DailyNavStatus.nonTradingDay => '非交易日',
-    };
-    final color = switch (status) {
-      DailyNavStatus.allUpdated => BeeTokens.success(context),
-      DailyNavStatus.partialUpdated => BeeTokens.warning(context),
-      DailyNavStatus.nonTradingDay => BeeTokens.info(context),
-      DailyNavStatus.pending => BeeTokens.textSecondary(context),
+  Widget _summaryStatusBadge(BuildContext context, DailyNavStatus status) {
+    final (label, background, foreground) = switch (status) {
+      DailyNavStatus.pending => (
+          '待更新',
+          const Color(0xFFF0F0F0),
+          const Color(0xFF999999)
+        ),
+      DailyNavStatus.partialUpdated => (
+          '部分更新',
+          const Color(0xFFFFF8E1),
+          const Color(0xFFF9A825),
+        ),
+      DailyNavStatus.allUpdated => (
+          '更新完成',
+          const Color(0xFFF0FFF0),
+          const Color(0xFF51CF66),
+        ),
+      DailyNavStatus.nonTradingDay => (
+          '非交易日',
+          const Color(0xFFF0F0F0),
+          const Color(0xFF999999),
+        ),
     };
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          '今日净值状态',
-          style: TextStyle(
-            fontSize: 13,
-            color: BeeTokens.textSecondary(context),
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          color: foreground,
+          fontWeight: FontWeight.w500,
         ),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            color: color,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -575,6 +575,7 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
     required DateTime date,
     required Decimal? profit,
     required Decimal? pct,
+    DailyNavStatus? status,
   }) {
     final dateStr = '${date.year}.${date.month}.${date.day}';
     final valueStr = profit == null
@@ -585,20 +586,27 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
         : '${pct >= Decimal.zero ? '+' : ''}'
             '${(pct * Decimal.fromInt(100)).toStringAsFixed(2)}%';
     final profitValue = profit;
-    final color = profitValue != null
+    final valueColor = profitValue != null
         ? (profitValue >= Decimal.zero
             ? BeeTokens.incomeColor(context, ref)
             : BeeTokens.expenseColor(context, ref))
-        : BeeTokens.textTertiary(context);
+        : const Color(0xFFCCCCCC);
+    final pctValue = pct;
+    final pctColor = pctValue != null
+        ? (pctValue >= Decimal.zero
+            ? BeeTokens.incomeColor(context, ref)
+            : BeeTokens.expenseColor(context, ref))
+        : const Color(0xFFBBBBBB);
 
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          '$label（$dateStr）',
-          style: TextStyle(
-            fontSize: 13,
-            color: BeeTokens.textSecondary(context),
+        Expanded(
+          child: Text(
+            '$label（$dateStr）',
+            style: TextStyle(
+              fontSize: 14,
+              color: BeeTokens.textSecondary(context),
+            ),
           ),
         ),
         Row(
@@ -607,8 +615,8 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
             Text(
               valueStr,
               style: TextStyle(
-                fontSize: 13,
-                color: color,
+                fontSize: 16,
+                color: valueColor,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -616,10 +624,14 @@ class _HoldingsListPageState extends ConsumerState<HoldingsListPage> {
             Text(
               pctStr,
               style: TextStyle(
-                fontSize: 12,
-                color: color,
+                fontSize: 14,
+                color: pctColor,
               ),
             ),
+            if (status != null) ...[
+              const SizedBox(width: BeeDimens.p8),
+              _summaryStatusBadge(context, status),
+            ],
           ],
         ),
       ],

@@ -6327,6 +6327,42 @@
 
 ---
 
+## 2026-08-18
+
+**移交角色**：invest-ui + qa
+**接收角色**：PM
+
+**任务**：7.20 基金模块 v3 UI 改版
+
+**完成工作**：
+- 7.20.1 今日收益状态标签：移除独立「今日净值状态」行，标签紧跟今日收益百分比后（间距 8px）；待更新/部分更新/更新完成/非交易日四态配色；文案统一为「更新完成」
+- 7.20.2 列表页摘要卡：标题 16/600、计数 14/#999、标签 14/#666、金额 18/700；持仓盈亏与今日/昨日收益 16/600 + 14/400 红绿配色
+- 7.20.2 基金卡：重构为头部（名称/代码/市值）、持有收益、今日/昨日两列三区块，分隔线 #f0f0f0，无数据展示 `--` / `(--%)`
+- 7.20.2 详情页：蓝色 #4a90d9 导航；Hero（市值 28/700 + 盈亏）；今日/昨日两列；参数区（持有份额/最新净值/持仓成本/累计收益）；交易记录连续列表 + 类型标签（买入红、卖出绿、初始登记灰、分红橙）
+- 新增 `holdingDailyReturnProvider` family，详情页独立取单基金日收益，不依赖列表整表查询
+
+**验证**：
+- 全量 `flutter test`：867 passed，1 skipped，0 failed
+- 改动文件 `flutter analyze` 无新增 error/warning
+
+**修改文件**：
+- `lib/pages/investment/holdings_list_page.dart`
+- `lib/pages/investment/holding_detail_page.dart`
+- `lib/widgets/investment/holding_card.dart`
+- `lib/providers/investment_providers.dart`
+- `test/widgets/holdings_list_page_layout_test.dart`
+- `test/widgets/holding_card_daily_return_test.dart`
+- `test/widgets/holding_card_nav_date_test.dart`
+- `test/widgets/holding_detail_delete_test.dart`
+- `test/widgets/holding_detail_edit_info_test.dart`
+- `test/widgets/holding_detail_transaction_edit_test.dart`
+- `test/widgets/holding_detail_convert_row_test.dart`
+- `test/widgets/holding_detail_conversion_edit_delete_test.dart`
+
+**git 状态**：当前分支 main，未提交，待 PM 复审合入
+
+---
+
 ## 2026-07-29
 
 **移交角色**：投资逻辑工程师（invest-logic）

@@ -23,7 +23,7 @@ void main() {
         currentNav: 1.2,
         marketValue: 600,
         holdingType: 'fund',
-      isQdii: false,
+        isQdii: false,
         createdAt: DateTime(2026),
         navDate: DateTime(2026, 8, 7),
       );
@@ -38,6 +38,7 @@ void main() {
           (ref) async =>
               const HoldingReturn(unrealizedPnL: 100, returnRate: 0.2),
         ),
+        holdingDailyReturnProvider(1).overrideWith((ref) async => null),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -72,10 +73,14 @@ void main() {
       find.descendant(of: find.byType(SectionCard), matching: find.text('转换')),
       findsOneWidget,
     );
-    expect(find.text('净值（2026.8.7）'), findsOneWidget);
+    expect(find.text('最新净值'), findsOneWidget);
+    expect(find.text('1.2000'), findsOneWidget);
+    expect(find.text('(8.7)'), findsOneWidget);
     expect(find.text('净值 1.2'), findsOneWidget);
     final amountTexts = tester.widgetList<AmountText>(find.byType(AmountText));
     expect(amountTexts.any((w) => w.value == 600), isTrue);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 2));
   });
 
   testWidgets('转出侧转换行也显示「转换」并按份额×净值展示', (tester) async {
@@ -108,6 +113,8 @@ void main() {
     );
     final amountTexts = tester.widgetList<AmountText>(find.byType(AmountText));
     expect(amountTexts.any((w) => w.value == 600), isTrue);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 2));
   });
 
   testWidgets('买入侧 amount 为转入成本时按实际成本展示', (tester) async {
@@ -132,5 +139,7 @@ void main() {
 
     final amountTexts = tester.widgetList<AmountText>(find.byType(AmountText));
     expect(amountTexts.any((w) => w.value == 590), isTrue);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 2));
   });
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:decimal/decimal.dart';
 
 import '../../data/db.dart';
 import '../../providers.dart';
+import '../../services/data/daily_return_calculator.dart';
 import '../../services/data/investment_service.dart';
 import '../../styles/tokens.dart';
 import '../../widgets/ui/ui.dart';
@@ -33,6 +35,7 @@ class HoldingDetailPage extends ConsumerWidget {
     final holdingAsync = ref.watch(holdingProvider(holdingId));
     final transactionsAsync = ref.watch(holdingTransactionsProvider(holdingId));
     final returnAsync = ref.watch(holdingReturnProvider(holdingId));
+    final dailyAsync = ref.watch(holdingDailyReturnProvider(holdingId));
 
     return Scaffold(
       backgroundColor: BeeTokens.scaffoldBackground(context),
@@ -43,26 +46,7 @@ class HoldingDetailPage extends ConsumerWidget {
           }
           return Column(
             children: [
-              PrimaryHeader(
-                title: holding.fundName,
-                subtitle: holding.fundCode,
-                showBack: true,
-                compact: true,
-                actions: [
-                  IconButton(
-                    onPressed: () =>
-                        _showEditHoldingInfoDialog(context, ref, holding),
-                    icon: const Icon(Icons.edit_outlined),
-                    tooltip: '编辑基金信息',
-                  ),
-                  IconButton(
-                    onPressed: () =>
-                        _confirmDeleteHolding(context, ref, holding),
-                    icon: const Icon(Icons.delete_outline),
-                    tooltip: '删除持仓',
-                  ),
-                ],
-              ),
+              _buildFundHeader(context, ref, holding),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(
@@ -72,7 +56,11 @@ class HoldingDetailPage extends ConsumerWidget {
                     BeeDimens.p12,
                   ),
                   children: [
-                    _buildStatsCard(context, ref, holding, returnAsync),
+                    _buildHeroCard(context, ref, holding, returnAsync),
+                    const SizedBox(height: BeeDimens.p8),
+                    _buildDailyReturnsCard(context, ref, dailyAsync),
+                    const SizedBox(height: BeeDimens.p8),
+                    _buildParamsCard(context, ref, holding),
                     const SizedBox(height: BeeDimens.p8),
                     _buildTransactionsSection(context, ref, transactionsAsync),
                   ],
@@ -120,8 +108,72 @@ class HoldingDetailPage extends ConsumerWidget {
     );
   }
 
-  /// 持仓统计卡片
-  Widget _buildStatsCard(
+  /// 蓝色基金导航栏（v3 UI）。
+  Widget _buildFundHeader(
+    BuildContext context,
+    WidgetRef ref,
+    InvestmentHolding holding,
+  ) {
+    return Material(
+      color: const Color(0xFF4A90D9),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                tooltip: '返回',
+                onPressed: () => Navigator.of(context).maybePop(),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      holding.fundName,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      holding.fundCode,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () =>
+                    _showEditHoldingInfoDialog(context, ref, holding),
+                icon: const Icon(Icons.edit_outlined, color: Colors.white),
+                tooltip: '编辑基金信息',
+              ),
+              IconButton(
+                onPressed: () => _confirmDeleteHolding(context, ref, holding),
+                icon: const Icon(Icons.delete_outline, color: Colors.white),
+                tooltip: '删除持仓',
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 第一块：市值 Hero + 持有收益。
+  Widget _buildHeroCard(
     BuildContext context,
     WidgetRef ref,
     InvestmentHolding holding,
@@ -137,72 +189,50 @@ class HoldingDetailPage extends ConsumerWidget {
         : '--';
 
     return SectionCard(
-      padding: const EdgeInsets.all(BeeDimens.p16),
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
         children: [
-          // 市值
-          _statRow(
-            context,
-            label: '市值',
-            child: AmountText(
-              value: holding.marketValue,
-              signed: false,
-              useCompactFormat: false,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: BeeTokens.textPrimary(context),
-              ),
+          Text(
+            '市值',
+            style: TextStyle(
+              fontSize: 12,
+              color: BeeTokens.textTertiary(context),
             ),
           ),
-          const SizedBox(height: BeeDimens.p12),
-          // 份额 + 净值
-          Row(
-            children: [
-              Expanded(
-                child: _statCell('份额', holding.totalShares.toStringAsFixed(2)),
-              ),
-              Container(
-                width: 1,
-                height: 32,
-                color: BeeTokens.divider(context),
-              ),
-              Expanded(
-                child: _statCell('成本', holding.totalCost.toStringAsFixed(2)),
-              ),
-              Container(
-                width: 1,
-                height: 32,
-                color: BeeTokens.divider(context),
-              ),
-              Expanded(
-                child: _statCell(
-                  holding.navDate == null
-                      ? '净值'
-                      : '净值（${holding.navDate!.year}.'
-                          '${holding.navDate!.month}.'
-                          '${holding.navDate!.day}）',
-                  holding.currentNav.toStringAsFixed(4),
-                ),
-              ),
-            ],
+          const SizedBox(height: 4),
+          AmountText(
+            value: holding.marketValue,
+            signed: false,
+            showCurrency: true,
+            useCompactFormat: false,
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              color: BeeTokens.textPrimary(context),
+            ),
           ),
-          const SizedBox(height: BeeDimens.p12),
-          // 盈亏 + 收益率
+          const SizedBox(height: 6),
           Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('持仓盈亏',
-                  style: TextStyle(
-                      fontSize: 13, color: BeeTokens.textSecondary(context))),
-              const Spacer(),
               AmountText(
                 value: pnl,
                 signed: true,
+                showCurrency: true,
                 style: TextStyle(
-                    fontSize: 14, fontWeight: FontWeight.w600, color: pnlColor),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: pnlColor,
+                ),
               ),
-              const SizedBox(width: BeeDimens.p8),
-              Text(rateStr, style: TextStyle(fontSize: 12, color: pnlColor)),
+              const SizedBox(width: 6),
+              Text(
+                rateStr,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: pnlColor,
+                ),
+              ),
             ],
           ),
         ],
@@ -210,34 +240,258 @@ class HoldingDetailPage extends ConsumerWidget {
     );
   }
 
-  Widget _statCell(String label, String value) {
-    return Builder(builder: (context) {
-      return Column(
+  /// 第二块：今日/昨日收益两列。
+  Widget _buildDailyReturnsCard(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<DailyReturnSnapshot?> dailyAsync,
+  ) {
+    final daily = dailyAsync.valueOrNull;
+    final hasData = daily != null && !daily.isNotApplicable;
+    final dailyData = hasData ? daily : null;
+    final now = DateTime.now();
+    final yesterday = now.subtract(const Duration(days: 1));
+
+    return SectionCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
         children: [
-          Text(label,
-              style: TextStyle(
-                  fontSize: 11, color: BeeTokens.textTertiary(context))),
-          const SizedBox(height: 4),
-          Text(value,
-              style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: BeeTokens.textPrimary(context))),
+          Expanded(
+            child: _dailyDetailColumn(
+              context,
+              ref,
+              label: '今日收益',
+              date: now,
+              profit: dailyData?.todayProfit,
+              pct: dailyData?.todayChangePct,
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 64,
+            color: const Color(0xFFF0F0F0),
+          ),
+          Expanded(
+            child: _dailyDetailColumn(
+              context,
+              ref,
+              label: '昨日收益',
+              date: yesterday,
+              profit: dailyData?.yesterdayProfit,
+              pct: dailyData?.yesterdayChangePct,
+            ),
+          ),
         ],
-      );
-    });
+      ),
+    );
   }
 
-  Widget _statRow(BuildContext context,
-      {required String label, required Widget child}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _dailyDetailColumn(
+    BuildContext context,
+    WidgetRef ref, {
+    required String label,
+    required DateTime date,
+    required Decimal? profit,
+    required Decimal? pct,
+  }) {
+    final hasValue = profit != null || pct != null;
+    final positive = (profit ?? pct ?? Decimal.zero) >= Decimal.zero;
+    final valueColor = hasValue
+        ? (positive
+            ? BeeTokens.incomeColor(context, ref)
+            : BeeTokens.expenseColor(context, ref))
+        : const Color(0xFFCCCCCC);
+    final pctColor = hasValue
+        ? (positive
+            ? BeeTokens.incomeColor(context, ref)
+            : BeeTokens.expenseColor(context, ref))
+        : const Color(0xFFBBBBBB);
+
+    return Column(
       children: [
-        Text(label,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: BeeTokens.textTertiary(context),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '${date.month}.${date.day}',
+              style: const TextStyle(
+                fontSize: 11,
+                color: Color(0xFFBBBBBB),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        if (profit != null)
+          AmountText(
+            value: profit.toDouble(),
+            signed: true,
+            showCurrency: true,
             style: TextStyle(
-                fontSize: 13, color: BeeTokens.textSecondary(context))),
-        child,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: valueColor,
+            ),
+          )
+        else
+          Text(
+            '--',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: valueColor,
+            ),
+          ),
+        const SizedBox(height: 2),
+        Text(
+          pct == null
+              ? '--%'
+              : '${pct >= Decimal.zero ? '+' : ''}'
+                  '${(pct * Decimal.fromInt(100)).toStringAsFixed(2)}%',
+          style: TextStyle(
+            fontSize: 12,
+            color: pctColor,
+          ),
+        ),
       ],
+    );
+  }
+
+  /// 第三块：份额/净值/成本/累计收益参数区。
+  Widget _buildParamsCard(
+    BuildContext context,
+    WidgetRef ref,
+    InvestmentHolding holding,
+  ) {
+    final pnl = holding.marketValue - holding.totalCost;
+    final pnlColor = pnl >= 0
+        ? BeeTokens.incomeColor(context, ref)
+        : BeeTokens.expenseColor(context, ref);
+    final navDate = holding.navDate;
+
+    return SectionCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          _paramsRow(
+            context,
+            leftLabel: '持有份额',
+            leftValue: Text(
+              _formatNumber(holding.totalShares),
+              style: _paramsValueStyle(context),
+            ),
+            rightLabel: '最新净值',
+            rightValue: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  holding.currentNav.toStringAsFixed(4),
+                  style: _paramsValueStyle(context),
+                ),
+                if (navDate != null) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    '(${navDate.month}.${navDate.day})',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: BeeTokens.textTertiary(context),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const Divider(height: 1, thickness: 1, color: Color(0xFFF5F5F5)),
+          _paramsRow(
+            context,
+            leftLabel: '持仓成本',
+            leftValue: AmountText(
+              value: holding.totalCost,
+              signed: false,
+              showCurrency: true,
+              style: _paramsValueStyle(context),
+            ),
+            rightLabel: '累计收益',
+            rightValue: AmountText(
+              value: pnl,
+              signed: true,
+              showCurrency: true,
+              style: _paramsValueStyle(context).copyWith(color: pnlColor),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  TextStyle _paramsValueStyle(BuildContext context) => TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w500,
+        color: BeeTokens.textPrimary(context),
+      );
+
+  String _formatNumber(double value) => NumberFormat('#,##0.00').format(value);
+
+  Widget _paramsRow(
+    BuildContext context, {
+    required String leftLabel,
+    required Widget leftValue,
+    required String rightLabel,
+    required Widget rightValue,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  leftLabel,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: BeeTokens.textTertiary(context),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                leftValue,
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Container(
+            width: 1,
+            height: 40,
+            color: const Color(0xFFF0F0F0),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  rightLabel,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: BeeTokens.textTertiary(context),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                rightValue,
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -251,8 +505,15 @@ class HoldingDetailPage extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text('交易记录', style: BeeTextTokens.strongTitle(context)),
+          padding: const EdgeInsets.fromLTRB(4, 0, 0, 8),
+          child: Text(
+            '交易记录',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: BeeTokens.textSecondary(context),
+            ),
+          ),
         ),
         transactionsAsync.when(
           skipLoadingOnReload: true,
@@ -269,17 +530,21 @@ class HoldingDetailPage extends ConsumerWidget {
                 ),
               );
             }
-            return Column(
-              children: transactions.map((tx) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: BeeDimens.p8),
-                  child: _TransactionTile(
-                    transaction: tx,
-                    onEdit: () => _showEditDialog(context, ref, tx),
-                    onDelete: () => _confirmDeleteTransaction(context, ref, tx),
-                  ),
-                );
-              }).toList(),
+            return SectionCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  for (var i = 0; i < transactions.length; i++)
+                    _TransactionTile(
+                      transaction: transactions[i],
+                      showDivider: i < transactions.length - 1,
+                      onEdit: () =>
+                          _showEditDialog(context, ref, transactions[i]),
+                      onDelete: () => _confirmDeleteTransaction(
+                          context, ref, transactions[i]),
+                    ),
+                ],
+              ),
             );
           },
           loading: () => const SectionCard(
@@ -309,6 +574,9 @@ class HoldingDetailPage extends ConsumerWidget {
         onSave: () {
           ref.invalidate(currentHoldingsProvider);
           ref.invalidate(portfolioSummaryProvider);
+          if (tx.holdingId != null) {
+            ref.invalidate(holdingDailyReturnProvider(tx.holdingId!));
+          }
         },
       ),
     );
@@ -380,6 +648,7 @@ class HoldingDetailPage extends ConsumerWidget {
     for (final id in holdingIds) {
       ref.invalidate(holdingProvider(id));
       ref.invalidate(holdingReturnProvider(id));
+      ref.invalidate(holdingDailyReturnProvider(id));
       ref.invalidate(holdingTransactionsProvider(id));
     }
   }
@@ -637,11 +906,13 @@ class _TransactionTile extends ConsumerWidget {
   final Transaction transaction;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final bool showDivider;
 
   const _TransactionTile({
     required this.transaction,
     this.onEdit,
     this.onDelete,
+    this.showDivider = false,
   });
 
   @override
@@ -660,16 +931,22 @@ class _TransactionTile extends ConsumerWidget {
             'redeem' => '赎回',
             'convert' => '转换',
             'initial' => '初始登记',
+            'dividend' => '分红',
             _ => investType,
           };
 
-    final typeColor = isConvert
-        ? BeeTokens.textSecondary(context)
-        : isInitial
-            ? BeeTokens.textTertiary(context)
-            : isBuy
-                ? BeeTokens.incomeColor(context, ref)
-                : BeeTokens.expenseColor(context, ref);
+    final (typeBackground, typeForeground) = isConvert
+        ? (const Color(0xFFF0F0F0), const Color(0xFF666666))
+        : switch (investType) {
+            'buy' => (const Color(0xFFFFF0F0), const Color(0xFFE74C3C)),
+            'sell' || 'redeem' => (
+                const Color(0xFFF0FFF0),
+                const Color(0xFF51CF66)
+              ),
+            'initial' => (const Color(0xFFF0F0F0), const Color(0xFF666666)),
+            'dividend' => (const Color(0xFFFFF8E1), const Color(0xFFF9A825)),
+            _ => (const Color(0xFFF0F0F0), const Color(0xFF666666)),
+          };
 
     final dateStr = DateFormat('MM-dd HH:mm').format(transaction.happenedAt);
     final shares = transaction.investShares ?? 0;
@@ -685,114 +962,135 @@ class _TransactionTile extends ConsumerWidget {
             : shares.abs() * nav)
         : amount;
 
-    return SectionCard(
-      padding: const EdgeInsets.all(BeeDimens.p12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(8),
-        onTap: onEdit,
-        child: Padding(
-          padding: const EdgeInsets.all(4),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 第一行：日期 + 类型 + 份额
-              Row(
-                children: [
-                  Text(dateStr,
+    final positiveShares =
+        isBuy || isInitial || investType == 'dividend' || shares >= 0;
+    final sharesColor = positiveShares
+        ? BeeTokens.incomeColor(context, ref)
+        : BeeTokens.expenseColor(context, ref);
+
+    return Column(
+      children: [
+        InkWell(
+          onTap: onEdit,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      dateStr,
                       style: TextStyle(
-                          fontSize: 12,
-                          color: BeeTokens.textTertiary(context))),
-                  const SizedBox(width: BeeDimens.p8),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: typeColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(typeLabel,
-                            style: TextStyle(fontSize: 11, color: typeColor)),
-                        // v4.7: 编辑图标暗示可编辑
-                        if (onEdit != null) ...[
-                          const SizedBox(width: 2),
-                          Icon(Icons.edit_outlined, size: 11, color: typeColor),
-                        ],
-                      ],
-                    ),
-                  ),
-                  // v4.7: 初始持仓标记
-                  if (isExcludedFromStats && isInitial) ...[
-                    const SizedBox(width: 4),
-                    Text('不计流水',
-                        style: TextStyle(
-                            fontSize: 9,
-                            color: BeeTokens.textTertiary(context),
-                            fontStyle: FontStyle.italic)),
-                  ],
-                  const Spacer(),
-                  Text(
-                    '${isBuy || isInitial ? '+' : '-'}${shares.abs().toStringAsFixed(2)} 份',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: BeeTokens.textPrimary(context),
-                    ),
-                  ),
-                  if (onDelete != null)
-                    IconButton(
-                      onPressed: onDelete,
-                      icon: const Icon(Icons.delete_outline, size: 18),
-                      tooltip: '删除流水',
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 32,
-                        minHeight: 32,
+                        fontSize: 12,
+                        color: BeeTokens.textTertiary(context),
                       ),
                     ),
-                ],
-              ),
-              const SizedBox(height: BeeDimens.p8),
-              // 第二行：金额 + 净值 + 手续费
-              Row(
-                children: [
-                  AmountText(
-                    value: displayAmount,
-                    signed: false,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: BeeTokens.textPrimary(context),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: typeBackground,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      child: Text(
+                        typeLabel,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: typeForeground,
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: BeeDimens.p8),
-                  if (nav > 0)
-                    Text('净值 $nav',
+                    if (isExcludedFromStats && isInitial) ...[
+                      const SizedBox(width: 4),
+                      Text(
+                        '不计流水',
                         style: TextStyle(
-                            fontSize: 11,
-                            color: BeeTokens.textTertiary(context))),
-                  const Spacer(),
-                  if (fee > 0)
-                    Text('手续费 ${fee.toStringAsFixed(2)}',
+                          fontSize: 9,
+                          color: BeeTokens.textTertiary(context),
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
+                    Text(
+                      '${positiveShares ? '+' : '-'}'
+                      '${shares.abs().toStringAsFixed(2)} 份',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: sharesColor,
+                      ),
+                    ),
+                    if (onDelete != null)
+                      IconButton(
+                        onPressed: onDelete,
+                        icon: const Icon(Icons.delete_outline, size: 18),
+                        tooltip: '删除流水',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 32,
+                          minHeight: 32,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    AmountText(
+                      value: displayAmount,
+                      signed: false,
+                      showCurrency: true,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: BeeTokens.textPrimary(context),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (nav > 0)
+                      Text(
+                        '净值 $nav',
                         style: TextStyle(
-                            fontSize: 11,
-                            color: BeeTokens.textTertiary(context))),
-                ],
-              ),
-              if (transaction.note != null && transaction.note!.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text(transaction.note!,
+                          fontSize: 12,
+                          color: BeeTokens.textTertiary(context),
+                        ),
+                      ),
+                    const Spacer(),
+                    if (fee > 0)
+                      Text(
+                        '手续费 ${fee.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: BeeTokens.textTertiary(context),
+                        ),
+                      ),
+                  ],
+                ),
+                if (transaction.note != null &&
+                    transaction.note!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    transaction.note!,
                     style: TextStyle(
-                        fontSize: 11, color: BeeTokens.textTertiary(context)),
+                      fontSize: 11,
+                      color: BeeTokens.textTertiary(context),
+                    ),
                     maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
-      ),
+        if (showDivider)
+          const Divider(height: 1, thickness: 1, color: Color(0xFFF5F5F5)),
+      ],
     );
   }
 }
