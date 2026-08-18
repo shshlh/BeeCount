@@ -32,6 +32,40 @@
 ## 2026-08-18
 
 **移交角色**：PM
+**接收角色**：architect + invest-logic + invest-ui + qa
+
+**任务**：7.18 P3 收口
+
+**背景**：7.17 已合入 `main`（`72b58d5`、`ee48dec`）。以下为复审遗留的 3 个非阻塞项。
+
+**要求**：
+
+7.18.1 净值历史物理清理（architect + qa）：
+- `upsertNavHistory` 写入后按 `fund_code` 分组、`nav_date` 降序保留最近 3 档，删除第 4 档及更早记录。
+- 建议封装 `pruneNavHistory`，优先在 Repository 内同事务完成；补充一次性清理旧数据的方法或迁移说明，避免已有超过 3 档的数据长期残留。
+- 测试：连续 upsert 超过 3 档后断言物理行数不超过 3；同日期再次 upsert 仍只覆盖、不新增。
+
+7.18.2 收益/涨跌 Decimal 化（invest-logic + invest-ui + qa）：
+- `DailyReturnSnapshot` 的收益、涨跌幅字段改为 `Decimal`；`calculateDailyReturn` 内部使用 `Decimal.parse` 计算。
+- `getPortfolioSummary` 的今日/昨日收益与涨跌幅直接按 `Decimal` 累加，避免先 double 再转 Decimal。
+- UI 只在最终展示时转成 `double` 或 `toStringAsFixed`，业务计算不落 double。
+- 测试：保留现有三档/QDII/下跌场景，并补精度敏感用例。
+
+7.18.3 money-only 刷新状态（invest-logic + qa）：
+- `NavRefreshResult` 增加明确的节流标识或 `attemptedFetch` 字段，区分「15 分钟节流命中」与「抓取后无成功结果」。
+- `refreshDailyNavsForLedger` 只在节流命中时保留上次状态；非节流路径继续计算状态。
+- 仅持有货币基金且抓取失败时，不应残留上一次状态；`eligibleHoldings` 为空时按约定落 `allUpdated`。
+- 测试：仅货币基金全部抓取失败 -> 状态正确落位；节流命中 -> 保留上次状态。
+
+**约束**：全量 `flutter test` 0 failed；改动文件 analyze 无新增 error；HANDOFF/TEAM 只增不减。
+
+**git 状态**：当前分支 main，基线 `ee48dec`，待派工
+
+---
+
+## 2026-08-18
+
+**移交角色**：PM
 **接收角色**：归档 / 待实机验证
 
 **任务**：7.17 复审合入
