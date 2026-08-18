@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' as d;
 import 'dart:io';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -76,6 +77,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
   double _amount = 0;
   String? _pickedCurrency;
   List<int> _tagIds = [];
+  int? _editingTransactionId;
   late final TextEditingController _noteCtrl;
   final FocusNode _noteFocusNode = FocusNode();
   List<NoteHistoryEntry> _frequentNotes = [];
@@ -88,6 +90,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
     _date = widget.initialDate ?? DateTime.now();
     _amount = widget.initialAmount ?? 0;
     _tagIds = List.from(widget.initialTagIds ?? []);
+    _editingTransactionId = widget.editingTransactionId;
     _noteCtrl = TextEditingController(text: widget.initialNote ?? '');
     _loadFrequentNotes();
     _resolveInitialAccounts();
@@ -210,7 +213,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
   }
 
   int? _pinnedIdFor(String side) {
-    if (widget.editingTransactionId == null) return null;
+    if (_editingTransactionId == null) return null;
     return side == 'from'
         ? widget.initialFromAccountId
         : widget.initialToAccountId;
@@ -265,7 +268,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
       if (!sameCurrency) {
         // 存量数据放行(2026-07-12 细则):编辑模式且账户对未改动(老数据在
         // 守卫上线前就是跨币种)→ 放行让用户能改备注/日期等,不强迫重选账户。
-        final isOriginalPair = widget.editingTransactionId != null &&
+        final isOriginalPair = _editingTransactionId != null &&
             _fromAccountId == widget.initialFromAccountId &&
             _toAccountId == widget.initialToAccountId;
         if (!isOriginalPair) {
@@ -298,7 +301,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
         initialTagIds: _tagIds,
         showAccountPicker: false,
         ledgerId: ledgerId,
-        editingTransactionId: widget.editingTransactionId,
+        editingTransactionId: _editingTransactionId,
         transactionKind: 'transfer',
         confirmOnly: true,
       ),
@@ -347,10 +350,11 @@ class _TransferFormState extends ConsumerState<TransferForm> {
         : null;
 
     try {
-      if (widget.editingTransactionId != null) {
+      final originalEditId = _editingTransactionId;
+      if (_editingTransactionId != null) {
         // 编辑模式：更新现有转账记录
         await repo.updateTransaction(
-          id: widget.editingTransactionId!,
+          id: _editingTransactionId!,
           type: 'transfer',
           amount: result.amount,
           categoryId: transferCategoryId, // 使用虚拟转账分类ID
@@ -361,23 +365,21 @@ class _TransferFormState extends ConsumerState<TransferForm> {
         );
         // 更新 toAccountId(同时写 toAccountSyncIdOverride,共享账本场景)
         await repo.updateTransactionFields(
-          id: widget.editingTransactionId!,
+          id: _editingTransactionId!,
           toAccountId: d.Value<int?>(toAccountForAdd),
           toAccountSyncIdOverride: toOverride,
           writeToAccountSyncIdOverride: true,
         );
-        // 共享账本:回填编辑人,UI 头像组立即展示
-        await TxAuthorService.markEdited(ref, widget.editingTransactionId!);
         // 更新标签
         if (result.tagIds.isNotEmpty) {
           await repo.updateTransactionTags(
-            transactionId: widget.editingTransactionId!,
+            transactionId: _editingTransactionId!,
             tagIds: result.tagIds,
           );
           ref.read(tagListRefreshProvider.notifier).state++;
         } else {
           await repo.removeAllTagsFromTransaction(
-              widget.editingTransactionId!);
+              _editingTransactionId!);
           ref.read(tagListRefreshProvider.notifier).state++;
         }
       } else {
@@ -395,8 +397,6 @@ class _TransferFormState extends ConsumerState<TransferForm> {
           happenedAt: result.date,
         );
         savedTxId = txId;
-        // 共享账本:本地立即标记创建人 + 编辑人
-        await TxAuthorService.markCreated(ref, txId);
         // 关联标签
         if (result.tagIds.isNotEmpty) {
           await repo.updateTransactionTags(
@@ -407,10 +407,28 @@ class _TransferFormState extends ConsumerState<TransferForm> {
         }
       }
 
+      // 再记一笔：先保存当前编辑，再切回新建模式，避免第二次保存覆盖原流水。
+      if (!exitAfterSave) {
+        setState(() {
+          _editingTransactionId = null;
+          _amount = 0;
+          _tagIds = [];
+          _pickedCurrency = null;
+          _noteCtrl.clear();
+        });
+      }
+
+      // 共享账本:回填作者（非关键后处理，放在模式切换之后）。
+      if (originalEditId != null) {
+        await TxAuthorService.markEdited(ref, originalEditId);
+      } else {
+        await TxAuthorService.markCreated(ref, savedTxId!);
+      }
+
       // 保存待上传的附件
       if (result.pendingAttachments.isNotEmpty) {
         await attachmentService.saveAttachments(
-          transactionId: savedTxId ?? widget.editingTransactionId ?? 0,
+          transactionId: savedTxId ?? originalEditId ?? 0,
           sourceFiles: result.pendingAttachments,
           startIndex: 0,
         );
@@ -432,7 +450,7 @@ class _TransferFormState extends ConsumerState<TransferForm> {
         }
         showToast(
           context,
-          widget.editingTransactionId != null
+          originalEditId != null
               ? l10n.transferUpdateSuccess
               : l10n.transferCreateSuccess,
         );
@@ -440,18 +458,13 @@ class _TransferFormState extends ConsumerState<TransferForm> {
         // 保存后跳到首页「明细」流水列表
         ref.read(bottomTabIndexProvider.notifier).state = 0;
       } else {
-        // 再记一笔：保留转出/转入/时间，清空金额/标签/备注
         showToast(
           context,
-          widget.editingTransactionId != null
+          originalEditId != null
               ? l10n.transferUpdateSuccess
               : l10n.transferCreateSuccess,
         );
-        setState(() {
-          _amount = 0;
-          _tagIds = [];
-          _noteCtrl.clear();
-        });
+        // 字段清理已在保存成功后、同步前完成。
       }
     } catch (e) {
       if (mounted) {
@@ -499,6 +512,11 @@ class _TransferFormState extends ConsumerState<TransferForm> {
       exitAfterSave: exitAfterSave,
     );
   }
+
+  /// 测试专用：绕过按钮回调直接触发保存，避免异步按钮在 widget test 中无法完成。
+  @visibleForTesting
+  Future<void> saveForTesting({required bool exitAfterSave}) =>
+      _save(exitAfterSave: exitAfterSave);
 
   void _swapTransferAccounts() {
     if (_fromAccount == null || _toAccount == null) return;

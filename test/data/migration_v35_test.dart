@@ -27,7 +27,7 @@ void main() {
     expect(row.read<int>('exclude_from_assets'), 0);
   });
 
-  test('schemaVersion = 41（当前最新版本）', () {
-    expect(db.schemaVersion, 41);
+  test('schemaVersion = 42（当前最新版本）', () {
+    expect(db.schemaVersion, 42);
   });
 }

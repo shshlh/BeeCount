@@ -52,6 +52,7 @@ class InvestmentCsvExportService {
       '市值',
       '备注',
       '所属分组',
+      'QDII',
     ]);
     for (final h in holdings) {
       rows.add([
@@ -65,6 +66,7 @@ class InvestmentCsvExportService {
         h.marketValue.toStringAsFixed(2),
         h.note ?? '',
         holdingGroup[h.id] ?? '',
+        h.isQdii ? '1' : '0',
       ]);
     }
 

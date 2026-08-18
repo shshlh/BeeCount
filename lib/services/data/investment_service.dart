@@ -160,10 +160,10 @@ class InvestmentService {
       if (quotes == null || quotes.isEmpty) continue;
       final quote = quotes.last;
       navMap[h.id] = quote;
-      final previous = h.navDate;
       final isMoney =
           isMoneyFund(fundName: h.fundName, holdingType: h.holdingType);
-      if (previous == null || quote.navDate.isAfter(previous)) {
+      final expected = _expectedNavDate(h, _clock());
+      if (_isSameDay(quote.navDate, expected)) {
         allAdvancedIds.add(h.id);
         if (!isMoney) advancedIds.add(h.id);
       }
@@ -265,6 +265,18 @@ class InvestmentService {
     return 'investment_nav_daily_status_${ledgerId}_${now.year}$month$day';
   }
 
+  /// 7.19.4.3 目标净值日：常规基金=当前交易日，QDII=上一交易日。
+  DateTime _expectedNavDate(InvestmentHolding holding, DateTime now) {
+    final today = DateTime(now.year, now.month, now.day);
+    if (holding.isQdii) {
+      return HolidayCalendar.previousTradingDay(today);
+    }
+    return today;
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
   // ---- 组合摘要 ----
 
   Future<PortfolioSummary> getPortfolioSummary(int ledgerId) async {
@@ -295,14 +307,27 @@ class InvestmentService {
       if (history.length < 3) continue;
       final quotes = [
         for (final row in history)
-          FundNavQuote(nav: row.unitNav, navDate: row.navDate),
+          FundNavQuote(
+            nav: row.unitNav,
+            navDate: row.navDate,
+            updatedAt: row.updatedAt,
+          ),
       ];
       final snapshot =
-          calculateDailyReturn(history: quotes, shares: h.totalShares);
+          calculateDailyReturn(
+        history: quotes,
+        shares: h.totalShares,
+        expectedNavDate: _expectedNavDate(h, _clock()),
+      );
       if (snapshot == null) continue;
-      todayProfit = (todayProfit ?? Decimal.zero) + snapshot.todayProfit;
-      yesterdayProfit =
-          (yesterdayProfit ?? Decimal.zero) + snapshot.yesterdayProfit;
+      final snapshotToday = snapshot.todayProfit;
+      final snapshotYesterday = snapshot.yesterdayProfit;
+      if (snapshotToday != null) {
+        todayProfit = (todayProfit ?? Decimal.zero) + snapshotToday;
+      }
+      if (snapshotYesterday != null) {
+        yesterdayProfit = (yesterdayProfit ?? Decimal.zero) + snapshotYesterday;
+      }
       final navsByDate = [...quotes]
         ..sort((a, b) => a.navDate.compareTo(b.navDate));
       final navs = navsByDate
@@ -310,10 +335,13 @@ class InvestmentService {
           .where((nav) => nav > 0)
           .toList();
       if (navs.length >= 3) {
-        todayBase +=
-            _toDecimal(navs[navs.length - 2]) * _toDecimal(h.totalShares);
-        yesterdayBase +=
-            _toDecimal(navs[navs.length - 3]) * _toDecimal(h.totalShares);
+        final sharesDecimal = _toDecimal(h.totalShares);
+        if (snapshot.todayUpdated) {
+          todayBase += _toDecimal(navs[navs.length - 2]) * sharesDecimal;
+          yesterdayBase += _toDecimal(navs[navs.length - 3]) * sharesDecimal;
+        } else {
+          yesterdayBase += _toDecimal(navs[navs.length - 2]) * sharesDecimal;
+        }
       }
     }
 
@@ -387,9 +415,14 @@ class InvestmentService {
     return calculateDailyReturn(
       history: [
         for (final row in history)
-          FundNavQuote(nav: row.unitNav, navDate: row.navDate),
+          FundNavQuote(
+            nav: row.unitNav,
+            navDate: row.navDate,
+            updatedAt: row.updatedAt,
+          ),
       ],
       shares: holding.totalShares,
+      expectedNavDate: _expectedNavDate(holding, _clock()),
     );
   }
 
@@ -478,6 +511,7 @@ class InvestmentService {
     String? note,
     int? holdingId,
     int? sourceAccountId,
+    bool isQdii = false,
   }) {
     return _repo.buy(
       ledgerId: ledgerId,
@@ -492,6 +526,7 @@ class InvestmentService {
       note: note,
       holdingId: holdingId,
       sourceAccountId: sourceAccountId,
+      isQdii: isQdii,
     );
   }
 
@@ -643,6 +678,7 @@ class InvestmentService {
     DateTime? happenedAt,
     DateTime? navDate,
     String? note,
+    bool isQdii = false,
   }) {
     return _repo.createInitialHolding(
       ledgerId: ledgerId,
@@ -655,6 +691,7 @@ class InvestmentService {
       happenedAt: happenedAt,
       navDate: navDate,
       note: note,
+      isQdii: isQdii,
     );
   }
 
@@ -663,11 +700,13 @@ class InvestmentService {
     int holdingId, {
     required String fundCode,
     String? fundName,
+    bool isQdii = false,
   }) {
     return _repo.updateHoldingInfo(
       holdingId,
       fundCode: fundCode,
       fundName: fundName,
+      isQdii: isQdii,
     );
   }
 

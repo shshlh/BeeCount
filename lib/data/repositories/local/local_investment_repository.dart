@@ -306,6 +306,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
     DateTime? navDate,
     double? marketValue,
     DateTime? updatedAt,
+    bool? isQdii,
   }) async {
     await (db.update(db.investmentHoldings)..where((h) => h.id.equals(id)))
         .write(InvestmentHoldingsCompanion(
@@ -320,6 +321,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
           marketValue != null ? d.Value(marketValue) : const d.Value.absent(),
       updatedAt:
           updatedAt != null ? d.Value(updatedAt) : const d.Value.absent(),
+      isQdii: isQdii != null ? d.Value(isQdii) : const d.Value.absent(),
     ));
   }
 
@@ -339,12 +341,14 @@ class LocalInvestmentRepository implements InvestmentRepository {
     String? note,
     int? holdingId,
     int? sourceAccountId,
+    bool isQdii = false,
   }) async {
     final sharesDecimal = _toDecimal(shares);
     final navDecimal = _toDecimal(nav);
     final amountDecimal = _toDecimal(amount);
     final effectiveHappenedAt = happenedAt ?? DateTime.now();
-    final effectiveNavDate = navDate ?? effectiveHappenedAt;
+    // 7.19.1: QDII 净值日由买入确认单决定，仓库不再用交易时间兜底。
+    final effectiveNavDate = navDate;
 
     return db.transaction(() async {
       // v4.7 返工：持仓归属必须是投资账户，禁止用扣款账户顶替。
@@ -377,6 +381,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
                   fundCode: fundCode,
                   fundName: fundName,
                   accountId: investmentAccountId,
+                  isQdii: d.Value(isQdii),
                   note: d.Value(note),
                 ),
               );
@@ -411,6 +416,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
         navDate: effectiveNavDate,
         marketValue: (newShares * navDecimal).toDouble(),
         updatedAt: effectiveHappenedAt,
+        isQdii: isQdii,
       );
 
       // 同步投资账户市值
@@ -507,6 +513,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
     DateTime? happenedAt,
     DateTime? navDate,
     String? note,
+    bool isQdii = false,
   }) async {
     if (toCost <= 0) throw ArgumentError('转入成本必须大于 0');
     if (refundAmount < 0) throw ArgumentError('退回金额不能为负数');
@@ -892,6 +899,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
     DateTime? happenedAt,
     DateTime? navDate,
     String? note,
+    bool isQdii = false,
   }) async {
     final effectiveHappenedAt = happenedAt ?? DateTime.now();
 
@@ -908,6 +916,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
                 fundCode: fundCode,
                 fundName: fundName,
                 accountId: accountId,
+                isQdii: d.Value(isQdii),
                 note: d.Value(note),
                 createdAt: d.Value(effectiveHappenedAt),
                 updatedAt: d.Value(effectiveHappenedAt),
@@ -933,6 +942,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
 
       // 3. 按全部投资交易重算持仓（复用场景自动累加份额/成本），并联动账户市值
       await _recomputeHolding(holdingId, preferredNavDate: navDate);
+      await _updateHolding(holdingId, isQdii: isQdii);
       await _syncInvestmentAccountValue(accountId);
 
       return holdingId;
@@ -944,6 +954,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
     int holdingId, {
     required String fundCode,
     String? fundName,
+    bool isQdii = false,
   }) async {
     final code = fundCode.trim();
     if (!RegExp(r'^\d{6}$').hasMatch(code)) {
@@ -967,6 +978,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
         fundName: fundName != null
             ? d.Value(fundName.trim())
             : const d.Value.absent(),
+        isQdii: d.Value(isQdii),
         updatedAt: d.Value(DateTime.now()),
       ));
     });
@@ -1139,6 +1151,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
     DateTime? navDate,
     double marketValue = 0,
     String? note,
+    bool isQdii = false,
   }) async {
     final existing = await _findHolding(ledgerId, fundCode, accountId);
     if (existing != null) {
@@ -1151,6 +1164,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
         currentNav: d.Value(currentNav),
         navDate: navDate != null ? d.Value(navDate) : const d.Value.absent(),
         marketValue: d.Value(marketValue),
+        isQdii: d.Value(isQdii),
         note: note != null ? d.Value(note) : const d.Value.absent(),
         updatedAt: d.Value(DateTime.now()),
       ));
@@ -1167,6 +1181,7 @@ class LocalInvestmentRepository implements InvestmentRepository {
             currentNav: d.Value(currentNav),
             navDate: d.Value(navDate),
             marketValue: d.Value(marketValue),
+            isQdii: d.Value(isQdii),
             note: d.Value(note),
             createdAt: d.Value(DateTime.now()),
             updatedAt: d.Value(DateTime.now()),

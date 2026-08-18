@@ -36,7 +36,7 @@ void main() {
     expect(row.read<int>('is_off_balance'), 1);
   });
 
-  test('schemaVersion = 41', () {
-    expect(db.schemaVersion, 41);
+  test('schemaVersion = 42', () {
+    expect(db.schemaVersion, 42);
   });
 }

@@ -17,6 +17,7 @@ void main() {
         currentNav: 1.2345,
         marketValue: 123.45,
         holdingType: 'fund',
+      isQdii: false,
         createdAt: DateTime(2026),
         navDate: navDate,
       );

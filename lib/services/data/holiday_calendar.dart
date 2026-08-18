@@ -50,4 +50,13 @@ class HolidayCalendar {
     }
     return !isHoliday(day);
   }
+
+  /// 最近一个交易日（不含 [date] 当天），QDII 目标净值日判定用（7.19.4）。
+  static DateTime previousTradingDay(DateTime date) {
+    var day = _dateOnly(date).subtract(const Duration(days: 1));
+    while (!isTradingDay(day)) {
+      day = day.subtract(const Duration(days: 1));
+    }
+    return day;
+  }
 }

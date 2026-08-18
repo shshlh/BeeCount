@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart' as d;
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -75,6 +76,7 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
   double _amount = 0;
   List<int> _tagIds = [];
   String? _pickedCurrency;
+  int? _editingTransactionId;
   late final TextEditingController _noteCtrl;
   final FocusNode _noteFocusNode = FocusNode();
   List<NoteHistoryEntry> _frequentNotes = [];
@@ -85,6 +87,7 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
     _date = widget.initialDate ?? DateTime.now();
     _amount = widget.initialAmount ?? 0;
     _tagIds = List.from(widget.initialTagIds ?? []);
+    _editingTransactionId = widget.editingTransactionId;
     _noteCtrl = TextEditingController(text: widget.initialNote ?? '');
     _resolveInitials();
     _loadFrequentNotes();
@@ -488,7 +491,7 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
       context,
       title: AppLocalizations.of(context).txFormAccount,
       initialAccount: _account,
-      pinnedAccountId: widget.editingTransactionId != null
+      pinnedAccountId: _editingTransactionId != null
           ? widget.initialAccountId
           : null,
     );
@@ -555,7 +558,7 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
   Future<void> _openAmountSheet() async {
     final ledgerId = ref.read(currentLedgerIdProvider);
     int? accountId = _account?.id;
-    if (widget.editingTransactionId == null && accountId == null) {
+    if (_editingTransactionId == null && accountId == null) {
       accountId = await _getDefaultAccountId(widget.kind, ledgerId);
     }
     if (!mounted) return;
@@ -582,7 +585,7 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
         initialTagIds: _tagIds,
         showAccountPicker: false,
         ledgerId: ledgerId,
-        editingTransactionId: widget.editingTransactionId,
+        editingTransactionId: _editingTransactionId,
         transactionKind: widget.kind,
         initialExcludeFromStats: widget.initialExcludeFromStats,
         initialExcludeFromBudget: widget.initialExcludeFromBudget,
@@ -623,10 +626,11 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
     final accountOverride = isSyntheticAccount
         ? await _resolveSyncIdByAccountId(res.accountId!, ledgerId)
         : null;
+    final originalEditId = _editingTransactionId;
 
-    if (widget.editingTransactionId != null) {
+    if (_editingTransactionId != null) {
       await repo.updateTransaction(
-        id: widget.editingTransactionId!,
+        id: _editingTransactionId!,
         type: widget.kind,
         amount: res.amount,
         categoryId: categoryIdForWrite,
@@ -640,8 +644,7 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
         currencyCode: res.currencyCode,
         nativeAmount: res.nativeAmount,
       );
-      transactionId = widget.editingTransactionId!;
-      await TxAuthorService.markEdited(ref, transactionId);
+      transactionId = _editingTransactionId!;
     } else {
       transactionId = await repo.addTransaction(
         ledgerId: ledgerId,
@@ -658,6 +661,23 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
         currencyCode: res.currencyCode,
         nativeAmount: res.nativeAmount,
       );
+    }
+
+    // 再记一笔：先保存当前编辑，再切回新建模式，避免第二次保存覆盖原流水。
+    // 在后续非关键后处理前清理，让用户能立即录入下一笔。
+    if (!exitAfterSave) {
+      setState(() {
+        _editingTransactionId = null;
+        _amount = 0;
+        _tagIds = [];
+        _pickedCurrency = null;
+        _noteCtrl.clear();
+      });
+    }
+
+    if (originalEditId != null) {
+      await TxAuthorService.markEdited(ref, originalEditId);
+    } else {
       await TxAuthorService.markCreated(ref, transactionId);
     }
 
@@ -681,7 +701,7 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
         tagIds: normalTagIds,
       );
       ref.read(tagListRefreshProvider.notifier).state++;
-    } else if (widget.editingTransactionId != null) {
+    } else if (originalEditId != null) {
       await repo.removeAllTagsFromTransaction(transactionId);
       ref.read(tagListRefreshProvider.notifier).state++;
     }
@@ -737,12 +757,7 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
       // 保存后跳到首页「明细」流水列表
       ref.read(bottomTabIndexProvider.notifier).state = 0;
     } else {
-      // 再记一笔：保留分类/账户/时间，清空金额/标签/备注
-      setState(() {
-        _amount = 0;
-        _tagIds = [];
-        _noteCtrl.clear();
-      });
+      // 字段清理已在保存成功后、同步前完成。
     }
     HapticFeedback.lightImpact();
     SystemSound.play(SystemSoundType.click);
@@ -762,6 +777,11 @@ class _TxEntryFormState extends ConsumerState<TxEntryForm> {
       exitAfterSave: exitAfterSave,
     );
   }
+
+  /// 测试专用：绕过按钮回调直接触发保存，避免异步按钮在 widget test 中无法完成。
+  @visibleForTesting
+  Future<void> saveForTesting({required bool exitAfterSave}) =>
+      _save(exitAfterSave: exitAfterSave);
 
   AmountEditorResult _buildDirectResult(int ledgerId) {
     final ledgerBase = ref.read(currentLedgerCurrencyProvider);

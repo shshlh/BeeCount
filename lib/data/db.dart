@@ -225,6 +225,9 @@ class InvestmentHoldings extends Table {
   /// 持仓类型：fund(基金) / stock(股票) / etf 等。
   TextColumn get holdingType => text().withDefault(const Constant('fund'))();
 
+  /// 是否为 QDII 基金（v7.19.4；净值日通常滞后 1~2 个交易日）。
+  BoolColumn get isQdii => boolean().withDefault(const Constant(false))();
+
   /// 备注。
   TextColumn get note => text().nullable()();
 
@@ -569,7 +572,7 @@ class BeeDatabase extends _$BeeDatabase {
 
   @override
   int get schemaVersion =>
-      41; // v31: 账户隐藏 / v32: 投资数据层 / v33: 账户体系改造 / v34: 账户初始资金日期 / v35: 账户不计入资产 / v36: 基金分组 / v37: 投资净值日期 / v38: 表外账户 / v39: 转换内部流水不进明细 / v40: 账户 ledger_id 回填/孤儿清理 / v41: 基金净值历史
+      42; // v31: 账户隐藏 / v32: 投资数据层 / v33: 账户体系改造 / v34: 账户初始资金日期 / v35: 账户不计入资产 / v36: 基金分组 / v37: 投资净值日期 / v38: 表外账户 / v39: 转换内部流水不进明细 / v40: 账户 ledger_id 回填/孤儿清理 / v41: 基金净值历史 / v42: QDII 标签
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -1446,6 +1449,16 @@ class BeeDatabase extends _$BeeDatabase {
                 'CREATE INDEX IF NOT EXISTS idx_fund_nav_history_date '
                 'ON fund_nav_history (nav_date);');
             logger.info('DBMigration', 'v41 迁移完成');
+          }
+          if (from < 42) {
+            logger.info('DBMigration', '开始迁移到 v42: 持仓 QDII 标签(is_qdii)');
+            await _addColumnIfMissing(
+              'investment_holdings',
+              'is_qdii',
+              'ALTER TABLE investment_holdings ADD COLUMN is_qdii '
+                  'INTEGER NOT NULL DEFAULT 0;',
+            );
+            logger.info('DBMigration', 'v42 迁移完成');
           }
         },
         onCreate: (m) async {

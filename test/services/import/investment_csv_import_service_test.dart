@@ -56,6 +56,7 @@ void main() {
       shares: 500,
       nav: 1.0,
       happenedAt: DateTime(2026, 8, 1, 11, 0),
+      isQdii: true,
     );
     final groupId =
         await investmentRepo.createGroup(ledgerId: 1, name: '核心');
@@ -83,6 +84,7 @@ void main() {
       investmentRepo: investmentRepo,
       repo: repo,
     ).buildCsv(ledgerId: 1);
+    expect(csv, contains('QDII'));
     // 7.16.3: 投资 CSV 不再含【账户】段，账户结构归配置 YAML。
     expect(csv, isNot(contains('【账户】')));
     final expectedHoldings =
@@ -135,6 +137,8 @@ void main() {
 
     final holdings = await investmentRepo.getHoldingsForLedger(1);
     expect(holdings.map((h) => h.fundCode).toSet(), {'000001', '000002'});
+    expect(holdings.firstWhere((h) => h.fundCode == '000002').isQdii, isTrue);
+    expect(holdings.firstWhere((h) => h.fundCode == '000001').isQdii, isFalse);
     expect((await investmentRepo.getInvestmentTransactionsForLedger(1)).length,
         expectedFlows);
 

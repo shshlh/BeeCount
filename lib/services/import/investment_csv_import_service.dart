@@ -96,6 +96,7 @@ class InvestmentCsvImportService {
         navDate: _date(_get(r, '净值日期')),
         marketValue: _num(r, '市值'),
         note: _get(r, '备注').trim().isEmpty ? null : _get(r, '备注').trim(),
+        isQdii: _bool(r, 'QDII'),
       );
       holdingIdByFundAccount['$fundCode|${_get(r, '所属账户').trim()}'] =
           holdingId;
@@ -261,6 +262,11 @@ class InvestmentCsvImportService {
 
   static double _num(Map<String, String> row, String key) =>
       double.tryParse(_get(row, key)) ?? 0;
+
+  static bool _bool(Map<String, String> row, String key) {
+    final raw = _get(row, key).trim().toLowerCase();
+    return raw == '1' || raw == 'true' || raw == '是';
+  }
 
   static int _int(Map<String, String> row, String key) =>
       int.tryParse(_get(row, key)) ?? 0;

@@ -27,6 +27,7 @@ void main() {
       currentNav: 1.0,
       marketValue: 500,
       holdingType: 'fund',
+      isQdii: false,
       createdAt: DateTime(2026),
     );
 
@@ -55,6 +56,7 @@ void main() {
     await tester.tap(find.byTooltip('编辑基金信息'));
     await tester.pumpAndSettle();
     expect(find.text('编辑基金信息'), findsOneWidget);
+    expect(find.text('QDII 基金'), findsOneWidget);
 
     await tester.enterText(find.byType(TextFormField).at(0), '11017');
     await tester.tap(find.widgetWithText(FilledButton, '保存'));
@@ -80,6 +82,7 @@ class _SpyInvestmentService extends InvestmentService {
     int holdingId, {
     required String fundCode,
     String? fundName,
+    bool isQdii = false,
   }) async {
     updateCalls++;
   }

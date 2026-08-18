@@ -82,7 +82,11 @@ void main() {
       '000001': FundNavQuote(nav: 1.5, navDate: navDate),
       '000002': FundNavQuote(nav: 2.5, navDate: navDate),
     });
-    final service = InvestmentService(repo, navFetch: fake);
+    final service = InvestmentService(
+      repo,
+      navFetch: fake,
+      clock: () => DateTime(2026, 8, 19, 20, 30),
+    );
 
     final updated = await service.refreshNavsForLedger(1);
 
@@ -284,7 +288,11 @@ void main() {
     final fake = _FakeNavFetchService({
       '000001': FundNavQuote(nav: 1.5, navDate: DateTime(2026, 8, 7)),
     });
-    final service = InvestmentService(repo, navFetch: fake);
+    final service = InvestmentService(
+      repo,
+      navFetch: fake,
+      clock: () => DateTime(2026, 8, 19, 20, 30),
+    );
 
     final result = await service.refreshNavsForLedgerDetailed(1);
 
@@ -371,7 +379,11 @@ void main() {
         ],
       },
     );
-    final service = InvestmentService(repo, navFetch: fake);
+    final service = InvestmentService(
+      repo,
+      navFetch: fake,
+      clock: () => DateTime(2026, 8, 19, 20, 30),
+    );
 
     final result = await service.refreshNavsForLedgerDetailed(1);
 
@@ -470,7 +482,7 @@ void main() {
     final service = InvestmentService(
       repo,
       navFetch: fake,
-      clock: () => DateTime(2026, 8, 18, 20, 30),
+      clock: () => DateTime(2026, 8, 19, 20, 30),
     );
 
     final result = await service.refreshDailyNavsForLedger(1);
@@ -512,7 +524,7 @@ void main() {
     final service = InvestmentService(
       repo,
       navFetch: fake,
-      clock: () => DateTime(2026, 8, 18, 20, 30),
+      clock: () => DateTime(2026, 8, 19, 20, 30),
     );
 
     final result = await service.refreshDailyNavsForLedger(1);
@@ -551,14 +563,14 @@ void main() {
           FundNavQuote(nav: 1.0, navDate: DateTime(2026, 8, 18)),
         ],
         '000002': [
-          FundNavQuote(nav: 1.0, navDate: DateTime(2026, 8, 18)),
+          FundNavQuote(nav: 1.0, navDate: DateTime(2026, 8, 19)),
         ],
       },
     );
     final service = InvestmentService(
       repo,
       navFetch: fake,
-      clock: () => DateTime(2026, 8, 18, 20, 30),
+      clock: () => DateTime(2026, 8, 19, 20, 30),
     );
 
     final result = await service.refreshDailyNavsForLedger(1);
@@ -569,6 +581,104 @@ void main() {
     expect(result.totalAdvancedCount, 1,
         reason: '货币基金仍计入 totalAdvancedCount 用于部分更新判断');
     expect(await service.getDailyNavStatus(1), DailyNavStatus.partialUpdated);
+  });
+
+  test('常规基金 18 日拉到 18 日净值：已更新（7.19.4）', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0,
+        navDate: DateTime(2026, 8, 17));
+    final fake = _FakeNavFetchService({
+      '000001': FundNavQuote(nav: 1.2, navDate: DateTime(2026, 8, 18)),
+    });
+    final service = InvestmentService(
+      repo,
+      navFetch: fake,
+      clock: () => DateTime(2026, 8, 18, 20, 30),
+    );
+
+    final result = await service.refreshDailyNavsForLedger(1);
+    expect(result.advancedCount, 1);
+    expect(await service.getDailyNavStatus(1), DailyNavStatus.allUpdated);
+  });
+
+  test('常规基金 18 日仍为 17 日净值：待更新（7.19.4）', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0,
+        navDate: DateTime(2026, 8, 17));
+    final fake = _FakeNavFetchService({
+      '000001': FundNavQuote(nav: 1.1, navDate: DateTime(2026, 8, 17)),
+    });
+    final service = InvestmentService(
+      repo,
+      navFetch: fake,
+      clock: () => DateTime(2026, 8, 18, 20, 30),
+    );
+
+    final result = await service.refreshDailyNavsForLedger(1);
+    expect(result.advancedCount, 0);
+    expect(await service.getDailyNavStatus(1), DailyNavStatus.pending);
+  });
+
+  test('QDII 18 日拉到 17 日净值：已更新（7.19.4）', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: 'QDII 基金',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0,
+        navDate: DateTime(2026, 8, 16),
+        isQdii: true);
+    final fake = _FakeNavFetchService({
+      '000001': FundNavQuote(nav: 1.2, navDate: DateTime(2026, 8, 17)),
+    });
+    final service = InvestmentService(
+      repo,
+      navFetch: fake,
+      clock: () => DateTime(2026, 8, 18, 20, 30),
+    );
+
+    final result = await service.refreshDailyNavsForLedger(1);
+    expect(result.advancedCount, 1);
+    expect(await service.getDailyNavStatus(1), DailyNavStatus.allUpdated);
+  });
+
+  test('QDII 18 日仍为 16 日净值：待更新（7.19.4）', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: 'QDII 基金',
+        amount: 1000,
+        shares: 1000,
+        nav: 1.0,
+        navDate: DateTime(2026, 8, 16),
+        isQdii: true);
+    final fake = _FakeNavFetchService({
+      '000001': FundNavQuote(nav: 1.1, navDate: DateTime(2026, 8, 16)),
+    });
+    final service = InvestmentService(
+      repo,
+      navFetch: fake,
+      clock: () => DateTime(2026, 8, 18, 20, 30),
+    );
+
+    final result = await service.refreshDailyNavsForLedger(1);
+    expect(result.advancedCount, 0);
+    expect(await service.getDailyNavStatus(1), DailyNavStatus.pending);
   });
 
   test('状态 key 带日期，跨日不残留昨日状态', () async {
@@ -583,7 +693,7 @@ void main() {
         navDate: DateTime(2026, 8, 18));
 
     final fake = _FakeNavFetchService({
-      '000001': FundNavQuote(nav: 1.2, navDate: DateTime(2026, 8, 19)),
+      '000001': FundNavQuote(nav: 1.2, navDate: DateTime(2026, 8, 18)),
     });
     final service = InvestmentService(
       repo,

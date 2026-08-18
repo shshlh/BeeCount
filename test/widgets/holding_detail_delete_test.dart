@@ -33,6 +33,7 @@ void main() {
       currentNav: 1.0,
       marketValue: 500,
       holdingType: 'fund',
+      isQdii: false,
       createdAt: DateTime(2026),
     );
     tx = Transaction(

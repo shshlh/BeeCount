@@ -19,6 +19,7 @@ void main() {
         currentNav: 1.1,
         marketValue: 110,
         holdingType: 'fund',
+      isQdii: false,
         createdAt: DateTime(2026),
       );
 
@@ -65,6 +66,27 @@ void main() {
 
     expect(find.textContaining('今日收益'), findsOneWidget);
     expect(find.textContaining('今日涨跌'), findsOneWidget);
+    expect(find.text('--'), findsNWidgets(4));
+  });
+
+  testWidgets('今日未更新时今日/昨日收益显示 --（7.19.3）', (tester) async {
+    await tester.pumpWidget(
+      host(
+        HoldingCard(
+          holding: buildHolding(),
+          dailyReturn: const DailyReturnSnapshot(
+            todayProfit: null,
+            yesterdayProfit: null,
+            todayChangePct: null,
+            yesterdayChangePct: null,
+            todayUpdated: false,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.textContaining('今日收益'), findsOneWidget);
     expect(find.text('--'), findsNWidgets(4));
   });
 }

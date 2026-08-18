@@ -33,11 +33,13 @@ void main() {
   tearDown(() async => db.close());
 
   testWidgets('组合摘要固定 + 顶部导入按钮 + 空态', (tester) async {
+    final spy = _SpyInvestmentService(investmentRepo);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           investmentRepositoryProvider.overrideWithValue(investmentRepo),
           repositoryProvider.overrideWithValue(repo),
+          investmentServiceProvider.overrideWithValue(spy),
           currentHoldingsProvider.overrideWith(
             (ref) => Stream<List<InvestmentHolding>>.value(const []),
           ),
@@ -71,6 +73,7 @@ void main() {
   });
 
   testWidgets('持仓存在时固定显示排序行与分组 chips', (tester) async {
+    final spy = _SpyInvestmentService(investmentRepo);
     final holding = InvestmentHolding(
       id: 1,
       ledgerId: 1,
@@ -82,6 +85,7 @@ void main() {
       currentNav: 2.0,
       marketValue: 200,
       holdingType: 'fund',
+      isQdii: false,
       createdAt: DateTime(2026),
     );
     final group = InvestmentGroup(
@@ -97,6 +101,7 @@ void main() {
         overrides: [
           investmentRepositoryProvider.overrideWithValue(investmentRepo),
           repositoryProvider.overrideWithValue(repo),
+          investmentServiceProvider.overrideWithValue(spy),
           currentHoldingsProvider.overrideWith(
             (ref) => Stream<List<InvestmentHolding>>.value([holding]),
           ),
@@ -141,6 +146,7 @@ void main() {
   });
 
   testWidgets('选中分组无基金时显示分组空态', (tester) async {
+    final spy = _SpyInvestmentService(investmentRepo);
     final holding = InvestmentHolding(
       id: 1,
       ledgerId: 1,
@@ -152,6 +158,7 @@ void main() {
       currentNav: 2.0,
       marketValue: 200,
       holdingType: 'fund',
+      isQdii: false,
       createdAt: DateTime(2026),
     );
 
@@ -160,6 +167,7 @@ void main() {
         overrides: [
           investmentRepositoryProvider.overrideWithValue(investmentRepo),
           repositoryProvider.overrideWithValue(repo),
+          investmentServiceProvider.overrideWithValue(spy),
           currentHoldingsProvider.overrideWith(
             (ref) => Stream<List<InvestmentHolding>>.value([holding]),
           ),
@@ -260,6 +268,7 @@ void main() {
       currentNav: 2.0,
       marketValue: 200,
       holdingType: 'fund',
+      isQdii: false,
       createdAt: DateTime(2026),
     );
 
@@ -351,11 +360,13 @@ void main() {
   });
 
   testWidgets('摘要卡片显示更新状态与今日收益', (tester) async {
+    final spy = _SpyInvestmentService(investmentRepo);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           investmentRepositoryProvider.overrideWithValue(investmentRepo),
           repositoryProvider.overrideWithValue(repo),
+          investmentServiceProvider.overrideWithValue(spy),
           currentHoldingsProvider.overrideWith(
             (ref) => Stream<List<InvestmentHolding>>.value(const []),
           ),

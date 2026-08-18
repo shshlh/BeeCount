@@ -1,5 +1,7 @@
 /// v5.0 记账页重构：顶部返回 + 标题「记一笔」+ 三 Tab；支出表单为
 /// 分类/账户/时间/备注四行 + 底部金额栏；转账 Tab 继续走 TransferForm。
+import 'dart:async';
+
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +13,8 @@ import 'package:beecount/data/repositories/local/local_repository.dart';
 import 'package:beecount/l10n/app_localizations.dart';
 import 'package:beecount/pages/transaction/transaction_editor_page.dart';
 import 'package:beecount/providers.dart';
+import 'package:beecount/widgets/transaction/transfer_form.dart';
+import 'package:beecount/widgets/transaction/tx_entry_form.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -214,4 +218,183 @@ void main() {
     expect(find.textContaining('已用额度'), findsOneWidget);
     expect(find.textContaining('50,000'), findsOneWidget);
   });
+
+  testWidgets('编辑流水再记一笔后第二次保存新增流水（7.19.2）', (tester) async {
+    final fake = _ImmediateLocalRepository(db);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          repositoryProvider.overrideWithValue(fake),
+          beecountCloudProviderInstance.overrideWith((ref) async => null),
+          currentLedgerProvider
+              .overrideWith((ref) => Stream<Ledger?>.value(ledger)),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: TransactionEditorPage(
+            initialKind: 'expense',
+            editingTransactionId: 1,
+            initialAmount: 50,
+            initialDate: DateTime(2026, 8, 18),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('¥ 50'), findsOneWidget);
+
+    // 第一次「再记一笔」：保存当前编辑并切回新建模式。
+    final formState = tester.state(find.byType(TxEntryForm)) as dynamic;
+    unawaited(formState.saveForTesting(exitAfterSave: false));
+    await tester.pumpAndSettle();
+    expect(fake.updateCount, 1);
+    expect(fake.removeAllTagsCalls, 1,
+        reason: '再记一笔后仍用原编辑流水清理标签');
+    expect(find.textContaining('¥ 0.00'), findsOneWidget);
+
+    // 填第二笔金额后保存，应新增而非覆盖原流水。
+    await tester.tap(find.text('金额'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('3'));
+    await tester.pump();
+    await tester.tap(find.text('0'));
+    await tester.pump();
+    await tester.tap(find.text('完成'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('¥ 30'), findsOneWidget);
+    unawaited(formState.saveForTesting(exitAfterSave: true));
+    await tester.pumpAndSettle();
+
+    expect(fake.updateCount, 1);
+    expect(fake.addCount, 1);
+  });
+
+  testWidgets('编辑转账再记一笔后第二次保存新增流水（7.19.2）', (tester) async {
+    final fake = _ImmediateLocalRepository(db);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          repositoryProvider.overrideWithValue(fake),
+          beecountCloudProviderInstance.overrideWith((ref) async => null),
+          currentLedgerProvider
+              .overrideWith((ref) => Stream<Ledger?>.value(ledger)),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: TransactionEditorPage(
+            initialKind: 'transfer',
+            editingTransactionId: 1,
+            initialAmount: 50,
+            initialDate: DateTime(2026, 8, 18),
+            initialAccountId: 1,
+            initialToAccountId: 2,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final formState = tester.state(find.byType(TransferForm)) as dynamic;
+    unawaited(formState.saveForTesting(exitAfterSave: false));
+    await tester.pumpAndSettle();
+    expect(fake.updateCount, 1);
+    expect(find.textContaining('¥ 0.00'), findsOneWidget);
+
+    await tester.tap(find.text('金额'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('3'));
+    await tester.pump();
+    await tester.tap(find.text('0'));
+    await tester.pump();
+    await tester.tap(find.text('完成'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('¥ 30'), findsOneWidget);
+
+    unawaited(formState.saveForTesting(exitAfterSave: true));
+    await tester.pumpAndSettle();
+    expect(fake.updateCount, 1);
+    expect(fake.addCount, 1);
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pump();
+  });
+}
+
+class _ImmediateLocalRepository extends LocalRepository {
+  int nextId = 1;
+  int updateCount = 0;
+  int addCount = 0;
+  int removeAllTagsCalls = 0;
+
+  _ImmediateLocalRepository(super.db);
+
+  @override
+  Future<void> updateTransaction({
+    required int id,
+    required String type,
+    required double amount,
+    int? categoryId,
+    String? note,
+    DateTime? happenedAt,
+    dynamic accountId,
+    String? categorySyncIdOverride,
+    String? accountSyncIdOverride,
+    String? toAccountSyncIdOverride,
+    bool? excludeFromStats,
+    bool? excludeFromBudget,
+    String? currencyCode,
+    double? nativeAmount,
+  }) async {
+    updateCount++;
+  }
+
+  @override
+  Future<int> addTransaction({
+    required int ledgerId,
+    required String type,
+    required double amount,
+    int? categoryId,
+    int? accountId,
+    int? toAccountId,
+    required DateTime happenedAt,
+    String? note,
+    String? syncId,
+    String? categorySyncIdOverride,
+    String? accountSyncIdOverride,
+    String? toAccountSyncIdOverride,
+    bool excludeFromStats = false,
+    bool excludeFromBudget = false,
+    String? currencyCode,
+    double? nativeAmount,
+  }) async {
+    addCount++;
+    return nextId++;
+  }
+
+  @override
+  Future<void> updateTransactionTags({
+    required int transactionId,
+    required List<int> tagIds,
+  }) async {}
+
+  @override
+  Future<void> removeAllTagsFromTransaction(int transactionId) async {
+    removeAllTagsCalls++;
+  }
+
+  @override
+  Future<void> updateTransactionFields({
+    required int id,
+    dynamic accountId,
+    dynamic toAccountId,
+    String? accountSyncIdOverride,
+    String? toAccountSyncIdOverride,
+    bool writeAccountSyncIdOverride = false,
+    bool writeToAccountSyncIdOverride = false,
+  }) async {}
 }

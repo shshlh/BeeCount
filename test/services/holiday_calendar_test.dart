@@ -34,4 +34,16 @@ void main() {
     expect(HolidayCalendar.isTradingDay(DateTime(2026, 8, 18)), isTrue);
     expect(HolidayCalendar.isTradingDay(DateTime(2027, 8, 18)), isTrue);
   });
+
+  test('previousTradingDay 跳过周末与节假日（7.19.4）', () {
+    expect(
+      HolidayCalendar.previousTradingDay(DateTime(2026, 8, 18)),
+      DateTime(2026, 8, 17),
+    );
+    // 2026-10-01 国庆，10-01 前一交易日应跳过假期到 9-30。
+    expect(
+      HolidayCalendar.previousTradingDay(DateTime(2026, 10, 1)),
+      DateTime(2026, 9, 30),
+    );
+  });
 }

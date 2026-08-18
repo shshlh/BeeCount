@@ -31,6 +31,23 @@
 
 ## 2026-08-18
 
+**移交角色**：invest-ui + invest-logic + qa
+**接收角色**：PM（复审）
+
+**任务**：7.19.5 返工完成
+
+**完成工作**：
+- `TxEntryForm` 再记一笔前保存 `originalEditId`，作者标记走 `markEdited`、空标签走 `removeAllTagsFromTransaction`，不再被切换新建模式误伤
+- `BuyDialog` 的 QDII 开关从 `widget.holding?.isQdii` 回填，已有 QDII 持仓加仓不会改回普通基金
+- 投资 CSV 持仓段新增 `QDII` 列，导出/导入与 `upsertHoldingForImport` 同步；roundtrip 测试断言 QDII 标签恢复
+- 全量 `flutter test` 866 passed / 1 skipped / 0 failed；改动文件 analyze 无 error
+
+**git 状态**：当前分支 main，7.19 改动未提交，待 PM 复审
+
+---
+
+## 2026-08-18
+
 **移交角色**：PM
 **接收角色**：invest-ui + qa
 

@@ -8,10 +8,12 @@ import '../system/logger_service.dart';
 class FundNavQuote {
   final double nav;
   final DateTime navDate;
+  final DateTime? updatedAt;
 
   const FundNavQuote({
     required this.nav,
     required this.navDate,
+    this.updatedAt,
   });
 }
 

@@ -34,8 +34,8 @@ void main() {
     return row.read<int>('c');
   }
 
-  test('schemaVersion = 41', () {
-    expect(db.schemaVersion, 41);
+  test('schemaVersion = 42', () {
+    expect(db.schemaVersion, 42);
   });
 
   test('fund_nav_history 表存在且字段齐全', () async {

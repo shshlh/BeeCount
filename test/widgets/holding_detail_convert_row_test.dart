@@ -23,6 +23,7 @@ void main() {
         currentNav: 1.2,
         marketValue: 600,
         holdingType: 'fund',
+      isQdii: false,
         createdAt: DateTime(2026),
         navDate: DateTime(2026, 8, 7),
       );

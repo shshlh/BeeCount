@@ -40,7 +40,7 @@ void main() {
     expect(row.readNullable<int>('nav_date'), 1786032000);
   });
 
-  test('schemaVersion = 41', () {
-    expect(db.schemaVersion, 41);
+  test('schemaVersion = 42', () {
+    expect(db.schemaVersion, 42);
   });
 }

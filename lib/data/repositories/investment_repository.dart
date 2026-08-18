@@ -39,6 +39,7 @@ abstract class InvestmentRepository {
     String? note,
     int? holdingId,
     int? sourceAccountId,
+    bool isQdii = false,
   });
 
   /// 卖出基金/股票。
@@ -83,6 +84,7 @@ abstract class InvestmentRepository {
     DateTime? happenedAt,
     DateTime? navDate,
     String? note,
+    bool isQdii = false,
   });
 
   /// 更新一整笔转换（A 卖出 + B 买入 + 关联退回），按 batchId 原子更新。
@@ -152,6 +154,7 @@ abstract class InvestmentRepository {
     DateTime? happenedAt,
     DateTime? navDate,
     String? note,
+    bool isQdii = false,
   });
 
   /// 更新持仓的基金代码/名称（6.13 防错）。
@@ -162,6 +165,7 @@ abstract class InvestmentRepository {
     int holdingId, {
     required String fundCode,
     String? fundName,
+    bool isQdii = false,
   });
 
   /// 删除整个持仓（6.13.4）。
@@ -212,6 +216,7 @@ abstract class InvestmentRepository {
     DateTime? navDate,
     double marketValue = 0,
     String? note,
+    bool isQdii = false,
   });
 
   /// 7.10.3 投资 CSV 导入：按名称查找分组，不存在则创建并返回 ID。

@@ -145,6 +145,72 @@ void main() {
     expect(r.returnRate, 1.0);
   });
 
+  test('getHoldingDailyReturn：今天未更新时今日收益为 null（7.19.3）', () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 100,
+        shares: 100,
+        nav: 1.0,
+        navDate: DateTime(2026, 8, 17));
+    for (final day in [15, 16, 17]) {
+      await db.into(db.fundNavHistories).insert(
+            FundNavHistoriesCompanion.insert(
+              fundCode: '000001',
+              navDate: DateTime(2026, 8, day),
+              unitNav: 1.0 + (day - 15) * 0.1,
+              updatedAt: DateTime(2026, 8, 17),
+            ),
+          );
+    }
+
+    final service = InvestmentService(
+      repo,
+      clock: () => DateTime(2026, 8, 18, 20),
+    );
+    final snapshot = await service.getHoldingDailyReturn(1);
+
+    expect(snapshot!.todayUpdated, isFalse);
+    expect(snapshot.todayProfit, isNull);
+    expect(snapshot.yesterdayProfit, isNotNull);
+  });
+
+  test('getHoldingDailyReturn：QDII 今天更新但净值日滞后仍算今日收益（7.19.3）',
+      () async {
+    await repo.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 200,
+        shares: 200,
+        nav: 1.0,
+        navDate: DateTime(2026, 8, 14),
+        isQdii: true);
+    for (final day in [13, 14, 17]) {
+      await db.into(db.fundNavHistories).insert(
+            FundNavHistoriesCompanion.insert(
+              fundCode: '000001',
+              navDate: DateTime(2026, 8, day),
+              unitNav: day == 13 ? 1.0 : (day == 14 ? 1.05 : 1.08),
+              updatedAt: DateTime(2026, 8, 18),
+            ),
+          );
+    }
+
+    final service = InvestmentService(
+      repo,
+      clock: () => DateTime(2026, 8, 18, 20),
+    );
+    final snapshot = await service.getHoldingDailyReturn(1);
+
+    expect(snapshot!.todayUpdated, isTrue);
+    expect(snapshot.todayProfit, isNotNull);
+    expect(snapshot.yesterdayProfit, isNotNull);
+  });
+
   // ---- 验证 ----
 
   test('validateBuy：份额 <= 0 抛异常', () {
@@ -376,6 +442,22 @@ void main() {
     final h = await repo.getHolding(1);
     expect(h!.totalShares, 500);
     expect(h.totalCost, 1000.0); // 投入本金
+  });
+
+  test('buy 传自定义净值日期：持仓 navDate 用确认日期而非交易时间（7.19.1）', () async {
+    await service.buy(
+        ledgerId: 1,
+        accountId: 10,
+        fundCode: '000001',
+        fundName: '基金A',
+        amount: 1000,
+        shares: 500,
+        nav: 2.0,
+        navDate: DateTime(2026, 8, 14),
+        happenedAt: DateTime(2026, 8, 16, 10));
+
+    final h = await repo.getHolding(1);
+    expect(h!.navDate, DateTime(2026, 8, 14));
   });
 
   test('sell：委托 repo，按比例扣减成本', () async {

@@ -1045,6 +1045,7 @@ class _HoldingInfoEditDialogState
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _codeCtrl;
   late final TextEditingController _nameCtrl;
+  late bool _isQdii;
   bool _saving = false;
 
   @override
@@ -1052,6 +1053,7 @@ class _HoldingInfoEditDialogState
     super.initState();
     _codeCtrl = TextEditingController(text: widget.holding.fundCode);
     _nameCtrl = TextEditingController(text: widget.holding.fundName);
+    _isQdii = widget.holding.isQdii;
   }
 
   @override
@@ -1071,6 +1073,7 @@ class _HoldingInfoEditDialogState
             widget.holding.id,
             fundCode: code,
             fundName: name.isEmpty ? null : name,
+            isQdii: _isQdii,
           );
       widget.onSaved?.call();
       if (mounted) Navigator.of(context).pop();
@@ -1115,6 +1118,14 @@ class _HoldingInfoEditDialogState
                   const InputDecoration(labelText: '基金名称', isDense: true),
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? '请输入基金名称' : null,
+            ),
+            const SizedBox(height: 12),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('QDII 基金'),
+              subtitle: const Text('净值日通常滞后 1~2 个交易日'),
+              value: _isQdii,
+              onChanged: (v) => setState(() => _isQdii = v),
             ),
           ],
         ),

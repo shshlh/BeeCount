@@ -11376,6 +11376,15 @@ class $InvestmentHoldingsTable extends InvestmentHoldings
       type: DriftSqlType.string,
       requiredDuringInsert: false,
       defaultValue: const Constant('fund'));
+  static const VerificationMeta _isQdiiMeta = const VerificationMeta('isQdii');
+  @override
+  late final GeneratedColumn<bool> isQdii = GeneratedColumn<bool>(
+      'is_qdii', aliasedName, false,
+      type: DriftSqlType.bool,
+      requiredDuringInsert: false,
+      defaultConstraints:
+          GeneratedColumn.constraintIsAlways('CHECK ("is_qdii" IN (0, 1))'),
+      defaultValue: const Constant(false));
   static const VerificationMeta _noteMeta = const VerificationMeta('note');
   @override
   late final GeneratedColumn<String> note = GeneratedColumn<String>(
@@ -11408,6 +11417,7 @@ class $InvestmentHoldingsTable extends InvestmentHoldings
         navDate,
         marketValue,
         holdingType,
+        isQdii,
         note,
         createdAt,
         updatedAt
@@ -11481,6 +11491,10 @@ class $InvestmentHoldingsTable extends InvestmentHoldings
           holdingType.isAcceptableOrUnknown(
               data['holding_type']!, _holdingTypeMeta));
     }
+    if (data.containsKey('is_qdii')) {
+      context.handle(_isQdiiMeta,
+          isQdii.isAcceptableOrUnknown(data['is_qdii']!, _isQdiiMeta));
+    }
     if (data.containsKey('note')) {
       context.handle(
           _noteMeta, note.isAcceptableOrUnknown(data['note']!, _noteMeta));
@@ -11524,6 +11538,8 @@ class $InvestmentHoldingsTable extends InvestmentHoldings
           .read(DriftSqlType.double, data['${effectivePrefix}market_value'])!,
       holdingType: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}holding_type'])!,
+      isQdii: attachedDatabase.typeMapping
+          .read(DriftSqlType.bool, data['${effectivePrefix}is_qdii'])!,
       note: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}note']),
       createdAt: attachedDatabase.typeMapping
@@ -11571,6 +11587,9 @@ class InvestmentHolding extends DataClass
   /// 持仓类型：fund(基金) / stock(股票) / etf 等。
   final String holdingType;
 
+  /// 是否为 QDII 基金（v7.19.4；净值日通常滞后 1~2 个交易日）。
+  final bool isQdii;
+
   /// 备注。
   final String? note;
   final DateTime createdAt;
@@ -11587,6 +11606,7 @@ class InvestmentHolding extends DataClass
       this.navDate,
       required this.marketValue,
       required this.holdingType,
+      required this.isQdii,
       this.note,
       required this.createdAt,
       this.updatedAt});
@@ -11606,6 +11626,7 @@ class InvestmentHolding extends DataClass
     }
     map['market_value'] = Variable<double>(marketValue);
     map['holding_type'] = Variable<String>(holdingType);
+    map['is_qdii'] = Variable<bool>(isQdii);
     if (!nullToAbsent || note != null) {
       map['note'] = Variable<String>(note);
     }
@@ -11631,6 +11652,7 @@ class InvestmentHolding extends DataClass
           : Value(navDate),
       marketValue: Value(marketValue),
       holdingType: Value(holdingType),
+      isQdii: Value(isQdii),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
       createdAt: Value(createdAt),
       updatedAt: updatedAt == null && nullToAbsent
@@ -11654,6 +11676,7 @@ class InvestmentHolding extends DataClass
       navDate: serializer.fromJson<DateTime?>(json['navDate']),
       marketValue: serializer.fromJson<double>(json['marketValue']),
       holdingType: serializer.fromJson<String>(json['holdingType']),
+      isQdii: serializer.fromJson<bool>(json['isQdii']),
       note: serializer.fromJson<String?>(json['note']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime?>(json['updatedAt']),
@@ -11674,6 +11697,7 @@ class InvestmentHolding extends DataClass
       'navDate': serializer.toJson<DateTime?>(navDate),
       'marketValue': serializer.toJson<double>(marketValue),
       'holdingType': serializer.toJson<String>(holdingType),
+      'isQdii': serializer.toJson<bool>(isQdii),
       'note': serializer.toJson<String?>(note),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime?>(updatedAt),
@@ -11692,6 +11716,7 @@ class InvestmentHolding extends DataClass
           Value<DateTime?> navDate = const Value.absent(),
           double? marketValue,
           String? holdingType,
+          bool? isQdii,
           Value<String?> note = const Value.absent(),
           DateTime? createdAt,
           Value<DateTime?> updatedAt = const Value.absent()}) =>
@@ -11707,6 +11732,7 @@ class InvestmentHolding extends DataClass
         navDate: navDate.present ? navDate.value : this.navDate,
         marketValue: marketValue ?? this.marketValue,
         holdingType: holdingType ?? this.holdingType,
+        isQdii: isQdii ?? this.isQdii,
         note: note.present ? note.value : this.note,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt.present ? updatedAt.value : this.updatedAt,
@@ -11728,6 +11754,7 @@ class InvestmentHolding extends DataClass
           data.marketValue.present ? data.marketValue.value : this.marketValue,
       holdingType:
           data.holdingType.present ? data.holdingType.value : this.holdingType,
+      isQdii: data.isQdii.present ? data.isQdii.value : this.isQdii,
       note: data.note.present ? data.note.value : this.note,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -11748,6 +11775,7 @@ class InvestmentHolding extends DataClass
           ..write('navDate: $navDate, ')
           ..write('marketValue: $marketValue, ')
           ..write('holdingType: $holdingType, ')
+          ..write('isQdii: $isQdii, ')
           ..write('note: $note, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -11768,6 +11796,7 @@ class InvestmentHolding extends DataClass
       navDate,
       marketValue,
       holdingType,
+      isQdii,
       note,
       createdAt,
       updatedAt);
@@ -11786,6 +11815,7 @@ class InvestmentHolding extends DataClass
           other.navDate == this.navDate &&
           other.marketValue == this.marketValue &&
           other.holdingType == this.holdingType &&
+          other.isQdii == this.isQdii &&
           other.note == this.note &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
@@ -11803,6 +11833,7 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
   final Value<DateTime?> navDate;
   final Value<double> marketValue;
   final Value<String> holdingType;
+  final Value<bool> isQdii;
   final Value<String?> note;
   final Value<DateTime> createdAt;
   final Value<DateTime?> updatedAt;
@@ -11818,6 +11849,7 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
     this.navDate = const Value.absent(),
     this.marketValue = const Value.absent(),
     this.holdingType = const Value.absent(),
+    this.isQdii = const Value.absent(),
     this.note = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -11834,6 +11866,7 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
     this.navDate = const Value.absent(),
     this.marketValue = const Value.absent(),
     this.holdingType = const Value.absent(),
+    this.isQdii = const Value.absent(),
     this.note = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -11853,6 +11886,7 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
     Expression<DateTime>? navDate,
     Expression<double>? marketValue,
     Expression<String>? holdingType,
+    Expression<bool>? isQdii,
     Expression<String>? note,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -11869,6 +11903,7 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
       if (navDate != null) 'nav_date': navDate,
       if (marketValue != null) 'market_value': marketValue,
       if (holdingType != null) 'holding_type': holdingType,
+      if (isQdii != null) 'is_qdii': isQdii,
       if (note != null) 'note': note,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -11887,6 +11922,7 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
       Value<DateTime?>? navDate,
       Value<double>? marketValue,
       Value<String>? holdingType,
+      Value<bool>? isQdii,
       Value<String?>? note,
       Value<DateTime>? createdAt,
       Value<DateTime?>? updatedAt}) {
@@ -11902,6 +11938,7 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
       navDate: navDate ?? this.navDate,
       marketValue: marketValue ?? this.marketValue,
       holdingType: holdingType ?? this.holdingType,
+      isQdii: isQdii ?? this.isQdii,
       note: note ?? this.note,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -11944,6 +11981,9 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
     if (holdingType.present) {
       map['holding_type'] = Variable<String>(holdingType.value);
     }
+    if (isQdii.present) {
+      map['is_qdii'] = Variable<bool>(isQdii.value);
+    }
     if (note.present) {
       map['note'] = Variable<String>(note.value);
     }
@@ -11970,6 +12010,7 @@ class InvestmentHoldingsCompanion extends UpdateCompanion<InvestmentHolding> {
           ..write('navDate: $navDate, ')
           ..write('marketValue: $marketValue, ')
           ..write('holdingType: $holdingType, ')
+          ..write('isQdii: $isQdii, ')
           ..write('note: $note, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
@@ -18171,6 +18212,7 @@ typedef $$InvestmentHoldingsTableCreateCompanionBuilder
   Value<DateTime?> navDate,
   Value<double> marketValue,
   Value<String> holdingType,
+  Value<bool> isQdii,
   Value<String?> note,
   Value<DateTime> createdAt,
   Value<DateTime?> updatedAt,
@@ -18188,6 +18230,7 @@ typedef $$InvestmentHoldingsTableUpdateCompanionBuilder
   Value<DateTime?> navDate,
   Value<double> marketValue,
   Value<String> holdingType,
+  Value<bool> isQdii,
   Value<String?> note,
   Value<DateTime> createdAt,
   Value<DateTime?> updatedAt,
@@ -18259,6 +18302,9 @@ class $$InvestmentHoldingsTableFilterComposer
 
   ColumnFilters<String> get holdingType => $composableBuilder(
       column: $table.holdingType, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<bool> get isQdii => $composableBuilder(
+      column: $table.isQdii, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get note => $composableBuilder(
       column: $table.note, builder: (column) => ColumnFilters(column));
@@ -18335,6 +18381,9 @@ class $$InvestmentHoldingsTableOrderingComposer
   ColumnOrderings<String> get holdingType => $composableBuilder(
       column: $table.holdingType, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<bool> get isQdii => $composableBuilder(
+      column: $table.isQdii, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get note => $composableBuilder(
       column: $table.note, builder: (column) => ColumnOrderings(column));
 
@@ -18386,6 +18435,9 @@ class $$InvestmentHoldingsTableAnnotationComposer
 
   GeneratedColumn<String> get holdingType => $composableBuilder(
       column: $table.holdingType, builder: (column) => column);
+
+  GeneratedColumn<bool> get isQdii =>
+      $composableBuilder(column: $table.isQdii, builder: (column) => column);
 
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
@@ -18456,6 +18508,7 @@ class $$InvestmentHoldingsTableTableManager extends RootTableManager<
             Value<DateTime?> navDate = const Value.absent(),
             Value<double> marketValue = const Value.absent(),
             Value<String> holdingType = const Value.absent(),
+            Value<bool> isQdii = const Value.absent(),
             Value<String?> note = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime?> updatedAt = const Value.absent(),
@@ -18472,6 +18525,7 @@ class $$InvestmentHoldingsTableTableManager extends RootTableManager<
             navDate: navDate,
             marketValue: marketValue,
             holdingType: holdingType,
+            isQdii: isQdii,
             note: note,
             createdAt: createdAt,
             updatedAt: updatedAt,
@@ -18488,6 +18542,7 @@ class $$InvestmentHoldingsTableTableManager extends RootTableManager<
             Value<DateTime?> navDate = const Value.absent(),
             Value<double> marketValue = const Value.absent(),
             Value<String> holdingType = const Value.absent(),
+            Value<bool> isQdii = const Value.absent(),
             Value<String?> note = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime?> updatedAt = const Value.absent(),
@@ -18504,6 +18559,7 @@ class $$InvestmentHoldingsTableTableManager extends RootTableManager<
             navDate: navDate,
             marketValue: marketValue,
             holdingType: holdingType,
+            isQdii: isQdii,
             note: note,
             createdAt: createdAt,
             updatedAt: updatedAt,

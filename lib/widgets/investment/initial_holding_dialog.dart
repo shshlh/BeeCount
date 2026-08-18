@@ -41,7 +41,8 @@ class _InitialHoldingDialogState extends ConsumerState<_InitialHoldingDialog> {
   final _costCtrl = TextEditingController();
   final _navCtrl = TextEditingController();
  final _noteCtrl = TextEditingController();
-  final DateTime _happenedAt = DateTime.now();
+ final DateTime _happenedAt = DateTime.now();
+ bool _isQdii = false;
  int? _selectedAccountId;
   List<db.Account> _investmentAccounts = [];
   bool _loading = false;
@@ -99,6 +100,7 @@ class _InitialHoldingDialogState extends ConsumerState<_InitialHoldingDialog> {
         nav: double.parse(_navCtrl.text),
         happenedAt: _happenedAt,
         note: _noteCtrl.text.trim().isEmpty ? null : _noteCtrl.text.trim(),
+        isQdii: _isQdii,
       );
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
@@ -228,6 +230,14 @@ class _InitialHoldingDialogState extends ConsumerState<_InitialHoldingDialog> {
                 },
               ),
               const SizedBox(height: 12),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('QDII 基金'),
+                subtitle: const Text('净值日通常滞后 1~2 个交易日'),
+                value: _isQdii,
+                onChanged: (v) => setState(() => _isQdii = v),
+              ),
+              const SizedBox(height: 4),
               // 备注
               TextFormField(
                 controller: _noteCtrl,

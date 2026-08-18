@@ -37,6 +37,8 @@ class _BuyDialogState extends ConsumerState<BuyDialog> {
   late final TextEditingController _amountCtrl;
   late final TextEditingController _sharesCtrl;
   late final TextEditingController _navCtrl;
+  late DateTime _navDate;
+  late bool _isQdii;
   bool _submitting = false;
   int? _selectedAccountId; // 扣款账户
   int? _selectedInvestmentAccountId; // 持仓归属的投资账户
@@ -52,6 +54,8 @@ class _BuyDialogState extends ConsumerState<BuyDialog> {
     _amountCtrl = TextEditingController();
     _sharesCtrl = TextEditingController();
     _navCtrl = TextEditingController(text: h != null && h.currentNav > 0 ? h.currentNav.toString() : '');
+    _navDate = DateTime.now();
+    _isQdii = widget.holding?.isQdii ?? false;
     _loadAccounts();
   }
 
@@ -119,6 +123,8 @@ class _BuyDialogState extends ConsumerState<BuyDialog> {
         nav: nav,
         holdingId: effectiveHoldingId,
         sourceAccountId: _selectedAccountId!,
+        navDate: _navDate,
+        isQdii: _isQdii,
       );
 
       if (mounted) Navigator.of(context).pop(true);
@@ -214,6 +220,37 @@ class _BuyDialogState extends ConsumerState<BuyDialog> {
                 },
               ),
               const SizedBox(height: BeeDimens.p16),
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _navDate,
+                    firstDate: DateTime(_navDate.year - 1),
+                    lastDate: DateTime(_navDate.year + 1, 12, 31),
+                  );
+                  if (picked != null && mounted) {
+                    setState(() => _navDate = picked);
+                  }
+                },
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: '确认净值日期',
+                    helperText: 'QDII 请按确认单选择实际净值日期',
+                  ),
+                  child: Text(
+                    '${_navDate.year}.${_navDate.month}.${_navDate.day}',
+                  ),
+                ),
+              ),
+              const SizedBox(height: BeeDimens.p16),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('QDII 基金'),
+                subtitle: const Text('净值日通常滞后 1~2 个交易日'),
+                value: _isQdii,
+                onChanged: (v) => setState(() => _isQdii = v),
+              ),
+              const SizedBox(height: BeeDimens.p8),
               // v4.7 返工：新买入先确定投资账户；无投资账户时保存会自动创建。
               if (widget.holding == null) ...[
                 if (_investmentAccounts.isNotEmpty)

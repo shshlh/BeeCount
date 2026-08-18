@@ -179,6 +179,7 @@ class _FakeInvestmentRepo extends LocalInvestmentRepository
         currentNav: 1.2345,
         marketValue: 123.45,
         holdingType: 'fund',
+      isQdii: false,
         createdAt: DateTime(2026),
       ),
     ];
