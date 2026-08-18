@@ -31,6 +31,23 @@
 
 ## 2026-08-18
 
+**移交角色**：PM
+**接收角色**：归档 / 待实机验证
+
+**任务**：7.18 P3 收口复审合入
+
+**完成工作**：
+- 审查通过：净值历史 prune、收益/涨跌 Decimal 化、money-only 刷新状态三个 P3 全部落地
+- 全量 `flutter test`：848 passed / 1 skipped / 0 failed
+- 改动文件 analyze 无新增 error
+- 合入 main：`844a3bd`
+
+**git 状态**：当前分支 main，已提交 `844a3bd`
+
+---
+
+## 2026-08-18
+
 **移交角色**：architect + invest-logic + invest-ui + qa
 **接收角色**：PM（复审）
 
